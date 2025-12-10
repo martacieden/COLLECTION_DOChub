@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, X, Search, SlidersHorizontal, Upload, MoreVertical, Info, Sparkles, LayoutGrid, List, FileText, SearchIcon, TrendingUp, Archive, Send, PanelLeft, Paperclip, Mic, Pencil } from 'lucide-react';
+import { ChevronDown, X, Search, SlidersHorizontal, Upload, MoreVertical, Info, Sparkles, List, FileText, SearchIcon, TrendingUp, Archive, Send, PanelLeft, Paperclip, Mic, Pencil, Eye, Share2, Trash2 } from 'lucide-react';
+import { Checkbox } from './components/ui/checkbox';
 import svgPaths from "./imports/svg-ylbe71kelt";
 import imgAvatar from "figma:asset/faff2adb1cb08272d6a4e4d91304adea83279eb7.png";
 import imgAvatar1 from "figma:asset/248e51d98c071d09cefd9d4449f99bd2dc3797f1.png";
@@ -11,6 +12,9 @@ import { CollectionDetailView, CollectionDetailHeader } from './components/Colle
 import { PageHeader } from './components/PageHeader';
 import { AllDocumentsTable } from './components/AllDocumentsTable';
 import { RecentlyOpenedView } from './components/RecentlyOpenedView';
+import { AIAssistantBanner } from './components/AIAssistantBanner';
+import { SummaryBox } from './components/SummaryBox';
+import { PinnedView } from './components/PinnedView';
 
 // ========================================
 // TYPES
@@ -128,21 +132,6 @@ function GlobalSidebar() {
 // ========================================
 
 function WorkspaceHeader({ onShowAIFilter, viewMode, selectedCollection, onUploadClick }: { onShowAIFilter?: () => void; viewMode?: string; selectedCollection?: any; onUploadClick?: () => void }) {
-  const getPageTitle = (mode?: string): string => {
-    switch (mode) {
-      case 'collections':
-        return 'Collections';
-      case 'all-documents':
-        return 'All documents';
-      case 'recent':
-        return 'Recently opened';
-      case 'pinned':
-        return 'Pinned';
-      default:
-        return 'Documents';
-    }
-  };
-
   return (
     <div className="bg-white border-b border-[#e8e8ec] flex-shrink-0 min-w-0 w-full max-w-full overflow-hidden">
       {/* Top bar with global search */}
@@ -180,7 +169,7 @@ function WorkspaceHeader({ onShowAIFilter, viewMode, selectedCollection, onUploa
       {/* Page header with title and banner */}
       {!selectedCollection && (
         <PageHeader 
-          title={getPageTitle(viewMode)}
+          title="Documents"
           onShowAIFilter={onShowAIFilter}
           onUploadClick={onUploadClick}
         />
@@ -649,7 +638,7 @@ function ContextSuggestionsDropdown({
 // ========================================
 
 function DocumentCardBlock({ documents }: { documents: Document[] }) {
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
 
   return (
     <div className="bg-white rounded-[8px] border border-[#e8e8ec] p-[16px]">
@@ -676,7 +665,13 @@ function DocumentCardBlock({ documents }: { documents: Document[] }) {
                 : 'text-[#60646c] hover:bg-[#f9fafb]'
             }`}
           >
-            <LayoutGrid className="size-[14px]" />
+            <svg className="size-[14px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+              <path d="M3 9h18"></path>
+              <path d="M3 15h18"></path>
+              <path d="M9 3v18"></path>
+              <path d="M15 3v18"></path>
+            </svg>
           </button>
         </div>
       </div>
@@ -781,15 +776,18 @@ function SearchResultBlock({ results }: { results: Document[] }) {
 
 function SummaryBlock({ insights }: { insights: string[] }) {
   return (
-    <div className="bg-gradient-to-br from-[#ebf3ff] to-[#f9fafb] rounded-[8px] border border-[#e0e1e6] p-[16px]">
-      <div className="flex items-center gap-[8px] mb-[12px]">
-        <Sparkles className="size-[16px] text-[#005be2]" />
+    <div 
+      className="flex flex-col items-start gap-[8px] self-stretch border border-[#AA99EC] rounded-[8px] p-[16px]"
+      style={{ backgroundColor: '#FAF8FF' }}
+    >
+      <div className="flex items-center gap-[8px]">
+        <Sparkles className="size-[16px] text-[#8B5CF6]" />
         <h3 className="text-[13px] font-semibold text-[#1c2024]">Key Insights</h3>
       </div>
-      <ul className="space-y-[8px]">
+      <ul className="space-y-[8px] w-full">
         {insights.map((insight, index) => (
           <li key={index} className="flex items-start gap-[8px]">
-            <div className="size-[6px] rounded-full bg-[#005be2] mt-[6px] flex-shrink-0" />
+            <div className="size-[6px] rounded-full bg-[#8B5CF6] mt-[6px] flex-shrink-0" />
             <p className="text-[13px] text-[#1c2024] leading-[1.6]">{insight}</p>
           </li>
         ))}
@@ -987,7 +985,7 @@ function AISuggestionPreviewModal({
   onClose: () => void;
   onAccept: () => void;
 }) {
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
   // Mock documents for the preview
   const previewDocuments = mockDocuments.slice(0, suggestion.documentCount);
 
@@ -1022,20 +1020,26 @@ function AISuggestionPreviewModal({
               {/* View toggle buttons */}
               <div className="flex items-center gap-[4px] border border-[#e0e1e6] rounded-[6px] p-[2px]">
                 <button
+                  onClick={() => setViewMode('grid')}
+                  className={`size-[28px] rounded-[4px] flex items-center justify-center transition-colors ${
+                    viewMode === 'grid' ? 'bg-[#f0f0f3]' : 'hover:bg-[#f9fafb]'
+                  }`}
+                >
+                  <svg className="size-[16px] text-[#60646c]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+                    <path d="M3 9h18"></path>
+                    <path d="M3 15h18"></path>
+                    <path d="M9 3v18"></path>
+                    <path d="M15 3v18"></path>
+                  </svg>
+                </button>
+                <button
                   onClick={() => setViewMode('list')}
                   className={`size-[28px] rounded-[4px] flex items-center justify-center transition-colors ${
                     viewMode === 'list' ? 'bg-[#f0f0f3]' : 'hover:bg-[#f9fafb]'
                   }`}
                 >
                   <List className="size-[16px] text-[#60646c]" />
-                </button>
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`size-[28px] rounded-[4px] flex items-center justify-center transition-colors ${
-                    viewMode === 'grid' ? 'bg-[#f0f0f3]' : 'hover:bg-[#f9fafb]'
-                  }`}
-                >
-                  <LayoutGrid className="size-[16px] text-[#60646c]" />
                 </button>
               </div>
               <button 
@@ -1255,11 +1259,17 @@ const userSets = [
 ];
 
 function CollectionCard({ title, organization, onClick, collectionId, sharedWith, icon }: { title: string; organization?: string; onClick?: () => void; collectionId?: string; sharedWith?: string[]; icon?: string }) {
-  // Use icon prop if provided
-  const emoji = icon || null;
+  // Use icon prop if provided, take only first emoji character
+  // Match emoji including complex emojis (with modifiers, skin tones, etc.)
+  const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E0}-\u{1F1FF}]/u;
+  let emoji: string | null = null;
+  if (icon) {
+    const trimmed = icon.trim();
+    const match = trimmed.match(emojiRegex);
+    emoji = match ? match[0] : null;
+  }
   // Remove emoji from title if it exists
-  const emojiRegex = /^[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]\s*/u;
-  const displayTitle = emoji ? title.replace(emojiRegex, '').trim() : title;
+  const displayTitle = emoji && title.includes(emoji) ? title.replace(emoji, '').trim() : title;
   
   // Get organization initials
   const org = organizations.find(o => o.name === organization);
@@ -1288,12 +1298,121 @@ function CollectionCard({ title, organization, onClick, collectionId, sharedWith
         }));
       })();
   
+  const [isHovered, setIsHovered] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMenuOpen]);
+
+  const handleMenuAction = (action: string) => {
+    setIsMenuOpen(false);
+    
+    switch (action) {
+      case 'rename':
+        toast.info('Rename collection');
+        break;
+      case 'view':
+        onClick?.();
+        break;
+      case 'share':
+        toast.info('Share collection');
+        break;
+      case 'delete':
+        toast.error('Delete collection');
+        break;
+    }
+  };
+
   return (
     <div 
       onClick={onClick}
-      className="bg-white border border-[#e8e8ec] rounded-[8px] p-[16px] flex flex-col gap-[12px] hover:border-[#005be2] transition-colors cursor-pointer"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => {
+        setIsHovered(false);
+        // Don't close menu on mouse leave if it's open
+      }}
+      className="bg-white border border-[#e8e8ec] rounded-[8px] p-[16px] flex flex-col gap-[12px] hover:border-[#005be2] transition-colors cursor-pointer relative"
     >
-      {/* Top row: icon + title + menu */}
+      {/* More button - shows on hover */}
+      {isHovered && (
+        <div className="absolute top-[8px] right-[8px] z-10" ref={menuRef}>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsMenuOpen(!isMenuOpen);
+            }}
+            className="size-[24px] rounded-[6px] flex items-center justify-center hover:bg-[#f9fafb] transition-colors"
+          >
+            <svg className="size-[16px]" fill="none" viewBox="0 0 16 16">
+              <path clipRule="evenodd" d={svgPaths.p2e576200} fill="#60646C" fillRule="evenodd" />
+            </svg>
+          </button>
+          
+          {/* Dropdown menu */}
+          {isMenuOpen && (
+            <div className="absolute top-[28px] right-0 bg-white border border-[#e8e8ec] rounded-[8px] shadow-lg min-w-[160px] py-[4px] z-20">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleMenuAction('rename');
+                }}
+                className="w-full px-[12px] py-[8px] flex items-center gap-[8px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] transition-colors text-left"
+              >
+                <Pencil className="size-[14px] text-[#60646c]" />
+                <span>Rename</span>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleMenuAction('view');
+                }}
+                className="w-full px-[12px] py-[8px] flex items-center gap-[8px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] transition-colors text-left"
+              >
+                <Eye className="size-[14px] text-[#60646c]" />
+                <span>View</span>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleMenuAction('share');
+                }}
+                className="w-full px-[12px] py-[8px] flex items-center gap-[8px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] transition-colors text-left"
+              >
+                <Share2 className="size-[14px] text-[#60646c]" />
+                <span>Share</span>
+              </button>
+              <div className="border-t border-[#e8e8ec] my-[4px]"></div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleMenuAction('delete');
+                }}
+                className="w-full px-[12px] py-[8px] flex items-center gap-[8px] text-[13px] text-[#ef4444] hover:bg-[#fef2f2] transition-colors text-left"
+              >
+                <Trash2 className="size-[14px] text-[#ef4444]" />
+                <span>Delete</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Top row: icon + title */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-[12px]">
           <div className="bg-[#f0f0f3] size-[24px] rounded-[6px] flex items-center justify-center text-[14px]">
@@ -1307,11 +1426,6 @@ function CollectionCard({ title, organization, onClick, collectionId, sharedWith
           </div>
           <p className="text-[14px] font-semibold text-[#1c2024] tracking-[-0.0056px]">{displayTitle}</p>
         </div>
-        <button className="size-[24px] rounded-[6px] flex items-center justify-center hover:bg-[#f9fafb]">
-          <svg className="size-[16px]" fill="none" viewBox="0 0 16 16">
-            <path clipRule="evenodd" d={svgPaths.p2e576200} fill="##60646C" fillRule="evenodd" />
-          </svg>
-        </button>
       </div>
       
       {/* Organization row */}
@@ -1334,7 +1448,7 @@ function CollectionCard({ title, organization, onClick, collectionId, sharedWith
               className={`size-[24px] rounded-full border-2 border-white ${user.color} flex items-center justify-center text-[10px] ${user.textColor || 'text-[#60646c]'}`}
             >
               {user.initials}
-            </div>
+          </div>
           ))}
         </div>
       </div>
@@ -1562,19 +1676,24 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
       )}
       
       {/* Collections section */}
-      <div className="bg-white px-[18px] py-[16px]">
-        <div className="flex items-center justify-between mb-[16px]">
+      <div className="bg-white flex-1 flex flex-col overflow-hidden min-w-0">
+        <div className="px-[24px] py-[16px] flex items-center justify-between flex-shrink-0">
           <h2 className="text-[13px] font-semibold text-[#60646c]">Collections</h2>
           <div className="flex items-center gap-[8px]">
+            {/* Filters Button */}
+            <button className="h-[32px] px-[8px] flex items-center gap-[8px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] bg-white">
+              <SlidersHorizontal className="size-[16px] text-[#60646c]" />
+              <span className="text-[12px] font-semibold">Filters</span>
+            </button>
+            
             {/* Search Input */}
-            <div className="relative">
-              <Search className="absolute left-[12px] top-1/2 -translate-y-1/2 size-[16px] text-[#60646c] pointer-events-none" />
+            <div className="relative" style={{ width: '200px' }}>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search collections..."
-                className="h-[32px] pl-[36px] pr-[12px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#005be2] min-w-[200px]"
+                placeholder='Search...'
+                className="w-full h-[32px] px-[12px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] placeholder:text-[#8b8d98] focus:outline-none focus:ring-2 focus:ring-[#005be2] focus:border-transparent"
               />
             </div>
             
@@ -1588,11 +1707,12 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
                     : 'bg-white text-[#60646c] hover:bg-[#f9fafb]'
                 }`}
               >
-                <svg className="size-[16px]" fill="none" viewBox="0 0 16 16">
-                  <path d="M2 3.75C2 3.33579 2.33579 3 2.75 3H6.25C6.66421 3 7 3.33579 7 3.75V7.25C7 7.66421 6.66421 8 6.25 8H2.75C2.33579 8 2 7.66421 2 7.25V3.75Z" fill="currentColor"/>
-                  <path d="M9 3.75C9 3.33579 9.33579 3 9.75 3H13.25C13.6642 3 14 3.33579 14 3.75V7.25C14 7.66421 13.6642 8 13.25 8H9.75C9.33579 8 9 7.66421 9 7.25V3.75Z" fill="currentColor"/>
-                  <path d="M2 9.75C2 9.33579 2.33579 9 2.75 9H6.25C6.66421 9 7 9.33579 7 9.75V13.25C7 13.6642 6.66421 14 6.25 14H2.75C2.33579 14 2 13.6642 2 13.25V9.75Z" fill="currentColor"/>
-                  <path d="M9 9.75C9 9.33579 9.33579 9 9.75 9H13.25C13.6642 9 14 9.33579 14 9.75V13.25C14 13.6642 13.6642 14 13.25 14H9.75C9.33579 14 9 13.6642 9 13.25V9.75Z" fill="currentColor"/>
+                <svg className="size-[16px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+                  <path d="M3 9h18"></path>
+                  <path d="M3 15h18"></path>
+                  <path d="M9 3v18"></path>
+                  <path d="M15 3v18"></path>
                 </svg>
               </button>
               <button
@@ -1622,48 +1742,63 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
             </button>
           </div>
         </div>
-        
+
         {viewMode === 'table' ? (
-          // Table View
-          <div className="w-full overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b border-[#e0e1e6]">
-                  <th className="text-left py-[12px] px-[16px] text-[13px] text-[#60646c]">Name</th>
-                  <th className="text-left py-[12px] px-[16px] text-[13px] text-[#60646c]">Description</th>
-                  <th className="text-left py-[12px] px-[16px] text-[13px] text-[#60646c]">Created by</th>
-                  <th className="text-left py-[12px] px-[16px] text-[13px] text-[#60646c]">Shared with</th>
-                  <th className="text-left py-[12px] px-[16px] text-[13px] text-[#60646c]">Documents</th>
-                  <th className="text-left py-[12px] px-[16px] text-[13px] text-[#60646c]">Last modified</th>
-                  <th className="w-[40px]"></th>
+          <>
+            
+            {/* Table View */}
+            <div className="flex-1 overflow-hidden pb-[16px] min-w-0 flex flex-col">
+              <div className="flex-1 min-w-0 overflow-x-auto overflow-y-auto">
+                <table className="caption-bottom text-sm w-full" style={{ minWidth: 'max-content' }}>
+                  <thead className="[&_tr]:border-b">
+                    <tr className="border-b transition-colors">
+                      <th className="h-10 px-2 text-left align-middle w-[40px] min-w-[40px]">
+                        <Checkbox
+                          checked={false}
+                          onCheckedChange={() => {}}
+                        />
+                      </th>
+                      <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[200px]">Name</th>
+                      <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[300px]">Description</th>
+                      <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[130px]">Created by</th>
+                      <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[120px]">Shared with</th>
+                      <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[100px]">Documents</th>
+                      <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[120px]">Last modified</th>
+                      <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[56px]"></th>
                 </tr>
               </thead>
-              <tbody>
+                  <tbody className="[&_tr:last-child]:border-0">
                 {filteredCollections.length > 0 ? (
                   filteredCollections.map((collection) => (
                     <tr 
                       key={collection.id}
-                      className="border-b border-[#e0e1e6] hover:bg-[#f9fafb] cursor-pointer transition-colors"
+                          className="border-b transition-colors hover:bg-[#f9fafb] cursor-pointer"
                       onClick={() => onCollectionClick?.(collection)}
                     >
-                      <td className="py-[12px] px-[16px]">
+                          <td className="p-2 align-middle" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={false}
+                              onCheckedChange={() => {}}
+                            />
+                          </td>
+                          <td className="p-2 align-middle whitespace-nowrap">
                         <div className="flex items-center gap-[8px]">
                           <span className="text-[20px]">{collection.icon}</span>
                           <span className="text-[13px] text-[#1c2024]">{collection.title}</span>
                         </div>
                       </td>
-                      <td className="py-[12px] px-[16px] text-[13px] text-[#60646c] max-w-[300px] truncate">
-                        {collection.description}
+                          <td className="p-2 align-middle">
+                            <span className="text-[13px] text-[#60646c] truncate block max-w-[300px]">{collection.description}</span>
                       </td>
-                      <td className="py-[12px] px-[16px] text-[13px] text-[#1c2024]">
-                        {collection.createdBy}
+                          <td className="p-2 align-middle whitespace-nowrap">
+                            <span className="text-[13px] text-[#1c2024]">{collection.createdBy}</span>
                       </td>
-                      <td className="py-[12px] px-[16px]">
+                          <td className="p-2 align-middle">
                         <div className="flex items-center gap-[4px]">
                           {collection.sharedWith.slice(0, 2).map((person, idx) => (
                             <div 
                               key={idx}
-                              className="size-[24px] rounded-full bg-[#e0e1e6] flex items-center justify-center text-[10px] text-[#1c2024]"
+                                  className="size-[24px] rounded-full bg-[#e0e1e6] flex items-center justify-center text-[10px] text-[#60646c]"
                               title={person}
                             >
                               {person.split(' ').map(n => n[0]).join('')}
@@ -1676,27 +1811,27 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
                           )}
                         </div>
                       </td>
-                      <td className="py-[12px] px-[16px] text-[13px] text-[#60646c]">
-                        {collection.count}
+                          <td className="p-2 align-middle whitespace-nowrap">
+                            <span className="text-[13px] text-[#60646c]">{collection.count}</span>
                       </td>
-                      <td className="py-[12px] px-[16px] text-[13px] text-[#60646c]">
-                        {collection.createdOn}
+                          <td className="p-2 align-middle whitespace-nowrap">
+                            <span className="text-[13px] text-[#60646c]">{collection.createdOn}</span>
                       </td>
-                      <td className="py-[12px] px-[16px]">
+                          <td className="p-2 align-middle whitespace-nowrap">
                         <button 
-                          className="size-[24px] rounded-[6px] flex items-center justify-center hover:bg-[#e0e1e6]"
+                              className="p-[4px] hover:bg-[#f0f0f3] rounded-[4px] transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
                           }}
                         >
-                          <MoreVertical className="size-[16px] text-[#60646c]" />
+                              <MoreVertical className="w-[16px] h-[16px] text-[#60646c]" />
                         </button>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={7} className="text-center py-[48px]">
+                        <td colSpan={8} className="text-center py-[48px]">
                       <p className="text-[#60646c] text-[13px]">No collections found matching "{searchQuery}"</p>
                     </td>
                   </tr>
@@ -1704,9 +1839,11 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
               </tbody>
             </table>
           </div>
+            </div>
+          </>
         ) : (
           // Grid/Card View
-          <div className="grid gap-[16px] w-full" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))' }}>
+          <div className="grid gap-[16px] w-full px-[24px] pt-[24px]" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))' }}>
             {filteredCollections.length > 0 ? (
               filteredCollections.map((collection) => (
                 <CollectionCard 
@@ -1744,7 +1881,9 @@ function MainContent({
   onBackFromCollection,
   documents,
   selectedOrganization,
-  onOrganizationChange
+  onOrganizationChange,
+  pinnedDocumentIds,
+  onPinToggle
 }: { 
   viewMode: ViewMode; 
   aiFilter?: string | null;
@@ -1759,6 +1898,8 @@ function MainContent({
   documents?: Document[];
   selectedOrganization?: string;
   onOrganizationChange?: (orgId: string) => void;
+  pinnedDocumentIds?: Set<string>;
+  onPinToggle?: (docId: string) => void;
 }) {
   if (viewMode === 'collection-detail' && selectedCollection) {
     return (
@@ -1774,10 +1915,12 @@ function MainContent({
     return (
       <div className="flex-1 overflow-auto bg-white">
         <AllDocumentsTable 
-          documents={documents} 
+        documents={documents}
           selectedOrganization={selectedOrganization}
           onOrganizationChange={onOrganizationChange}
           organizations={organizations}
+          pinnedDocumentIds={pinnedDocumentIds}
+          onPinToggle={onPinToggle}
         />
       </div>
     );
@@ -1793,8 +1936,12 @@ function MainContent({
 
   if (viewMode === 'pinned') {
     return (
-      <div className="flex-1 flex flex-col bg-white">
-        {/* Empty state - only header is shown */}
+      <div className="flex-1 overflow-auto bg-white">
+        <PinnedView 
+          documents={documents}
+          pinnedDocumentIds={pinnedDocumentIds}
+          onPinToggle={onPinToggle}
+        />
       </div>
     );
   }
@@ -1819,26 +1966,9 @@ function FojoAssistantPanel() {
       {/* Content Area */}
       <div className="flex-1 overflow-hidden flex flex-col">
         {/* Summary Section */}
-        <div>
-          {/* Header Bar */}
-          <div className="px-[24px] py-[16px] flex items-center justify-between bg-white">
-            <div className="flex items-center gap-[8px]">
-              <Sparkles className="size-[16px] text-[#8B5CF6]" />
-              <h3 className="text-[13px] font-semibold text-[#1c2024]">Summary</h3>
-            </div>
-            <button className="size-[24px] rounded-[6px] bg-[#f0f0f3] flex items-center justify-center hover:bg-[#e0e1e6] transition-colors">
-              <Pencil className="size-[14px] text-[#60646c]" />
-            </button>
-          </div>
-          {/* Summary Content */}
-          <div className="px-[24px] pb-[24px]">
-            <div className="bg-white border border-[#C084FC] rounded-[8px] px-[24px] py-[16px]">
-              <p className="text-[13px] text-[#1c2024] leading-[1.5]">
-                All documents related to the Oak Street property renovation project including blueprints, permits, contracts, and vendor documents.
-              </p>
-            </div>
-          </div>
-        </div>
+        <SummaryBox 
+          summary="All documents related to the Oak Street property renovation project including blueprints, permits, contracts, and vendor documents."
+        />
 
         {/* Assistant Message - Scrollable Area */}
         <div className="flex-1 overflow-y-auto px-[24px] py-[24px] min-w-0">
@@ -1914,7 +2044,8 @@ function LeftTabsPanel({
   isCollapsed,
   onToggleCollapse,
   selectedOrganization,
-  onOrganizationChange
+  onOrganizationChange,
+  pinnedDocumentIds
 }: { 
   viewMode: ViewMode; 
   onViewChange: (view: ViewMode) => void;
@@ -1922,6 +2053,7 @@ function LeftTabsPanel({
   onToggleCollapse: () => void;
   selectedOrganization: string;
   onOrganizationChange: (orgId: string) => void;
+  pinnedDocumentIds?: Set<string>;
 }) {
   const [orgDropdownOpen, setOrgDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -1930,7 +2062,7 @@ function LeftTabsPanel({
     { id: 'collections' as ViewMode, icon: 'p47bd72a', label: 'Collections', count: 18 },
     { id: 'all-documents' as ViewMode, icon: 'p153eb300', label: 'All documents', count: 41 },
     { id: 'recent' as ViewMode, icon: 'p2b2b7000', label: 'Recently opened', count: 24 },
-    { id: 'pinned' as ViewMode, icon: 'p316b2c00', label: 'Pinned', count: 2 },
+    { id: 'pinned' as ViewMode, icon: 'p316b2c00', label: 'Pinned', count: pinnedDocumentIds?.size || 0 },
   ];
 
   const selectedOrg = organizations.find(o => o.id === selectedOrganization) || organizations[0];
@@ -1952,7 +2084,7 @@ function LeftTabsPanel({
       {/* Top section with org selector and search */}
       {!isCollapsed && viewMode !== 'collection-detail' && (
         <div className="p-[12px] border-b border-[#e8e8ec]">
-          <div className="flex items-center gap-[8px] mb-[8px] relative" ref={dropdownRef}>
+          <div className="flex items-center gap-[8px] relative" ref={dropdownRef}>
             <button 
               onClick={() => setOrgDropdownOpen(!orgDropdownOpen)}
               className="flex-1 flex items-center gap-[8px] h-[32px] px-[8px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb]"
@@ -2056,6 +2188,13 @@ function LeftTabsPanel({
 // MAIN APP LAYOUT
 // ========================================
 
+interface UploadedDocument {
+  id: string;
+  name: string;
+  type: string;
+  uploadedAt: Date;
+}
+
 export default function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('collections');
   const [aiFilter, setAiFilter] = useState<string | null>(null);
@@ -2065,6 +2204,8 @@ export default function App() {
   const [selectedCollection, setSelectedCollection] = useState<any>(null);
   const [documents, setDocuments] = useState<Document[]>(mockDocuments);
   const [selectedOrganization, setSelectedOrganization] = useState<string>('all');
+  const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
+  const [pinnedDocumentIds, setPinnedDocumentIds] = useState<Set<string>>(new Set());
 
   const handleShowAIFilter = () => {
     setAiFilter('needs-signature');
@@ -2106,6 +2247,15 @@ export default function App() {
     // Add new documents to the beginning of the list
     setDocuments(prev => [...newDocuments, ...prev]);
     
+    // Store uploaded documents for AI banner
+    const uploadedDocsForBanner: UploadedDocument[] = files.map((fileInfo, index) => ({
+      id: `uploaded-${Date.now()}-${index}`,
+      name: fileInfo.file.name,
+      type: fileInfo.file.name.split('.').pop()?.toLowerCase() || 'pdf',
+      uploadedAt: new Date()
+    }));
+    setUploadedDocuments(uploadedDocsForBanner);
+    
     // Show success toast
     const fileCount = files.length;
     const collectionCount = collections.length;
@@ -2119,6 +2269,18 @@ export default function App() {
         `${fileCount} ${fileCount === 1 ? 'document' : 'documents'} uploaded successfully`
       );
     }
+  };
+
+  const handlePinToggle = (docId: string) => {
+    setPinnedDocumentIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(docId)) {
+        newSet.delete(docId);
+      } else {
+        newSet.add(docId);
+      }
+      return newSet;
+    });
   };
 
   const handleCreateCollection = (name: string, description: string, rules: any[]) => {
@@ -2154,6 +2316,7 @@ export default function App() {
             onToggleCollapse={handleToggleLeftPanel}
             selectedOrganization={selectedOrganization}
             onOrganizationChange={setSelectedOrganization}
+            pinnedDocumentIds={pinnedDocumentIds}
           />
           <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
             {viewMode === 'collection-detail' ? (
@@ -2167,21 +2330,23 @@ export default function App() {
                 {/* Content with right panel */}
                 <div className="flex-1 flex overflow-hidden min-w-0">
                   <div className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ width: 0, flex: '1 1 0%' }}>
-                    <MainContent 
-                      viewMode={viewMode} 
-                      aiFilter={aiFilter} 
-                      onClearAIFilter={handleClearAIFilter}
-                      onUploadClick={() => setIsUploadModalOpen(true)}
-                      onNewCollectionClick={() => setIsNewCollectionModalOpen(true)}
-                      isLeftPanelCollapsed={isLeftPanelCollapsed}
-                      onToggleLeftPanel={handleToggleLeftPanel}
-                      onCollectionClick={handleCollectionClick}
-                      selectedCollection={selectedCollection}
-                      onBackFromCollection={handleBackFromCollection}
-                      documents={documents}
-                      selectedOrganization={selectedOrganization}
-                      onOrganizationChange={setSelectedOrganization}
-                    />
+          <MainContent 
+            viewMode={viewMode} 
+            aiFilter={aiFilter} 
+            onClearAIFilter={handleClearAIFilter}
+            onUploadClick={() => setIsUploadModalOpen(true)}
+            onNewCollectionClick={() => setIsNewCollectionModalOpen(true)}
+            isLeftPanelCollapsed={isLeftPanelCollapsed}
+            onToggleLeftPanel={handleToggleLeftPanel}
+            onCollectionClick={handleCollectionClick}
+            selectedCollection={selectedCollection}
+            onBackFromCollection={handleBackFromCollection}
+            documents={documents}
+            selectedOrganization={selectedOrganization}
+            onOrganizationChange={setSelectedOrganization}
+            pinnedDocumentIds={pinnedDocumentIds}
+            onPinToggle={handlePinToggle}
+          />
                   </div>
                   <div className="flex-shrink-0 flex-grow-0 border-l border-[#e8e8ec] overflow-hidden" style={{ width: '400px', minWidth: '400px', maxWidth: '400px' }}>
                     <FojoAssistantPanel />
@@ -2203,6 +2368,9 @@ export default function App() {
                 documents={documents}
                 selectedOrganization={selectedOrganization}
                 onOrganizationChange={setSelectedOrganization}
+                pinnedDocumentIds={pinnedDocumentIds}
+                onPinToggle={handlePinToggle}
+                onOrganizationChange={setSelectedOrganization}
               />
             )}
           </div>
@@ -2213,6 +2381,27 @@ export default function App() {
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
         onComplete={handleUploadComplete}
+        collectionOrganization={selectedCollection?.organization}
+      />
+
+      {/* AI Assistant Banner */}
+      <AIAssistantBanner
+        uploadedDocuments={uploadedDocuments}
+        onAddToCollection={(collectionName, docs) => {
+          toast.success(`Added ${docs.length} documents to ${collectionName} collection`);
+          setUploadedDocuments([]);
+        }}
+        onCreateCollection={(collectionName, docs) => {
+          toast.success(`Created new collection "${collectionName}" with ${docs.length} documents`);
+          setUploadedDocuments([]);
+        }}
+        onViewDetails={(suggestion) => {
+          // Open modal with details
+          console.log('View details for:', suggestion);
+        }}
+        onDismiss={() => {
+          setUploadedDocuments([]);
+        }}
       />
 
       <NewCollectionModal

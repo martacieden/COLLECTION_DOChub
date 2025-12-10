@@ -7,6 +7,7 @@ interface UploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onComplete: (files: FileInfo[], collections: string[]) => void;
+  collectionOrganization?: string;
 }
 
 interface FileInfo {
@@ -25,7 +26,7 @@ const organizations = [
   { id: 5, name: 'The Robertson Foundation', initial: 'T', color: '#98D8C8' }
 ];
 
-export function UploadModal({ isOpen, onClose, onComplete }: UploadModalProps) {
+export function UploadModal({ isOpen, onClose, onComplete, collectionOrganization }: UploadModalProps) {
   const [currentStep, setCurrentStep] = useState<UploadStep>('select');
   const [selectedOrganization, setSelectedOrganization] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<FileInfo[]>([]);
@@ -34,6 +35,20 @@ export function UploadModal({ isOpen, onClose, onComplete }: UploadModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const orgDropdownRef = useRef<HTMLDivElement>(null);
   const orgDropdownUploadingRef = useRef<HTMLDivElement>(null);
+
+  // Auto-select organization from collection when modal opens
+  useEffect(() => {
+    if (isOpen && collectionOrganization) {
+      // Check if the organization exists in the list
+      const orgExists = organizations.find(org => org.name === collectionOrganization);
+      if (orgExists) {
+        setSelectedOrganization(collectionOrganization);
+      }
+    } else if (isOpen && !collectionOrganization) {
+      // Reset to empty when opening without collection
+      setSelectedOrganization('');
+    }
+  }, [isOpen, collectionOrganization]);
 
   // Close dropdown when clicking outside
   useEffect(() => {

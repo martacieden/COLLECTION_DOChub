@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, Share, Users, FileText, Plus, ChevronDown, ChevronUp, Search, SlidersHorizontal, Grid3x3, List, TrendingUp, ArrowLeft, Upload, Sparkles, ChevronRight, MoreVertical, Loader2 } from 'lucide-react';
+import { Settings, Share, Users, FileText, Plus, ChevronDown, ChevronUp, Search, SlidersHorizontal, List, TrendingUp, ArrowLeft, Upload, Sparkles, ChevronRight, MoreVertical, Loader2 } from 'lucide-react';
 import imgAvatar from "figma:asset/faff2adb1cb08272d6a4e4d91304adea83279eb7.png";
 import imgAvatar1 from "figma:asset/248e51d98c071d09cefd9d4449f99bd2dc3797f1.png";
 import { CollectionDocumentsTable } from './CollectionDocumentsTable';
@@ -87,7 +87,7 @@ function FileIcon({ type }: { type: string }) {
         };
       case 'image':
         return {
-          bgColor: 'bg-[#FEEBEC]',
+          bgColor: 'bg-[#FEE7E9]',
           color: 'text-[#CE2C31]',
           svg: (
             <>
@@ -391,6 +391,15 @@ const baseMockCollectionDocuments = [
 
 // Collection Detail Header Component
 export function CollectionDetailHeader({ collection, onBack, onAddDocument }: CollectionDetailViewProps) {
+  // Extract emoji from icon prop (same logic as CollectionCard)
+  const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E0}-\u{1F1FF}]/u;
+  let emoji: string | null = null;
+  if (collection.icon) {
+    const trimmed = collection.icon.trim();
+    const match = trimmed.match(emojiRegex);
+    emoji = match ? match[0] : null;
+  }
+
   return (
     <div className="border-b border-[#e8e8ec] px-[64px] py-[16px] bg-white flex-shrink-0">
       <div>
@@ -406,6 +415,17 @@ export function CollectionDetailHeader({ collection, onBack, onAddDocument }: Co
                 <ArrowLeft className="size-[16px] text-[#60646c]" />
               </button>
             )}
+            
+            {/* Collection Icon */}
+            <div className="bg-[#f0f0f3] size-[32px] rounded-[6px] flex items-center justify-center text-[18px] mt-[2px]">
+              {emoji || (
+                <svg xmlns="http://www.w3.org/2000/svg" className="size-[20px]" fill="none" viewBox="0 0 16 16">
+                  <path d="M3.00586 12.7604C3.03391 12.8969 3.155 12.9995 3.29981 12.9996H12.7002L12.7607 12.9938C12.8777 12.9697 12.9701 12.8774 12.9941 12.7604L13 12.6998V8.29944C12.9999 8.15463 12.8973 8.03354 12.7607 8.00549L12.7002 7.99963V6.49963C13.6942 6.49974 14.4999 7.30548 14.5 8.29944V12.6998C14.4999 13.6938 13.6942 14.4995 12.7002 14.4996H3.29981C2.30585 14.4995 1.50011 13.6938 1.5 12.6998V8.29944C1.50011 7.30548 2.30585 6.49974 3.29981 6.49963V7.99963C3.13427 7.99974 3.00011 8.13391 3 8.29944V12.6998L3.00586 12.7604ZM12.7002 6.49963V7.99963H3.29981V6.49963H12.7002Z" fill="#60646C"/>
+                  <path d="M10.25 0.499634C10.6642 0.499634 11 0.835421 11 1.24963C11 1.66385 10.6642 1.99963 10.25 1.99963H5.75C5.33579 1.99963 5 1.66385 5 1.24963C5 0.835421 5.33579 0.499634 5.75 0.499634H10.25Z" fill="#60646C"/>
+                  <path d="M12 3.24963C12.4142 3.24963 12.75 3.58542 12.75 3.99963C12.75 4.41385 12.4142 4.74963 12 4.74963H4C3.58579 4.74963 3.25 4.41385 3.25 3.99963C3.25 3.58542 3.58579 3.24963 4 3.24963H12Z" fill="#60646C"/>
+                </svg>
+              )}
+            </div>
             
             <div>
               <div className="flex items-center gap-[12px] mb-[4px]">
@@ -523,42 +543,45 @@ export function CollectionDetailView({ collection, onBack, onAddDocument }: Coll
 
       {/* Details Section */}
       <div className="border-b border-[#e8e8ec] px-[64px] py-[16px] flex-shrink-0">
-        <button
-          onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
-          className="w-full flex items-center justify-between text-left"
-        >
+        <div className="w-full flex items-center justify-between">
           <h2 className="text-[13px] font-medium text-[#1c2024]">Details</h2>
-          {isDetailsExpanded ? (
-            <ChevronDown className="size-[16px] text-[#60646c]" />
-          ) : (
-            <ChevronRight className="size-[16px] text-[#60646c]" />
-          )}
-        </button>
+          <button
+            onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
+            className="h-[32px] w-[32px] flex items-center justify-center border border-[#e0e1e6] rounded-[6px] bg-[#f0f0f3] hover:bg-[#e0e1e6] transition-colors"
+          >
+            <ChevronDown className={`size-[16px] text-[#60646c] transition-transform ${isDetailsExpanded ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
         
         {isDetailsExpanded && (
           <div className="mt-[24px] space-y-[24px]">
-            {/* Description */}
-            <div>
-              <div className="text-[11px] text-[#8b8d98] mb-[4px] uppercase tracking-wider">Description</div>
-              <p className="text-[13px] text-[#1c2024]">
-                {collection.description || 'Premium assets worth over $1M with high ratings and active status. This smart collection automatically includes properties, aviation, and maritime assets that meet our premium criteria.'}
-              </p>
-            </div>
-
             {/* Filter Criteria */}
             {collection.rules && collection.rules.length > 0 ? (
               <div>
                 <div className="flex items-center justify-between mb-[8px]">
-                  <div className="text-[11px] text-[#8b8d98] uppercase tracking-wider">Filters</div>
+                  <div>
+                    <div className="text-[11px] text-[#8b8d98] uppercase tracking-wider mb-[4px]">Filters</div>
+                    <p className="text-[13px] text-[#1c2024]">
+                      {collection.description || 'Premium assets worth over $1M with high ratings and active status. This smart collection automatically includes properties, aviation, and maritime assets that meet our premium criteria.'}
+                    </p>
+                    {collection.autoSync && (
+                      <div className="flex items-center gap-[6px] text-[11px] text-[#60646c] mt-[4px]">
+                        <svg className="size-[12px]" fill="none" viewBox="0 0 12 12">
+                          <path d="M6 1v2M6 9v2M1 6h2M9 6h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                        </svg>
+                        <span>Auto-sync enabled - collection updates automatically when rules change</span>
+                      </div>
+                    )}
+                  </div>
                   <button className="text-[13px] text-[#005be2] hover:underline flex items-center gap-[4px]">
                     <span>Customize</span>
                   </button>
                 </div>
-                <div className="flex flex-wrap gap-[8px]">
+                <div className="flex flex-wrap gap-[6px]">
                   {collection.rules.map((rule, index) => (
                     <div
                       key={index}
-                      className="px-[12px] py-[6px] bg-[#f0f0f3] rounded-[6px] text-[13px] text-[#1c2024]"
+                      className="px-[8px] py-[3px] bg-[#f9fafb] border border-[#e8e8ec] rounded-[4px] text-[11px] text-[#60646c]"
                     >
                       {rule}
                     </div>
@@ -567,7 +590,20 @@ export function CollectionDetailView({ collection, onBack, onAddDocument }: Coll
               </div>
             ) : (
               <div>
-                <div className="text-[11px] text-[#8b8d98] mb-[8px] uppercase tracking-wider">Filters</div>
+                <div className="mb-[8px]">
+                  <div className="text-[11px] text-[#8b8d98] mb-[4px] uppercase tracking-wider">Filters</div>
+                  <p className="text-[13px] text-[#1c2024] mb-[4px]">
+                    {collection.description || 'Premium assets worth over $1M with high ratings and active status. This smart collection automatically includes properties, aviation, and maritime assets that meet our premium criteria.'}
+                  </p>
+                  {collection.autoSync && (
+                    <div className="flex items-center gap-[6px] text-[11px] text-[#60646c]">
+                      <svg className="size-[12px]" fill="none" viewBox="0 0 12 12">
+                        <path d="M6 1v2M6 9v2M1 6h2M9 6h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      </svg>
+                      <span>Auto-sync enabled - collection updates automatically when rules change</span>
+                    </div>
+                  )}
+                </div>
                 <div className="space-y-[12px]">
                   <div>
                     <p className="text-[13px] text-[#1c2024] mb-[8px]">
@@ -600,25 +636,47 @@ export function CollectionDetailView({ collection, onBack, onAddDocument }: Coll
                 </div>
               </div>
             )}
-
-            {/* Auto-sync Notice */}
-            {collection.autoSync && (
-              <div className="flex items-center gap-[6px] text-[11px] text-[#60646c]">
-                <svg className="size-[12px]" fill="none" viewBox="0 0 12 12">
-                  <path d="M6 1v2M6 9v2M1 6h2M9 6h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-                <span>Auto-sync enabled - collection updates automatically when rules change</span>
-              </div>
-            )}
           </div>
         )}
       </div>
 
       {/* Filter Bar */}
       <div className="border-b border-[#e8e8ec] px-[64px] py-[12px] bg-white flex-shrink-0 min-w-0 w-full max-w-full">
-        <div className="flex items-center gap-[8px] min-w-0">
-          {/* View Switcher (Grid Icon first) */}
-          <div className="flex items-center border border-[#e0e1e6] rounded-[6px]">
+        <div className="flex items-center justify-between gap-[8px] min-w-0">
+          <div className="flex items-center gap-[8px] min-w-0">
+            {/* Filters Button */}
+            <button className="h-[32px] px-[8px] flex items-center gap-[8px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] bg-white">
+              <SlidersHorizontal className="size-[16px] text-[#60646c]" />
+              <span className="text-[12px] font-semibold">Filters</span>
+            </button>
+
+            {/* Search Input */}
+            <div className="relative" style={{ width: '256px' }}>
+              <input
+                type="text"
+                value={filterQuery}
+                onChange={(e) => setFilterQuery(e.target.value)}
+                placeholder='Filter documents (e.g., "signed last month")...'
+                className="w-full h-[32px] px-[12px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] placeholder:text-[#8b8d98] focus:outline-none focus:ring-2 focus:ring-[#005be2] focus:border-transparent"
+              />
+            </div>
+
+            {/* Apply Button */}
+            <button className="h-[32px] px-[12px] flex items-center gap-[4px] bg-[#f0f0f3] rounded-[6px] text-[13px] text-[#b9bbc6] hover:bg-[#e0e1e6]">
+              <Sparkles className="size-[16px]" />
+              <span className="text-[13px] font-semibold">Apply</span>
+            </button>
+
+            {/* Column Count */}
+            {viewMode === 'table' && (
+              <span className="text-[13px] text-[#60646c] whitespace-nowrap">
+                {visibleColumnsCount}/{visibleColumnsCount} columns
+              </span>
+            )}
+          </div>
+
+          {/* View Switcher (Grid Icon first) - Right side */}
+          <div className="flex items-center border border-[#e0e1e6] rounded-[6px] flex-shrink-0">
             <button
               onClick={() => setViewMode('grid')}
               className={`h-[32px] w-[32px] flex items-center justify-center rounded-l-[6px] transition-colors ${
@@ -627,7 +685,13 @@ export function CollectionDetailView({ collection, onBack, onAddDocument }: Coll
                   : 'text-[#60646c] hover:bg-[#f9fafb]'
               }`}
             >
-              <Grid3x3 className="size-[16px]" />
+              <svg className="size-[16px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+                <path d="M3 9h18"></path>
+                <path d="M3 15h18"></path>
+                <path d="M9 3v18"></path>
+                <path d="M15 3v18"></path>
+              </svg>
             </button>
             <button
               onClick={() => setViewMode('table')}
@@ -640,36 +704,6 @@ export function CollectionDetailView({ collection, onBack, onAddDocument }: Coll
               <List className="size-[16px]" />
             </button>
           </div>
-
-          {/* Filters Button */}
-          <button className="h-[32px] px-[8px] flex items-center gap-[8px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] bg-white">
-            <SlidersHorizontal className="size-[16px] text-[#60646c]" />
-            <span className="text-[12px] font-semibold">Filters</span>
-          </button>
-
-          {/* Search Input */}
-          <div className="relative" style={{ width: '256px' }}>
-            <input
-              type="text"
-              value={filterQuery}
-              onChange={(e) => setFilterQuery(e.target.value)}
-              placeholder='Filter documents (e.g., "signed last month")...'
-              className="w-full h-[32px] px-[12px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] placeholder:text-[#8b8d98] focus:outline-none focus:ring-2 focus:ring-[#005be2] focus:border-transparent"
-            />
-          </div>
-
-          {/* Apply Button */}
-          <button className="h-[32px] px-[12px] flex items-center gap-[4px] bg-[#f0f0f3] rounded-[6px] text-[13px] text-[#b9bbc6] hover:bg-[#e0e1e6]">
-            <Sparkles className="size-[16px]" />
-            <span className="text-[13px] font-semibold">Apply</span>
-          </button>
-
-          {/* Column Count */}
-          {viewMode === 'table' && (
-            <span className="text-[13px] text-[#60646c] whitespace-nowrap">
-              {visibleColumnsCount}/{visibleColumnsCount} columns
-            </span>
-          )}
         </div>
       </div>
 
@@ -847,7 +881,7 @@ export function CollectionDetailView({ collection, onBack, onAddDocument }: Coll
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[16px] px-[24px]">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-[16px] px-[24px] pt-[24px] pb-[24px]">
               {filteredDocuments.map((doc) => (
               <div
                 key={doc.id}

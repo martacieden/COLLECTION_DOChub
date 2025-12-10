@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Checkbox } from './ui/checkbox';
-import { MoreVertical, FileText, Sparkles, SlidersHorizontal, List } from 'lucide-react';
+import { MoreVertical, FileText, Sparkles, SlidersHorizontal, List, Pin } from 'lucide-react';
 import svgPaths from "../imports/svg-ylbe71kelt";
+import { DocumentCard } from './DocumentCard';
 
 interface Document {
   id: string;
@@ -28,10 +29,12 @@ interface AllDocumentsTableProps {
   selectedOrganization?: string;
   onOrganizationChange?: (orgId: string) => void;
   organizations?: Organization[];
+  pinnedDocumentIds?: Set<string>;
+  onPinToggle?: (docId: string) => void;
 }
 
 // FileIcon component для визначення типу файлу та іконки
-function FileIcon({ type }: { type: string }) {
+export function FileIcon({ type }: { type: string }) {
   const ext = type.toLowerCase();
   
   const getIconType = () => {
@@ -63,7 +66,7 @@ function FileIcon({ type }: { type: string }) {
         };
       case 'image':
         return {
-          bgColor: 'bg-[#FEEBEC]',
+          bgColor: 'bg-[#FEE7E9]',
           color: 'text-[#CE2C31]',
           svg: (
             <>
@@ -280,10 +283,13 @@ export function AllDocumentsTable({
   documents = mockDocuments, 
   selectedOrganization = 'all',
   onOrganizationChange,
-  organizations = defaultOrganizations
+  organizations = defaultOrganizations,
+  pinnedDocumentIds,
+  onPinToggle
 }: AllDocumentsTableProps) {
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [filterQuery, setFilterQuery] = useState<string>('');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   const handleSelectDocument = (docId: string) => {
     setSelectedDocuments(prev => 
@@ -331,42 +337,76 @@ export function AllDocumentsTable({
     <div className="flex-1 flex flex-col overflow-hidden bg-white min-w-0">
       {/* Filter Bar */}
       <div className="border-b border-[#e8e8ec] px-[24px] py-[12px] bg-white flex-shrink-0 min-w-0 w-full max-w-full">
-        <div className="flex items-center gap-[8px] min-w-0">
-          {/* Filters Button */}
-          <button className="h-[32px] px-[8px] flex items-center gap-[8px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] bg-white">
-            <SlidersHorizontal className="size-[16px] text-[#60646c]" />
-            <span className="text-[12px] font-semibold">Filters</span>
-          </button>
+        <div className="flex items-center justify-between gap-[8px] min-w-0">
+          <div className="flex items-center gap-[8px] min-w-0">
+            {/* Filters Button */}
+            <button className="h-[32px] px-[8px] flex items-center gap-[8px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] bg-white">
+              <SlidersHorizontal className="size-[16px] text-[#60646c]" />
+              <span className="text-[12px] font-semibold">Filters</span>
+            </button>
 
-          {/* Search Input */}
-          <div className="relative" style={{ width: '256px' }}>
-            <input
-              type="text"
-              value={filterQuery}
-              onChange={(e) => setFilterQuery(e.target.value)}
-              placeholder='Filter documents (e.g., "signed last month")...'
-              className="w-full h-[32px] px-[12px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] placeholder:text-[#8b8d98] focus:outline-none focus:ring-2 focus:ring-[#005be2] focus:border-transparent"
-            />
+            {/* Search Input */}
+            <div className="relative" style={{ width: '256px' }}>
+              <input
+                type="text"
+                value={filterQuery}
+                onChange={(e) => setFilterQuery(e.target.value)}
+                placeholder='Filter documents (e.g., "signed last month")...'
+                className="w-full h-[32px] px-[12px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] placeholder:text-[#8b8d98] focus:outline-none focus:ring-2 focus:ring-[#005be2] focus:border-transparent"
+              />
+            </div>
+
+            {/* Apply Button */}
+            <button className="h-[32px] px-[12px] flex items-center gap-[4px] bg-[#f0f0f3] rounded-[6px] text-[13px] text-[#b9bbc6] hover:bg-[#e0e1e6]">
+              <Sparkles className="size-[16px]" />
+              <span className="text-[13px] font-semibold">Apply</span>
+            </button>
+
+            {/* Column Count */}
+            {viewMode === 'table' && (
+              <span className="text-[13px] text-[#60646c] whitespace-nowrap">
+                {visibleColumnsCount}/{visibleColumnsCount} columns
+              </span>
+            )}
           </div>
 
-          {/* Apply Button */}
-          <button className="h-[32px] px-[12px] flex items-center gap-[4px] bg-[#f0f0f3] rounded-[6px] text-[13px] text-[#b9bbc6] hover:bg-[#e0e1e6]">
-            <Sparkles className="size-[16px]" />
-            <span className="text-[13px] font-semibold">Apply</span>
-          </button>
-
-          {/* Column Count */}
-          <span className="text-[13px] text-[#60646c] whitespace-nowrap">
-            {visibleColumnsCount}/{visibleColumnsCount} columns
-          </span>
+          {/* View Switcher (Grid Icon first) - Right side */}
+          <div className="flex items-center border border-[#e0e1e6] rounded-[6px] flex-shrink-0">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`h-[32px] w-[32px] flex items-center justify-center rounded-l-[6px] transition-colors ${
+                viewMode === 'grid' 
+                  ? 'bg-[#f0f0f3] text-[#1c2024]' 
+                  : 'text-[#60646c] hover:bg-[#f9fafb]'
+              }`}
+            >
+              <svg className="size-[16px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+                <path d="M3 9h18"></path>
+                <path d="M3 15h18"></path>
+                <path d="M9 3v18"></path>
+                <path d="M15 3v18"></path>
+              </svg>
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`h-[32px] w-[32px] flex items-center justify-center rounded-r-[6px] transition-colors ${
+                viewMode === 'table' 
+                  ? 'bg-[#f0f0f3] text-[#1c2024]' 
+                  : 'text-[#60646c] hover:bg-[#f9fafb]'
+              }`}
+            >
+              <List className="size-[16px]" />
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Documents Table */}
-      <div className="flex-1 overflow-hidden pb-[16px] min-w-0 flex flex-col">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden pb-[16px] min-w-0 flex flex-col">
         {/* Bulk Actions Bar */}
         {selectedDocuments.length > 0 && (
-          <div className="mb-[16px] px-[24px]">
+          <div className="mb-[16px] px-[24px] pt-[24px]">
             <div className="bg-[#f0f0f3] border border-[#e0e1e6] rounded-[8px] px-[24px] py-[12px] flex items-center justify-between">
               <div className="flex items-center gap-[12px]">
                 <span className="text-[13px] text-[#1c2024]">{selectedDocuments.length} selected</span>
@@ -378,6 +418,19 @@ export function AllDocumentsTable({
                 </button>
               </div>
               <div className="flex items-center gap-[8px]">
+                <button
+                  onClick={() => {
+                    if (onPinToggle) {
+                      // Toggle pin status for all selected documents
+                      selectedDocuments.forEach(docId => {
+                        onPinToggle(docId);
+                      });
+                    }
+                  }}
+                  className="size-[24px] rounded-[4px] flex items-center justify-center transition-colors bg-white/80 hover:bg-white border border-[#e0e1e6] text-[#60646c] hover:text-[#1c2024]"
+                >
+                  <Pin className="size-[14px]" />
+                </button>
                 <button className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb]">
                   Remove from collection
                 </button>
@@ -399,7 +452,7 @@ export function AllDocumentsTable({
         )}
 
         {filteredDocuments.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center" style={{ paddingTop: '36px' }}>
+          <div className="flex-1 flex flex-col items-center justify-center text-center pt-[24px]">
             <div className="bg-[#f0f0f3] text-[#60646c] rounded-[8px] size-[28px] grid place-items-center mb-[16px]">
               <FileText className="size-[16px]" />
             </div>
@@ -407,6 +460,18 @@ export function AllDocumentsTable({
               <h2 className="text-[16px] font-medium mb-[4px]">No documents to show</h2>
               <p className="text-[13px] leading-[20px]">Upload a document to get started</p>
             </div>
+          </div>
+        ) : viewMode === 'grid' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[16px] px-[24px] pt-[24px] pb-[24px]">
+            {filteredDocuments.map((doc) => (
+              <DocumentCard
+                key={doc.id}
+                document={doc}
+                isSelected={selectedDocuments.includes(doc.id)}
+                onSelect={handleSelectDocument}
+                isPinned={pinnedDocumentIds?.has(doc.id) || false}
+              />
+            ))}
           </div>
         ) : (
           <div className="flex-1 min-w-0 overflow-x-auto overflow-y-auto">
