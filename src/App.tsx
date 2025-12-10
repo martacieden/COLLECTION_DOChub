@@ -2056,6 +2056,7 @@ function MainContent({
 
 function FojoAssistantPanel({ collection, documents }: { collection?: any; documents?: Document[] }) {
   // Generate AI summary based on collection state
+  // Fojo analyzes in priority order: Documents > Rules > Description > Title
   const generateSummary = (): string => {
     if (!collection) {
       return "Select a collection to see AI-generated insights and suggestions.";
@@ -2067,73 +2068,137 @@ function FojoAssistantPanel({ collection, documents }: { collection?: any; docum
       : [];
     
     const hasDocuments = collectionDocuments.length > 0;
-    const hasRules = collection.rules && collection.rules.length > 0;
+    const enabledRules = collection.rules ? collection.rules.filter((r: CollectionRule) => r.enabled) : [];
+    const hasRules = enabledRules.length > 0;
     const hasDescription = collection.description && collection.description.trim().length > 0;
 
     // Case A: Collection has documents
+    // Fojo analyzes documents first, then rules, then description
     if (hasDocuments) {
-      // Analyze document patterns
-      const docTypes = [...new Set(collectionDocuments.map(d => d.type))];
+      // Analyze document patterns: types, themes, dates, entities
+      const docTypes = [...new Set(collectionDocuments.map(d => d.type).filter(Boolean))];
       const docCategories = [...new Set(collectionDocuments.map(d => d.category).filter((cat): cat is string => Boolean(cat)))];
       const docOrganizations = [...new Set(collectionDocuments.map(d => d.organization).filter(Boolean))];
+      const docTags = [...new Set(collectionDocuments.flatMap(d => d.tags || []))];
       
+      // Analyze dates
+      const dates = collectionDocuments.map(d => d.uploadedOn).filter(Boolean);
+      const dateYears = [...new Set(dates.map(d => {
+        const match = d?.match(/\d{4}/);
+        return match ? match[0] : null;
+      }).filter(Boolean))];
+      
+      // Build summary based on what documents represent
       let summary = `This collection contains ${collectionDocuments.length} ${collectionDocuments.length === 1 ? 'document' : 'documents'}`;
       
+      // Identify patterns
       if (docTypes.length > 0) {
-        summary += `, including ${docTypes.slice(0, 3).join(', ')}${docTypes.length > 3 ? ' and more' : ''} files`;
+        summary += `, primarily ${docTypes.slice(0, 3).join(', ')}${docTypes.length > 3 ? ' and more' : ''} files`;
       }
       
       if (docCategories.length > 0) {
-        summary += `. Categories: ${docCategories.slice(0, 2).join(', ')}${docCategories.length > 2 ? ' and more' : ''}`;
+        summary += `. Themes include: ${docCategories.slice(0, 2).join(', ')}${docCategories.length > 2 ? ' and more' : ''}`;
       }
       
       if (docOrganizations.length > 0) {
-        summary += `. Related to: ${docOrganizations.slice(0, 2).join(', ')}${docOrganizations.length > 2 ? ' and more' : ''}`;
+        summary += `. Related entities: ${docOrganizations.slice(0, 2).join(', ')}${docOrganizations.length > 2 ? ' and more' : ''}`;
+      }
+      
+      if (dateYears.length > 0) {
+        summary += `. Dates span: ${dateYears.sort().join(', ')}`;
+      }
+      
+      if (docTags.length > 0) {
+        summary += `. Common tags: ${docTags.slice(0, 3).join(', ')}${docTags.length > 3 ? ' and more' : ''}`;
       }
       
       summary += '.';
       
-      // Suggest improvements if no rules
+      // Suggest opportunities for improvements
       if (!hasRules && collectionDocuments.length >= 3) {
-        summary += ' You may want to add rules to automatically include similar documents.';
+        // Analyze what type of documents are here to suggest specific rules
+        const hasTaxDocs = collectionDocuments.some(d => 
+          d.name.toLowerCase().includes('tax') || 
+          d.name.toLowerCase().includes('irs') ||
+          d.tags?.some(t => t.toLowerCase().includes('tax'))
+        );
+        
+        if (hasTaxDocs) {
+          summary += ' You may want to add a rule for tax documents detected here.';
+        } else if (docTypes.length === 1) {
+          summary += ` You may want to add a rule to automatically include ${docTypes[0]} files.`;
+        } else {
+          summary += ' You may want to add rules to automatically include similar documents.';
+        }
       }
       
       return summary;
     }
 
     // Case B: Collection has rules but no documents
+    // Fojo summarizes what rules imply and suggests examples
     if (hasRules && !hasDocuments) {
-      const rulesDescription = collection.rules.slice(0, 2).join(', ');
-      let summary = `This collection has automation rules configured: ${rulesDescription}`;
-      if (collection.rules.length > 2) {
-        summary += ` and ${collection.rules.length - 2} more`;
-      }
-      summary += '. Documents that match these criteria will be automatically added to this collection.';
+      // Format rules for display
+      const ruleDescriptions = enabledRules.slice(0, 3).map((rule: CollectionRule) => {
+        const operatorText = rule.operator === 'is' || rule.operator === 'equals' 
+          ? 'is' 
+          : rule.operator === 'contains' 
+          ? 'contains' 
+          : rule.operator === 'not'
+          ? 'not'
+          : rule.operator;
+        
+        return `${rule.label || rule.type} ${operatorText} "${rule.value}"`;
+      });
       
-      // Suggest examples
-      if (collection.rules.some((r: string) => r.toLowerCase().includes('tax'))) {
-        summary += ' For example, tax documents matching your criteria would appear here.';
-      } else if (collection.rules.some((r: string) => r.toLowerCase().includes('contract'))) {
-        summary += ' For example, contracts matching your criteria would appear here.';
+      let summary = `This collection has automation rules configured: ${ruleDescriptions.join(', ')}`;
+      if (enabledRules.length > 3) {
+        summary += ` and ${enabledRules.length - 3} more`;
+      }
+      summary += '.';
+      
+      // Suggest examples of documents that would match
+      const ruleTypes = [...new Set(enabledRules.map((r: CollectionRule) => r.type))];
+      const hasTaxRule = enabledRules.some((r: CollectionRule) => 
+        r.value.toLowerCase().includes('tax') || 
+        r.type === 'keywords' && r.value.toLowerCase().includes('tax')
+      );
+      const hasContractRule = enabledRules.some((r: CollectionRule) => 
+        r.value.toLowerCase().includes('contract') || 
+        r.value.toLowerCase().includes('agreement')
+      );
+      
+      if (hasTaxRule) {
+        summary += ' Documents matching your tax criteria (e.g., tax returns, W-2s, 1099s) would automatically appear here.';
+      } else if (hasContractRule) {
+        summary += ' Documents matching your contract criteria (e.g., agreements, leases, terms) would automatically appear here.';
+      } else if (ruleTypes.includes('document_type')) {
+        const typeRule = enabledRules.find((r: CollectionRule) => r.type === 'document_type');
+        if (typeRule) {
+          summary += ` Documents of type "${typeRule.value}" matching your criteria would automatically appear here.`;
+        }
       } else {
-        summary += ' Start uploading or creating documents that match your rules to see them appear here.';
+        summary += ' Start uploading or creating documents that match your rules to see them appear here automatically.';
       }
       
       return summary;
     }
 
     // Case C: Collection has description but no rules and no documents
+    // Fojo interprets description and suggests first steps
     if (hasDescription && !hasRules && !hasDocuments) {
       let summary = `Based on your description: "${collection.description.substring(0, 100)}${collection.description.length > 100 ? '...' : ''}"`;
-      summary += ' You can add documents manually or set up automation rules to automatically include documents that match your criteria.';
+      summary += ' This collection is ready to use.';
+      summary += ' You can add documents manually, or set up automation rules to automatically include documents that match your criteria.';
       summary += ' Consider adding rules to make this collection automatically sync with new documents.';
       
       return summary;
     }
 
     // Case D: Collection has only a title
+    // Fojo must NOT hallucinate - explicitly say what's missing
     if (!hasDescription && !hasRules && !hasDocuments) {
-      return `"${collection.title}" is a new collection. Add a description to help AI understand what this collection is for, or start adding documents. You can also set up automation rules to automatically include matching documents.`;
+      return `"${collection.title}" is a new collection with no content yet. To help me understand what this collection is for, please add a description. You can also start adding documents manually, or set up automation rules to automatically include matching documents.`;
     }
 
     return "Analyzing collection...";
@@ -2150,17 +2215,25 @@ function FojoAssistantPanel({ collection, documents }: { collection?: any; docum
       : [];
     
     const hasDocuments = collectionDocuments.length > 0;
-    const hasRules = collection.rules && collection.rules.length > 0;
+    const enabledRules = collection.rules ? collection.rules.filter((r: CollectionRule) => r.enabled) : [];
+    const hasRules = enabledRules.length > 0;
     const hasDescription = collection.description && collection.description.trim().length > 0;
 
+    // Case A: Has documents - grounded in real content
     if (hasDocuments) {
-      return "I've analyzed the documents in this collection. I can help you understand patterns, find relationships, and suggest improvements. What would you like to know?";
-    } else if (hasRules) {
-      return "This collection has automation rules set up. I can help you understand what documents would match these rules and suggest ways to refine them.";
-    } else if (hasDescription) {
-      return "I see you've described what this collection is for. I can help you set up rules, find relevant documents, or refine your description.";
-    } else {
-      return "This is a new collection. I can help you add a description, set up automation rules, or find documents to add. What would you like to do?";
+      return "I've analyzed the documents in this collection. I can help you understand patterns, identify themes, find relationships between documents, and suggest opportunities for improvements. What would you like to know?";
+    } 
+    // Case B: Has rules but no documents - grounded in rules
+    else if (hasRules) {
+      return "This collection has automation rules configured. I can help you understand what types of documents would match these rules and suggest examples. I can also help you refine the rules to better match your needs.";
+    } 
+    // Case C: Has description but no rules and no documents
+    else if (hasDescription) {
+      return "I see you've described what this collection is for. I can help you set up automation rules based on your description, find relevant documents from your library, or help refine your description to be more specific.";
+    } 
+    // Case D: Only title - must not hallucinate
+    else {
+      return "This is a new collection. To help me assist you better, please add a description explaining what this collection is meant for. I can then help you set up automation rules or find documents to add. What would you like this collection to contain?";
     }
   };
 
@@ -2681,6 +2754,24 @@ export default function App() {
       }
     });
     
+    // Якщо завантаження відбувається зі сторінки колекції, автоматично додаємо документи до неї
+    if (selectedCollection && viewMode === 'collection-detail') {
+      const docIds = newDocuments.map(doc => doc.id!);
+      const collectionIndex = updatedCollections.findIndex(col => col.id === selectedCollection.id);
+      if (collectionIndex !== -1) {
+        const collection = updatedCollections[collectionIndex];
+        updatedCollections[collectionIndex] = {
+          ...collection,
+          documentIds: [...new Set([...(collection.documentIds || []), ...docIds])],
+          count: (collection.documentIds?.length || 0) + docIds.length
+        };
+        // Додаємо до selectedCollections, щоб документи отримали правильні collectionIds
+        if (!selectedCollections.includes(selectedCollection.title)) {
+          selectedCollections.push(selectedCollection.title);
+        }
+      }
+    }
+    
     // Оновлюємо collectionIds в документах
     const documentsWithCollections = newDocuments.map(doc => {
       const docCollectionIds: string[] = [];
@@ -2712,6 +2803,14 @@ export default function App() {
     setCollections(updatedCollections);
     // Зберігаємо в localStorage
     saveCollectionsToStorage(updatedCollections);
+    
+    // Оновлюємо selectedCollection якщо документи додано до поточної колекції
+    if (selectedCollection) {
+      const updatedSelectedCollection = updatedCollections.find(col => col.id === selectedCollection.id);
+      if (updatedSelectedCollection) {
+        setSelectedCollection(updatedSelectedCollection);
+      }
+    }
     
     // Add new documents to the beginning of the list
     setDocuments(prev => [...documentsWithCollections, ...prev]);

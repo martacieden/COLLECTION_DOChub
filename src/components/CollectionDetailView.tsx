@@ -407,7 +407,7 @@ export function CollectionDetailHeader({ collection, onBack, onAddDocument }: Co
 
   return (
     <div className="border-b border-[#e8e8ec] px-[24px] pt-[16px] pb-[8px] bg-white flex-shrink-0">
-      <div>
+      <div className="pt-[16px]">
         {/* Title Row */}
         <div className="flex items-start justify-between mb-[8px]">
           <div className="flex items-start gap-[12px]">
@@ -693,9 +693,9 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
         )}
 
         {/* Documents Content */}
-        <div className="pb-[16px] pt-0 min-w-0 flex flex-col">
+        <div className="pb-[16px] pt-0 min-w-0 flex flex-col flex-1">
           {filteredDocuments.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center min-h-0">
+            <div className="flex-1 flex flex-col items-center justify-center text-center py-[120px]">
               <div className="bg-[#f0f0f3] text-[#60646c] rounded-[8px] size-[28px] grid place-items-center mb-[16px]">
                 <FileText className="size-[16px]" />
               </div>
