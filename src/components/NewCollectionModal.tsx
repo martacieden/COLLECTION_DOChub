@@ -1,11 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Sparkles, Check, Loader2, Tag, FileText, Calendar, User, Building, ChevronRight, Search, ChevronDown, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+
+interface Document {
+  id: string;
+  name: string;
+  type?: string;
+  category?: string;
+  tags?: string[];
+  organization?: string;
+  uploadedOn?: string;
+}
 
 interface NewCollectionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreateCollection: (name: string, description: string, rules: CollectionRule[]) => void;
+  selectedDocuments?: Document[]; // Документи для створення колекції
 }
 
 interface CollectionRule {
@@ -35,7 +46,7 @@ const ruleTypeColors = {
   vendor: 'bg-[#FEF8E6] text-[#D97706]',
 };
 
-export function NewCollectionModal({ isOpen, onClose, onCreateCollection }: NewCollectionModalProps) {
+export function NewCollectionModal({ isOpen, onClose, onCreateCollection, selectedDocuments = [] }: NewCollectionModalProps) {
   const [collectionName, setCollectionName] = useState('');
   const [description, setDescription] = useState('');
   const [generatedRules, setGeneratedRules] = useState<CollectionRule[]>([]);
@@ -44,6 +55,111 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection }: NewC
   const [isRulesExpanded, setIsRulesExpanded] = useState(false);
   const [matchedDocCount, setMatchedDocCount] = useState(0);
   const [nameError, setNameError] = useState('');
+
+  // Генеруємо AI suggestions на основі вибраних документів
+  const generateSuggestionsFromDocuments = (docs: Document[]): CollectionRule[] => {
+    if (docs.length === 0) return [];
+
+    const rules: CollectionRule[] = [];
+    
+    // Аналізуємо типи документів
+    const docTypes = [...new Set(docs.map(d => d.type).filter(Boolean))];
+    if (docTypes.length > 0 && docTypes.length <= 3) {
+      docTypes.forEach(type => {
+        rules.push({
+          id: `rule-type-${type}`,
+          type: 'document_type',
+          label: 'Document Type',
+          value: type || '',
+          operator: 'is',
+          enabled: true
+        });
+      });
+    }
+
+    // Аналізуємо категорії
+    const categories = [...new Set(docs.map(d => d.category).filter(Boolean))];
+    if (categories.length > 0 && categories.length <= 2) {
+      categories.forEach(cat => {
+        rules.push({
+          id: `rule-category-${cat}`,
+          type: 'keywords',
+          label: 'Category',
+          value: cat || '',
+          operator: 'contains',
+          enabled: true
+        });
+      });
+    }
+
+    // Аналізуємо теги
+    const allTags = docs.flatMap(d => d.tags || []);
+    const tagCounts: Record<string, number> = {};
+    allTags.forEach(tag => {
+      tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+    });
+    const commonTags = Object.entries(tagCounts)
+      .filter(([_, count]) => count >= Math.ceil(docs.length / 2))
+      .map(([tag]) => tag)
+      .slice(0, 3);
+    
+    if (commonTags.length > 0) {
+      rules.push({
+        id: 'rule-tags',
+        type: 'tags',
+        label: 'Tags',
+        value: commonTags.join(', '),
+        operator: 'contains',
+        enabled: true
+      });
+    }
+
+    // Аналізуємо організації
+    const organizations = [...new Set(docs.map(d => d.organization).filter(Boolean))];
+    if (organizations.length === 1) {
+      rules.push({
+        id: 'rule-org',
+        type: 'client',
+        label: 'Organization',
+        value: organizations[0] || '',
+        operator: 'is',
+        enabled: true
+      });
+    }
+
+    return rules;
+  };
+
+  // При відкритті modal з вибраними документами, автоматично генеруємо suggestions
+  useEffect(() => {
+    if (isOpen && selectedDocuments.length > 0 && generatedRules.length === 0) {
+      const suggestions = generateSuggestionsFromDocuments(selectedDocuments);
+      if (suggestions.length > 0) {
+        setGeneratedRules(suggestions);
+        setShowRulesBlock(true);
+        setMatchedDocCount(selectedDocuments.length);
+      }
+      
+      // Генеруємо автоматичну назву та опис
+      if (!collectionName) {
+        const docTypes = [...new Set(selectedDocuments.map(d => d.type).filter(Boolean))];
+        const categories = [...new Set(selectedDocuments.map(d => d.category).filter(Boolean))];
+        
+        if (categories.length > 0) {
+          setCollectionName(`${categories[0]} Documents`);
+        } else if (docTypes.length > 0) {
+          setCollectionName(`${docTypes[0]} Files`);
+        } else {
+          setCollectionName(`Collection from ${selectedDocuments.length} documents`);
+        }
+      }
+      
+      if (!description) {
+        setDescription(`Collection created from ${selectedDocuments.length} selected ${selectedDocuments.length === 1 ? 'document' : 'documents'}.`);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, selectedDocuments.length]);
 
   if (!isOpen) return null;
 

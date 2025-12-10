@@ -10,6 +10,7 @@ interface BulkActionsBarProps {
   showRemoveFromCollection?: boolean; // Показувати кнопку "Remove from collection"
   onRemoveFromCollection?: () => void;
   onAddToCollection?: () => void; // Додати документи до колекції
+  onCreateCollection?: () => void; // Створити колекцію з вибраних документів
   onDelete?: () => void; // Видалити документи
   onExport?: () => void; // Експортувати документи
   onShare?: () => void; // Поділитися документами
@@ -27,6 +28,7 @@ export function BulkActionsBar({
   showRemoveFromCollection = false,
   onRemoveFromCollection,
   onAddToCollection,
+  onCreateCollection,
   onDelete,
   onExport,
   onShare,
@@ -66,6 +68,15 @@ export function BulkActionsBar({
                   <span>Pin</span>
                 </>
               )}
+            </button>
+          )}
+          {onCreateCollection && (
+            <button 
+              onClick={onCreateCollection}
+              className="h-[32px] px-[12px] bg-[#005be2] rounded-[6px] text-[13px] text-white hover:bg-[#0047b3] flex items-center gap-[6px]"
+            >
+              <Plus className="size-[14px]" />
+              <span>Create Collection</span>
             </button>
           )}
           {onAddToCollection && (

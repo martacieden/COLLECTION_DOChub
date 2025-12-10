@@ -9,6 +9,7 @@ import imgAvatar from "./assets/faff2adb1cb08272d6a4e4d91304adea83279eb7.png";
 import imgAvatar1 from "./assets/248e51d98c071d09cefd9d4449f99bd2dc3797f1.png";
 import { UploadModal } from './components/UploadModal';
 import { NewCollectionModal } from './components/NewCollectionModal';
+import { AddToCollectionModal } from './components/AddToCollectionModal';
 import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner';
 import { CollectionDetailView, CollectionDetailHeader } from './components/CollectionDetailView';
@@ -1906,7 +1907,7 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
           </>
         ) : (
           // Grid/Card View
-          <div className="grid gap-[16px] w-full p-[24px]" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))' }}>
+          <div className="grid gap-[16px] w-full px-[24px] pb-[24px]" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))' }}>
             {filteredCollections.length > 0 ? (
               filteredCollections.map((collection) => (
                 <CollectionCard 
@@ -1949,7 +1950,9 @@ function MainContent({
   onPinToggle,
   collections,
   onRemoveFromCollection,
-  onDelete
+  onDelete,
+  onAddToCollection,
+  onCreateCollection
 }: { 
   viewMode: ViewMode; 
   aiFilter?: string | null;
@@ -1969,6 +1972,8 @@ function MainContent({
   collections?: Collection[];
   onRemoveFromCollection?: (collectionId: string, documentIds: string[]) => void;
   onDelete?: (documentIds: string[]) => void;
+  onAddToCollection?: (documentIds: string[]) => void;
+  onCreateCollection?: (documentIds: string[]) => void;
 }) {
   if (viewMode === 'collection-detail' && selectedCollection) {
     return (
@@ -1977,6 +1982,7 @@ function MainContent({
         onBack={onBackFromCollection}
         onAddDocument={onUploadClick}
         onRemoveFromCollection={onRemoveFromCollection}
+        onDelete={onDelete}
         documents={documents}
       />
     );
@@ -2001,6 +2007,8 @@ function MainContent({
           onPinToggle={onPinToggle}
           collections={collectionsList}
           onDelete={onDelete}
+          onAddToCollection={onAddToCollection}
+          onCreateCollection={onCreateCollection}
         />
       </div>
     );
@@ -2577,6 +2585,9 @@ export default function App() {
   const [aiFilter, setAiFilter] = useState<string | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isNewCollectionModalOpen, setIsNewCollectionModalOpen] = useState(false);
+  const [isAddToCollectionModalOpen, setIsAddToCollectionModalOpen] = useState(false);
+  const [selectedDocumentsForCollection, setSelectedDocumentsForCollection] = useState<string[]>([]);
+  const [selectedDocumentsForNewCollection, setSelectedDocumentsForNewCollection] = useState<Document[]>([]);
   const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState(false);
   const [selectedCollection, setSelectedCollection] = useState<any>(null);
   const [documents, setDocuments] = useState<Document[]>(mockDocuments);
@@ -2617,10 +2628,30 @@ export default function App() {
             documentIds: []
           }));
           
+          // Заповнюємо documentIds для mock колекцій на основі collectionIds у документах
+          const documentsWithCollections = mockDocuments.filter(doc => doc.collectionIds && doc.collectionIds.length > 0);
+          const collectionsWithDocuments = mockCollections.map(col => {
+            const docIds = documentsWithCollections
+              .filter(doc => doc.collectionIds?.includes(col.id))
+              .map(doc => doc.id || '')
+              .filter(id => id !== '');
+            return {
+              ...col,
+              documentIds: docIds,
+              count: docIds.length
+            };
+          });
+          
           // Об'єднуємо: mock колекції + збережені користувацькі колекції
-          const mockIds = new Set(mockCollections.map(c => c.id));
-          const userCollections = parsed.filter((c: Collection) => c && c.id && !mockIds.has(c.id));
-          return [...mockCollections, ...userCollections];
+          const mockIds = new Set(collectionsWithDocuments.map(c => c.id));
+          const userCollections = parsed
+            .filter((c: Collection) => c && c.id && !mockIds.has(c.id))
+            .map((c: Collection) => ({
+              ...c,
+              // Синхронізуємо count з documentIds.length
+              count: (c.documentIds?.length || 0)
+            }));
+          return [...collectionsWithDocuments, ...userCollections];
         } else {
           // Якщо parsed не є масивом, очищаємо localStorage і використовуємо mock дані
           try {
@@ -2641,28 +2672,37 @@ export default function App() {
     }
     
     // Якщо немає збережених даних, ініціалізуємо з mock даних
-    return allCollections.map(col => ({
-      id: col.id,
-      title: col.title,
-      description: col.description || '',
-      count: col.count,
-      type: col.type,
-      icon: col.icon,
-      createdBy: col.createdBy || 'Joan Zhao',
-      createdOn: col.createdOn || new Date().toLocaleDateString(),
-      organization: col.organization,
-      sharedWith: col.sharedWith,
-      rules: col.rules ? col.rules.map((rule, idx) => ({
-        id: `rule-${col.id}-${idx}`,
-        type: 'keywords' as const,
-        label: 'Rule',
-        value: rule,
-        operator: 'contains' as const,
-        enabled: true
-      })) : undefined,
-      autoSync: col.autoSync,
-      documentIds: []
-    }));
+    // Заповнюємо documentIds на основі collectionIds у документах
+    const documentsWithCollections = mockDocuments.filter(doc => doc.collectionIds && doc.collectionIds.length > 0);
+    return allCollections.map(col => {
+      const docIds = documentsWithCollections
+        .filter(doc => doc.collectionIds?.includes(col.id))
+        .map(doc => doc.id || '')
+        .filter(id => id !== '');
+      
+      return {
+        id: col.id,
+        title: col.title,
+        description: col.description || '',
+        count: docIds.length || col.count,
+        type: col.type,
+        icon: col.icon,
+        createdBy: col.createdBy || 'Joan Zhao',
+        createdOn: col.createdOn || new Date().toLocaleDateString(),
+        organization: col.organization,
+        sharedWith: col.sharedWith,
+        rules: col.rules ? col.rules.map((rule, idx) => ({
+          id: `rule-${col.id}-${idx}`,
+          type: 'keywords' as const,
+          label: 'Rule',
+          value: rule,
+          operator: 'contains' as const,
+          enabled: true
+        })) : undefined,
+        autoSync: col.autoSync,
+        documentIds: docIds
+      };
+    });
   });
 
   // Функція для збереження колекцій в localStorage
@@ -2730,10 +2770,11 @@ export default function App() {
       });
       
       if (matchedDocIds.length > 0) {
+        const updatedDocumentIds = [...(collection.documentIds || []), ...matchedDocIds];
         return {
           ...collection,
-          documentIds: [...(collection.documentIds || []), ...matchedDocIds],
-          count: (collection.documentIds?.length || 0) + matchedDocIds.length
+          documentIds: updatedDocumentIds,
+          count: updatedDocumentIds.length
         };
       }
       
@@ -2746,10 +2787,11 @@ export default function App() {
       if (collection) {
         const docIds = newDocuments.map(doc => doc.id!);
         const index = updatedCollections.indexOf(collection);
+        const updatedDocumentIds = [...new Set([...(collection.documentIds || []), ...docIds])];
         updatedCollections[index] = {
           ...collection,
-          documentIds: [...new Set([...(collection.documentIds || []), ...docIds])],
-          count: (collection.documentIds?.length || 0) + docIds.length
+          documentIds: updatedDocumentIds,
+          count: updatedDocumentIds.length
         };
       }
     });
@@ -2760,10 +2802,11 @@ export default function App() {
       const collectionIndex = updatedCollections.findIndex(col => col.id === selectedCollection.id);
       if (collectionIndex !== -1) {
         const collection = updatedCollections[collectionIndex];
+        const updatedDocumentIds = [...new Set([...(collection.documentIds || []), ...docIds])];
         updatedCollections[collectionIndex] = {
           ...collection,
-          documentIds: [...new Set([...(collection.documentIds || []), ...docIds])],
-          count: (collection.documentIds?.length || 0) + docIds.length
+          documentIds: updatedDocumentIds,
+          count: updatedDocumentIds.length
         };
         // Додаємо до selectedCollections, щоб документи отримали правильні collectionIds
         if (!selectedCollections.includes(selectedCollection.title)) {
@@ -2851,6 +2894,13 @@ export default function App() {
     });
   };
 
+  // Handler для створення колекції з вибраних документів
+  const handleCreateCollectionFromSelection = (documentIds: string[]) => {
+    const selectedDocs = documents.filter(doc => documentIds.includes(doc.id || ''));
+    setSelectedDocumentsForNewCollection(selectedDocs);
+    setIsNewCollectionModalOpen(true);
+  };
+
   const handleCreateCollection = (name: string, description: string, rules: CollectionRule[]) => {
     // Створюємо нову колекцію
     const newCollection: Collection = {
@@ -2870,21 +2920,29 @@ export default function App() {
       documentIds: []
     };
     
-    // Знаходимо документи, які відповідають правилам
-    const matchingDocuments = documents.filter(doc => 
-      matchDocumentToRules(doc, rules)
-    );
+    // Якщо є вибрані документи для нової колекції, використовуємо їх
+    let matchingDocuments: Document[] = [];
+    if (selectedDocumentsForNewCollection.length > 0) {
+      matchingDocuments = selectedDocumentsForNewCollection;
+      // Очищаємо вибрані документи
+      setSelectedDocumentsForNewCollection([]);
+    } else {
+      // Інакше знаходимо документи, які відповідають правилам
+      matchingDocuments = documents.filter(doc => 
+        matchDocumentToRules(doc, rules)
+      );
+    }
     
     // Додаємо ID документів до колекції
-    newCollection.documentIds = matchingDocuments.map(doc => doc.id || '');
-    newCollection.count = matchingDocuments.length;
+    newCollection.documentIds = matchingDocuments.map(doc => doc.id || '').filter(id => id !== '');
+    newCollection.count = newCollection.documentIds.length;
     
     // Оновлюємо документи, додаючи collectionId
     setDocuments(prev => prev.map(doc => {
       if (matchingDocuments.some(md => md.id === doc.id)) {
         return {
           ...doc,
-          collectionIds: [...(doc.collectionIds || []), newCollection.id]
+          collectionIds: [...new Set([...(doc.collectionIds || []), newCollection.id])]
         };
       }
       return doc;
@@ -2898,11 +2956,11 @@ export default function App() {
       return updated;
     });
     
-    toast.success(`Collection "${name}" created with ${matchingDocuments.length} documents`);
-    
-    // Автоматично відкриваємо створену колекцію
+    // Автоматично відкриваємо створену колекцію (після оновлення списку)
     setSelectedCollection(newCollection);
     setViewMode('collection-detail');
+    
+    toast.success(`Collection "${name}" created with ${newCollection.count} ${newCollection.count === 1 ? 'document' : 'documents'}`);
   };
 
   const handleCollectionClick = (collection: any) => {
@@ -2992,6 +3050,55 @@ export default function App() {
     toast.success(`${documentIds.length} ${documentIds.length === 1 ? 'document' : 'documents'} deleted`);
   };
 
+  // Додавання документів до колекції
+  const handleAddToCollection = (collectionId: string, documentIds: string[]) => {
+    // Оновлюємо колекцію - додаємо documentIds
+    setCollections(prev => {
+      const updated = prev.map(col => {
+        if (col.id === collectionId) {
+          const updatedDocumentIds = [...new Set([...(col.documentIds || []), ...documentIds])];
+          return {
+            ...col,
+            documentIds: updatedDocumentIds,
+            count: updatedDocumentIds.length
+          };
+        }
+        return col;
+      });
+      
+      // Зберігаємо в localStorage
+      saveCollectionsToStorage(updated);
+      
+      // Оновлюємо selectedCollection якщо це поточна колекція
+      if (selectedCollection && selectedCollection.id === collectionId) {
+        const updatedCollection = updated.find(col => col.id === collectionId);
+        if (updatedCollection) {
+          setSelectedCollection(updatedCollection);
+        }
+      }
+      
+      return updated;
+    });
+
+    // Оновлюємо документи - додаємо collectionId
+    setDocuments(prev => prev.map(doc => {
+      if (documentIds.includes(doc.id || '')) {
+        const updatedCollectionIds = [...new Set([...(doc.collectionIds || []), collectionId])];
+        return {
+          ...doc,
+          collectionIds: updatedCollectionIds
+        };
+      }
+      return doc;
+    }));
+  };
+
+  // Handler для відкриття Add to Collection modal
+  const handleOpenAddToCollection = (documentIds: string[]) => {
+    setSelectedDocumentsForCollection(documentIds);
+    setIsAddToCollectionModalOpen(true);
+  };
+
   return (
     <div className="h-screen w-screen bg-[#f9fafb] flex overflow-hidden">
       <GlobalSidebar />
@@ -3017,6 +3124,9 @@ export default function App() {
                   collection={selectedCollection}
                   onBack={handleBackFromCollection}
                   onAddDocument={() => setIsUploadModalOpen(true)}
+                  onSettingsClick={() => toast.info('Collection settings - coming soon')}
+                  onShareClick={() => toast.info('Share collection - coming soon')}
+                  onFiltersClick={() => toast.info('Collection filters - coming soon')}
                 />
                 {/* Content with right panel */}
                 <div className="flex-1 flex overflow-hidden min-w-0">
@@ -3040,6 +3150,8 @@ export default function App() {
             collections={collections}
             onRemoveFromCollection={handleRemoveFromCollection}
             onDelete={handleDeleteDocuments}
+            onAddToCollection={handleOpenAddToCollection}
+            onCreateCollection={handleCreateCollectionFromSelection}
           />
                   </div>
                   <div className="flex-shrink-0 flex-grow-0 border-l border-[#e8e8ec] overflow-hidden" style={{ width: '400px', minWidth: '400px', maxWidth: '400px' }}>
@@ -3067,6 +3179,8 @@ export default function App() {
                 collections={collections}
                 onRemoveFromCollection={handleRemoveFromCollection}
                 onDelete={handleDeleteDocuments}
+                onAddToCollection={handleOpenAddToCollection}
+                onCreateCollection={handleCreateCollectionFromSelection}
               />
             )}
           </div>
@@ -3102,8 +3216,26 @@ export default function App() {
 
       <NewCollectionModal
         isOpen={isNewCollectionModalOpen}
-        onClose={() => setIsNewCollectionModalOpen(false)}
+        onClose={() => {
+          setIsNewCollectionModalOpen(false);
+          setSelectedDocumentsForNewCollection([]);
+        }}
         onCreateCollection={handleCreateCollection}
+        selectedDocuments={selectedDocumentsForNewCollection}
+      />
+      <AddToCollectionModal
+        isOpen={isAddToCollectionModalOpen}
+        onClose={() => {
+          setIsAddToCollectionModalOpen(false);
+          setSelectedDocumentsForCollection([]);
+        }}
+        collections={collections.map(col => ({
+          id: col.id,
+          title: col.title,
+          icon: col.icon
+        }))}
+        selectedDocumentIds={selectedDocumentsForCollection}
+        onAddToCollection={handleAddToCollection}
       />
       
       <Toaster position="top-right" />

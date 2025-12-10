@@ -8,6 +8,15 @@ import { FilterBar } from './FilterBar';
 import svgPaths from "../imports/svg-ylbe71kelt";
 import { Checkbox } from './ui/checkbox';
 
+interface CollectionRule {
+  id: string;
+  type: 'document_type' | 'tags' | 'client' | 'keywords' | 'date_range' | 'vendor';
+  label: string;
+  value: string;
+  operator: 'is' | 'contains' | 'equals' | 'not';
+  enabled: boolean;
+}
+
 interface CollectionDetailViewProps {
   collection: {
     id: string;
@@ -20,13 +29,17 @@ interface CollectionDetailViewProps {
     createdOn?: string;
     organization?: string;
     sharedWith?: string[];
-    rules?: string[];
+    rules?: CollectionRule[] | string[];
     autoSync?: boolean;
     documentIds?: string[];
   };
   onBack?: () => void;
   onAddDocument?: () => void;
   onRemoveFromCollection?: (collectionId: string, documentIds: string[]) => void;
+  onDelete?: (documentIds: string[]) => void;
+  onSettingsClick?: () => void;
+  onShareClick?: () => void;
+  onFiltersClick?: () => void;
   documents?: any[];
 }
 
@@ -395,7 +408,7 @@ const baseMockCollectionDocuments = [
 ];
 
 // Collection Detail Header Component
-export function CollectionDetailHeader({ collection, onBack, onAddDocument }: CollectionDetailViewProps) {
+export function CollectionDetailHeader({ collection, onBack, onAddDocument, onSettingsClick, onShareClick, onFiltersClick }: CollectionDetailViewProps) {
   // Extract emoji from icon prop (same logic as CollectionCard)
   const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E0}-\u{1F1FF}]/u;
   let emoji: string | null = null;
@@ -456,17 +469,26 @@ export function CollectionDetailHeader({ collection, onBack, onAddDocument }: Co
 
           {/* Action Buttons */}
           <div className="flex items-center gap-[8px]">
-            <button className="h-[36px] px-[12px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px]">
+            <button 
+              onClick={onSettingsClick}
+              className="h-[36px] px-[12px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px]"
+            >
               <Settings className="size-[16px] text-[#60646c]" />
               <span>Settings</span>
             </button>
             
-            <button className="h-[36px] px-[12px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px]">
+            <button 
+              onClick={onShareClick}
+              className="h-[36px] px-[12px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px]"
+            >
               <Share className="size-[16px] text-[#60646c]" />
               <span>Share</span>
             </button>
 
-            <button className="h-[36px] px-[12px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px]">
+            <button 
+              onClick={onFiltersClick}
+              className="h-[36px] px-[12px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px]"
+            >
               <FileText className="size-[16px] text-[#60646c]" />
               <span>Filters</span>
             </button>
@@ -485,7 +507,7 @@ export function CollectionDetailHeader({ collection, onBack, onAddDocument }: Co
   );
 }
 
-export function CollectionDetailView({ collection, onBack, onAddDocument, onRemoveFromCollection, documents }: CollectionDetailViewProps) {
+export function CollectionDetailView({ collection, onBack, onAddDocument, onRemoveFromCollection, onDelete, onSettingsClick, onShareClick, onFiltersClick, documents }: CollectionDetailViewProps) {
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
@@ -570,8 +592,9 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
         <div className="w-full flex items-center justify-between">
           <h2 className="text-[13px] font-medium text-[#1c2024]">Details</h2>
           <button
+            type="button"
             onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
-            className="h-[32px] w-[32px] flex items-center justify-center border border-[#e0e1e6] rounded-[6px] bg-[#f0f0f3] hover:bg-[#e0e1e6] transition-colors"
+            className="h-[32px] w-[32px] flex items-center justify-center border border-[#e0e1e6] rounded-[6px] bg-[#f0f0f3] hover:bg-[#e0e1e6] transition-colors cursor-pointer"
           >
             <ChevronDown className={`size-[16px] text-[#60646c] transition-transform ${isDetailsExpanded ? 'rotate-180' : ''}`} />
           </button>
@@ -602,14 +625,20 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-[6px]">
-                  {collection.rules.map((rule, index) => (
-                    <div
-                      key={index}
-                      className="px-[8px] py-[3px] bg-[#f9fafb] border border-[#e8e8ec] rounded-[4px] text-[11px] text-[#60646c]"
-                    >
-                      {rule}
-                    </div>
-                  ))}
+                  {collection.rules.map((rule, index) => {
+                    // Обробляємо як об'єкт CollectionRule або як рядок
+                    const ruleText = typeof rule === 'string' 
+                      ? rule 
+                      : `${rule.label || rule.type} ${rule.operator || 'is'} "${rule.value}"`;
+                    return (
+                      <div
+                        key={typeof rule === 'string' ? index : rule.id}
+                        className="px-[8px] py-[3px] bg-[#f9fafb] border border-[#e8e8ec] rounded-[4px] text-[11px] text-[#60646c]"
+                      >
+                        {ruleText}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ) : (
@@ -688,7 +717,7 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
             onDownload={() => {}}
             onExport={() => {}}
             onShare={() => {}}
-            onDelete={() => {}}
+            onDelete={onDelete ? () => onDelete(selectedDocuments) : undefined}
           />
         )}
 
