@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { Checkbox } from './ui/checkbox';
-import { MoreVertical, FileText, Sparkles, SlidersHorizontal, List, Pin } from 'lucide-react';
+import { MoreVertical, FileText } from 'lucide-react';
 import svgPaths from "../imports/svg-ylbe71kelt";
 import { DocumentCard } from './DocumentCard';
+import { FilterBar } from './FilterBar';
+import { BulkActionsBar } from './BulkActionsBar';
+import { QuickFilters } from './QuickFilters';
 
 interface Document {
   id: string;
@@ -16,12 +19,19 @@ interface Document {
   organization?: string;
   signatureStatus?: string;
   lastUpdate?: string;
+  collectionIds?: string[];
 }
 
 interface Organization {
   id: string;
   name: string;
   initials: string;
+}
+
+interface Collection {
+  id: string;
+  title: string;
+  icon?: string;
 }
 
 interface AllDocumentsTableProps {
@@ -31,6 +41,7 @@ interface AllDocumentsTableProps {
   organizations?: Organization[];
   pinnedDocumentIds?: Set<string>;
   onPinToggle?: (docId: string) => void;
+  collections?: Collection[];
 }
 
 // FileIcon component для визначення типу файлу та іконки
@@ -285,11 +296,13 @@ export function AllDocumentsTable({
   onOrganizationChange,
   organizations = defaultOrganizations,
   pinnedDocumentIds,
-  onPinToggle
+  onPinToggle,
+  collections = []
 }: AllDocumentsTableProps) {
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [filterQuery, setFilterQuery] = useState<string>('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(null);
 
   const handleSelectDocument = (docId: string) => {
     setSelectedDocuments(prev => 
@@ -307,7 +320,40 @@ export function AllDocumentsTable({
     }
   };
 
-  // Filter documents based on search query and organization
+  // Helper functions for Quick Filters
+  const currentUser = 'Joan Zhao'; // Поточний користувач
+
+  const isSigned = (doc: Document): boolean => {
+    const status = doc.signatureStatus?.toLowerCase() || '';
+    return status.includes('signed') || status.includes('executed');
+  };
+
+  const isPendingSignature = (doc: Document): boolean => {
+    const status = doc.signatureStatus?.toLowerCase() || '';
+    return status.includes('pending') || status.includes('review') || !status || status === '';
+  };
+
+  const isUploadedByMe = (doc: Document): boolean => {
+    return doc.uploadedBy?.toLowerCase() === currentUser.toLowerCase();
+  };
+
+  const isSharedWithMe = (doc: Document): boolean => {
+    return doc.sharedWith?.some(user => user.toLowerCase() === currentUser.toLowerCase()) || false;
+  };
+
+  const isRecentUpload = (doc: Document): boolean => {
+    if (!doc.uploadedOn) return false;
+    try {
+      const docDate = new Date(doc.uploadedOn);
+      const now = new Date();
+      const daysDiff = Math.floor((now.getTime() - docDate.getTime()) / (1000 * 60 * 60 * 24));
+      return daysDiff <= 7 && !isNaN(docDate.getTime());
+    } catch {
+      return false;
+    }
+  };
+
+  // Filter documents based on search query, organization, and quick filter
   const filteredDocuments = documents.filter(doc => {
     // Filter by organization
     if (selectedOrganization && selectedOrganization !== 'all') {
@@ -315,6 +361,31 @@ export function AllDocumentsTable({
       if (org && doc.organization !== org.name) {
         return false;
       }
+    }
+    
+    // Filter by active Quick Filter
+    if (activeQuickFilter) {
+      let matchesQuickFilter = false;
+      switch (activeQuickFilter) {
+        case 'signed':
+          matchesQuickFilter = isSigned(doc);
+          break;
+        case 'pending-signature':
+          matchesQuickFilter = isPendingSignature(doc);
+          break;
+        case 'uploaded-by-me':
+          matchesQuickFilter = isUploadedByMe(doc);
+          break;
+        case 'shared-with-me':
+          matchesQuickFilter = isSharedWithMe(doc);
+          break;
+        case 'recent-uploads':
+          matchesQuickFilter = isRecentUpload(doc);
+          break;
+        default:
+          matchesQuickFilter = true;
+      }
+      if (!matchesQuickFilter) return false;
     }
     
     // Filter by search query
@@ -333,123 +404,62 @@ export function AllDocumentsTable({
   // Count visible columns in table view
   const visibleColumnsCount = 11; // Checkbox + Name + Description + Type + Attached to + Shared with + Uploaded by + Uploaded on + Organization + Signature status + Actions
 
+  const handlePinToggle = () => {
+    if (onPinToggle) {
+      // Toggle pin status for all selected documents
+      selectedDocuments.forEach(docId => {
+        onPinToggle(docId);
+      });
+      // Clear selection after pinning/unpinning
+      setSelectedDocuments([]);
+    }
+  };
+
+  const handleQuickFilterClick = (filterId: string | null) => {
+    setActiveQuickFilter(filterId);
+    // Очистити text filter при виборі Quick Filter для кращого UX
+    if (filterId) {
+      setFilterQuery('');
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-white min-w-0">
-      {/* Filter Bar */}
-      <div className="border-b border-[#e8e8ec] px-[24px] py-[12px] bg-white flex-shrink-0 min-w-0 w-full max-w-full">
-        <div className="flex items-center justify-between gap-[8px] min-w-0">
-          <div className="flex items-center gap-[8px] min-w-0">
-            {/* Filters Button */}
-            <button className="h-[32px] px-[8px] flex items-center gap-[8px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] bg-white">
-              <SlidersHorizontal className="size-[16px] text-[#60646c]" />
-              <span className="text-[12px] font-semibold">Filters</span>
-            </button>
+      {/* Documents Table with Scroll */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0 flex flex-col relative">
+        {/* Filter Bar */}
+        <FilterBar
+          filterQuery={filterQuery}
+          onFilterChange={setFilterQuery}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          visibleColumnsCount={viewMode === 'table' ? visibleColumnsCount : undefined}
+        />
 
-            {/* Search Input */}
-            <div className="relative" style={{ width: '256px' }}>
-              <input
-                type="text"
-                value={filterQuery}
-                onChange={(e) => setFilterQuery(e.target.value)}
-                placeholder='Filter documents (e.g., "signed last month")...'
-                className="w-full h-[32px] px-[12px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] placeholder:text-[#8b8d98] focus:outline-none focus:ring-2 focus:ring-[#005be2] focus:border-transparent"
-              />
-            </div>
+        {/* Quick Filters */}
+        <QuickFilters
+          documents={documents}
+          activeFilter={activeQuickFilter}
+          onFilterClick={handleQuickFilterClick}
+          currentUser={currentUser}
+        />
 
-            {/* Apply Button */}
-            <button className="h-[32px] px-[12px] flex items-center gap-[4px] bg-[#f0f0f3] rounded-[6px] text-[13px] text-[#b9bbc6] hover:bg-[#e0e1e6]">
-              <Sparkles className="size-[16px]" />
-              <span className="text-[13px] font-semibold">Apply</span>
-            </button>
-
-            {/* Column Count */}
-            {viewMode === 'table' && (
-              <span className="text-[13px] text-[#60646c] whitespace-nowrap">
-                {visibleColumnsCount}/{visibleColumnsCount} columns
-              </span>
-            )}
-          </div>
-
-          {/* View Switcher (Grid Icon first) - Right side */}
-          <div className="flex items-center border border-[#e0e1e6] rounded-[6px] flex-shrink-0">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`h-[32px] w-[32px] flex items-center justify-center rounded-l-[6px] transition-colors ${
-                viewMode === 'grid' 
-                  ? 'bg-[#f0f0f3] text-[#1c2024]' 
-                  : 'text-[#60646c] hover:bg-[#f9fafb]'
-              }`}
-            >
-              <svg className="size-[16px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect width="18" height="18" x="3" y="3" rx="2"></rect>
-                <path d="M3 9h18"></path>
-                <path d="M3 15h18"></path>
-                <path d="M9 3v18"></path>
-                <path d="M15 3v18"></path>
-              </svg>
-            </button>
-            <button
-              onClick={() => setViewMode('table')}
-              className={`h-[32px] w-[32px] flex items-center justify-center rounded-r-[6px] transition-colors ${
-                viewMode === 'table' 
-                  ? 'bg-[#f0f0f3] text-[#1c2024]' 
-                  : 'text-[#60646c] hover:bg-[#f9fafb]'
-              }`}
-            >
-              <List className="size-[16px]" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Documents Table */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden pb-[16px] min-w-0 flex flex-col">
         {/* Bulk Actions Bar */}
         {selectedDocuments.length > 0 && (
-          <div className="mb-[16px] px-[24px] pt-[24px]">
-            <div className="bg-[#f0f0f3] border border-[#e0e1e6] rounded-[8px] px-[24px] py-[12px] flex items-center justify-between">
-              <div className="flex items-center gap-[12px]">
-                <span className="text-[13px] text-[#1c2024]">{selectedDocuments.length} selected</span>
-                <button 
-                  onClick={() => setSelectedDocuments([])}
-                  className="text-[13px] text-[#60646c] hover:text-[#1c2024]"
-                >
-                  Clear selection
-                </button>
-              </div>
-              <div className="flex items-center gap-[8px]">
-                <button
-                  onClick={() => {
-                    if (onPinToggle) {
-                      // Toggle pin status for all selected documents
-                      selectedDocuments.forEach(docId => {
-                        onPinToggle(docId);
-                      });
-                    }
-                  }}
-                  className="size-[24px] rounded-[4px] flex items-center justify-center transition-colors bg-white/80 hover:bg-white border border-[#e0e1e6] text-[#60646c] hover:text-[#1c2024]"
-                >
-                  <Pin className="size-[14px]" />
-                </button>
-                <button className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb]">
-                  Remove from collection
-                </button>
-                <button className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb]">
-                  Move
-                </button>
-                <button 
-                  disabled={selectedDocuments.length > 1}
-                  className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Rename
-                </button>
-                <button className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb]">
-                  Download
-                </button>
-              </div>
-            </div>
-          </div>
+          <BulkActionsBar
+            selectedCount={selectedDocuments.length}
+            onClearSelection={() => setSelectedDocuments([])}
+            onPinToggle={handlePinToggle}
+            hasQuickFilters={true}
+            onAddToCollection={() => {}}
+            onDelete={() => {}}
+            onExport={() => {}}
+            onShare={() => {}}
+          />
         )}
+
+        {/* Documents Content */}
+        <div className="pb-[16px] pt-[16px] min-w-0 flex flex-col">
 
         {filteredDocuments.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center pt-[24px]">
@@ -462,16 +472,24 @@ export function AllDocumentsTable({
             </div>
           </div>
         ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[16px] px-[24px] pt-[24px] pb-[24px]">
-            {filteredDocuments.map((doc) => (
-              <DocumentCard
-                key={doc.id}
-                document={doc}
-                isSelected={selectedDocuments.includes(doc.id)}
-                onSelect={handleSelectDocument}
-                isPinned={pinnedDocumentIds?.has(doc.id) || false}
-              />
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[16px] p-[24px]">
+            {filteredDocuments.map((doc) => {
+              // Знайти колекції, до яких належить документ
+              const docCollections = collections.filter(col => 
+                doc.collectionIds?.includes(col.id)
+              );
+              
+              return (
+                <DocumentCard
+                  key={doc.id}
+                  document={doc}
+                  isSelected={selectedDocuments.includes(doc.id)}
+                  onSelect={handleSelectDocument}
+                  isPinned={pinnedDocumentIds?.has(doc.id) || false}
+                  collections={docCollections}
+                />
+              );
+            })}
           </div>
         ) : (
           <div className="flex-1 min-w-0 overflow-x-auto overflow-y-auto">
@@ -493,6 +511,7 @@ export function AllDocumentsTable({
                   <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[120px]">Uploaded on</th>
                   <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[150px]">Organization</th>
                   <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[140px]">Signature status</th>
+                  <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[180px]">Collections</th>
                   <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[56px]"></th>
                 </tr>
               </thead>
@@ -577,6 +596,39 @@ export function AllDocumentsTable({
                     <td className="p-2 align-middle whitespace-nowrap">
                       <StatusBadge status={doc.signatureStatus} />
                     </td>
+                    <td className="p-2 align-middle">
+                      <div className="flex flex-wrap gap-[4px]">
+                        {(() => {
+                          const docCollections = collections.filter(col => 
+                            doc.collectionIds?.includes(col.id)
+                          );
+                          
+                          if (docCollections.length === 0) {
+                            return <span className="text-[13px] text-[#8b8d98]">-</span>;
+                          }
+                          
+                          return docCollections.slice(0, 2).map((col) => (
+                            <span
+                              key={col.id}
+                              className="inline-flex items-center gap-[4px] px-[6px] py-[2px] rounded-[4px] bg-[#f0f0f3] border border-[#e0e1e6] text-[12px] text-[#1c2024]"
+                            >
+                              {col.icon && <span>{col.icon}</span>}
+                              <span className="truncate max-w-[120px]">{col.title}</span>
+                            </span>
+                          )).concat(
+                            docCollections.length > 2 ? (
+                              <span
+                                key="more"
+                                className="inline-flex items-center px-[6px] py-[2px] rounded-[4px] bg-white border border-[#e0e1e6] text-[12px] text-[#60646c]"
+                                title={docCollections.slice(2).map(c => c.title).join(', ')}
+                              >
+                                +{docCollections.length - 2}
+                              </span>
+                            ) : []
+                          );
+                        })()}
+                      </div>
+                    </td>
                     <td className="p-2 align-middle whitespace-nowrap">
                       <button className="p-[4px] hover:bg-[#f0f0f3] rounded-[4px] transition-colors">
                         <MoreVertical className="w-[16px] h-[16px] text-[#60646c]" />
@@ -588,6 +640,7 @@ export function AllDocumentsTable({
             </table>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

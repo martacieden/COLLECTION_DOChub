@@ -22,7 +22,33 @@ import { PinnedView } from './components/PinnedView';
 
 type ViewMode = 'collections' | 'all-documents' | 'recent' | 'pinned' | 'collection-detail';
 
+interface CollectionRule {
+  id: string;
+  type: 'document_type' | 'tags' | 'client' | 'keywords' | 'date_range' | 'vendor';
+  label: string;
+  value: string;
+  operator: 'is' | 'contains' | 'equals' | 'not';
+  enabled: boolean;
+}
+
+interface Collection {
+  id: string;
+  title: string;
+  description: string;
+  count: number;
+  type: string;
+  icon: string;
+  createdBy: string;
+  createdOn: string;
+  organization?: string;
+  sharedWith?: string[];
+  rules?: CollectionRule[];
+  autoSync?: boolean;
+  documentIds?: string[]; // IDs документів, які явно додані до колекції
+}
+
 interface Document {
+  id?: string;
   name: string;
   description: string;
   type: string;
@@ -33,6 +59,9 @@ interface Document {
   uploadedBy?: string;
   uploadedOn?: string;
   organization?: string;
+  collectionIds?: string[]; // IDs колекцій, до яких належить документ
+  tags?: string[];
+  signatureStatus?: string;
 }
 
 interface ContextSuggestion {
@@ -184,6 +213,7 @@ function WorkspaceHeader({ onShowAIFilter, viewMode, selectedCollection, onUploa
 
 const mockDocuments: Document[] = [
   {
+    id: 'DOC-001',
     name: 'Oak Street - Revised Blueprints v3.2',
     description: 'Architectural plans for main floor renovation...',
     type: 'PDF',
@@ -193,9 +223,12 @@ const mockDocuments: Document[] = [
     status: 'Approved',
     uploadedBy: 'Joan Zhao',
     uploadedOn: 'Nov 28, 2024',
-    organization: 'Summation Partners'
+    organization: 'Summation Partners',
+    collectionIds: ['1'], // Oak Street Renovation
+    tags: ['Construction', 'Architecture', 'Oak Street']
   },
   {
+    id: 'DOC-002',
     name: 'Building Permit - Oak Street Property',
     description: 'Approved building permit for structural changes...',
     type: 'PDF',
@@ -205,19 +238,26 @@ const mockDocuments: Document[] = [
     status: 'Signed',
     uploadedBy: 'Michael Chen',
     uploadedOn: 'Nov 25, 2024',
-    organization: 'Summation Partners'
+    organization: 'Smith Family Office',
+    collectionIds: ['1', '3'], // Oak Street Renovation, Permits & Approvals
+    tags: ['Permits', 'Oak Street', 'Approved'],
+    signatureStatus: 'Signed'
   },
   {
+    id: 'DOC-003',
     name: 'General Contractor Agreement - Studio XYZ',
     description: 'Executed contract with Studio XYZ for design...',
     type: 'DOCX',
     attachedTo: ['Oak Street Renovation', 'Executed Contracts'],
     shared: ['user3'],
     icon: 'word',
-    status: 'Waiting for Signature',
+    status: 'Signed',
     uploadedBy: 'Sarah Miller',
     uploadedOn: 'Dec 1, 2024',
-    organization: 'Summation Partners'
+    organization: 'Johnson Family Trust',
+    collectionIds: ['1', '2'], // Oak Street Renovation, Executed Contracts
+    tags: ['Contract', 'Executed', 'Oak Street'],
+    signatureStatus: 'Signed'
   },
   {
     name: 'Invoice #1247 - Electrical Work Phase 1',
@@ -387,6 +427,28 @@ const mockDocuments: Document[] = [
     uploadedOn: 'Nov 29, 2024',
     organization: 'Summation Partners'
   }
+];
+
+// Mock collections data - винесено на рівень модуля для використання в App()
+const allCollections = [
+  { id: '1', title: 'Oak Street Renovation', count: 42, type: 'construction', description: 'All documents related to the Oak Street property renovation project including blueprints, permits, contracts, and vendor documents.', icon: '🏗️', createdOn: '13/10/2025', createdBy: 'Joan Zhao', sharedWith: ['Michael Kim', 'Alex Smith', 'Sarah Johnson'], rules: ['Category is any of Construction, Permits, Contracts', 'Project = Oak Street', 'Status is any of Active, In Progress'], autoSync: true, organization: 'Smith Family Office' },
+  { id: '2', title: 'Executed Contracts', count: 28, type: 'legal', description: 'Signed and executed contractual agreements across all projects and vendors.', icon: '📝', createdOn: '15/09/2025', createdBy: 'Joan Zhao', sharedWith: ['Michael Kim', 'Legal Team'], rules: ['Document Type = Contract', 'Status = Signed'], autoSync: true, organization: 'Johnson Family Trust' },
+  { id: '3', title: 'Permits & Approvals', count: 15, type: 'legal', description: 'Building permits, zoning approvals, and regulatory documentation.', icon: '✅', createdOn: '20/08/2025', createdBy: 'Michael Kim', sharedWith: ['Joan Zhao', 'Alex Smith'], rules: ['Category = Permits', 'Status is any of Approved, Active'], autoSync: true, organization: 'Smith Family Office' },
+  { id: '4', title: 'Financial - Invoices', count: 67, type: 'financial', description: 'Payment invoices and billing documents from all vendors and contractors.', icon: '💰', createdOn: '10/07/2025', createdBy: 'Joan Zhao', sharedWith: ['Finance Team', 'Michael Kim'], rules: ['Document Type = Invoice', 'Date is within last 12 months'], autoSync: true, organization: "Herwitz's Family" },
+  { id: '5', title: 'Change Orders', count: 19, type: 'construction', description: 'Project modification requests and approved change orders.', icon: '🔄', createdOn: '05/06/2025', createdBy: 'Alex Smith', sharedWith: ['Joan Zhao', 'Michael Kim'], rules: ['Document Type = Change Order', 'Project = Oak Street'], autoSync: true, organization: 'Wayne Estate Management' },
+  { id: '6', title: 'Lien Waivers', count: 12, type: 'legal', description: 'Lien waiver documentation from contractors and subcontractors.', icon: '📋', createdOn: '25/05/2025', createdBy: 'Michael Kim', sharedWith: ['Joan Zhao', 'Legal Team'], rules: ['Document Type = Lien Waiver'], autoSync: false, organization: 'The Robertson Foundation' },
+  { id: '7', title: 'Insurance Documents', count: 23, type: 'legal', description: 'Insurance policies, certificates, and liability documentation.', icon: '🛡️', createdOn: '18/04/2025', createdBy: 'Joan Zhao', sharedWith: ['Insurance Team', 'Michael Kim'], rules: ['Category = Insurance', 'Date is within last 24 months'], autoSync: true, organization: 'Smith Family Office' },
+  { id: '8', title: 'Safety Inspections', count: 31, type: 'construction', description: 'Safety inspection reports and compliance documentation.', icon: '⚠️', createdOn: '12/03/2025', createdBy: 'Alex Smith', sharedWith: ['Joan Zhao', 'Safety Team'], rules: ['Document Type = Inspection', 'Category = Safety'], autoSync: true, organization: 'Johnson Family Trust' },
+  { id: '9', title: 'Vendor Contracts', count: 38, type: 'legal', description: 'Agreements with suppliers, contractors, and service providers.', icon: '🤝', createdOn: '08/02/2025', createdBy: 'Joan Zhao', sharedWith: ['Procurement Team', 'Legal Team'], rules: ['Document Type = Contract', 'Party Type = Vendor'], autoSync: true, organization: 'Smith Family Office' },
+  { id: '10', title: 'Property Appraisals', count: 8, type: 'financial', description: 'Property valuation reports and appraisal documents.', icon: '💎', createdOn: '22/01/2025', createdBy: 'Michael Kim', sharedWith: ['Joan Zhao', 'Finance Team'], rules: ['Document Type = Appraisal'], autoSync: false, organization: "Herwitz's Family" },
+  { id: '11', title: 'Meeting Minutes', count: 45, type: 'general', description: 'Project meeting notes, action items, and decision logs.', icon: '📅', createdOn: '15/12/2024', createdBy: 'Joan Zhao', sharedWith: ['All Team Members'], rules: ['Document Type = Meeting Minutes', 'Date is within last 6 months'], autoSync: true, organization: 'Wayne Estate Management' },
+  { id: '12', title: 'Site Photos', count: 156, type: 'construction', description: 'Construction progress photos and site documentation imagery.', icon: '📸', createdOn: '03/11/2024', createdBy: 'Alex Smith', sharedWith: ['Joan Zhao', 'Project Team'], rules: ['File Type = Image', 'Project = Oak Street'], autoSync: true, organization: 'The Robertson Foundation' },
+  { id: '13', title: 'Equipment Rentals', count: 14, type: 'financial', description: 'Equipment rental agreements and related invoices.', icon: '🚜', createdOn: '28/10/2024', createdBy: 'Joan Zhao', sharedWith: ['Operations Team'], rules: ['Category = Equipment', 'Document Type is any of Contract, Invoice'], autoSync: false, organization: 'Smith Family Office' },
+  { id: '14', title: 'Warranty Documents', count: 22, type: 'general', description: 'Product warranties and manufacturer guarantees.', icon: '🔧', createdOn: '19/09/2024', createdBy: 'Michael Kim', sharedWith: ['Joan Zhao', 'Maintenance Team'], rules: ['Document Type = Warranty'], autoSync: true, organization: 'Johnson Family Trust' },
+  { id: '15', title: 'As-Built Drawings', count: 34, type: 'construction', description: 'Final construction drawings reflecting actual built conditions.', icon: '📐', createdOn: '07/08/2024', createdBy: 'Alex Smith', sharedWith: ['Joan Zhao', 'Engineering Team'], rules: ['Document Type = Drawing', 'Status = As-Built'], autoSync: true, organization: 'Smith Family Office' },
+  { id: '16', title: 'Punch Lists', count: 11, type: 'construction', description: 'Outstanding items and completion checklists.', icon: '✓', createdOn: '25/07/2024', createdBy: 'Joan Zhao', sharedWith: ['Project Team'], rules: ['Document Type = Punch List'], autoSync: false, organization: "Herwitz's Family" },
+  { id: '17', title: 'Payment Applications', count: 29, type: 'financial', description: 'Contractor payment requests and progress billing.', icon: '💵', createdOn: '14/06/2024', createdBy: 'Joan Zhao', sharedWith: ['Finance Team', 'Michael Kim'], rules: ['Document Type = Payment Application', 'Project = Oak Street'], autoSync: true, organization: 'Wayne Estate Management' },
+  { id: '18', title: 'Material Orders', count: 53, type: 'construction', description: 'Purchase orders and material delivery documentation.', icon: '📦', createdOn: '02/05/2024', createdBy: 'Alex Smith', sharedWith: ['Joan Zhao', 'Procurement Team'], rules: ['Document Type = Purchase Order', 'Category = Materials'], autoSync: true, organization: 'The Robertson Foundation' },
 ];
 
 function StatusBadge({ status }: { status?: string }) {
@@ -1456,7 +1518,7 @@ function CollectionCard({ title, organization, onClick, collectionId, sharedWith
   );
 }
 
-function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClick, selectedOrganization }: { onUploadClick?: () => void; onNewCollectionClick?: () => void; onCollectionClick?: (collection: any) => void; selectedOrganization?: string }) {
+function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClick, selectedOrganization, collections }: { onUploadClick?: () => void; onNewCollectionClick?: () => void; onCollectionClick?: (collection: any) => void; selectedOrganization?: string; collections?: Collection[] }) {
   const [question, setQuestion] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<AISuggestion[]>(mockAISuggestions);
@@ -1491,8 +1553,11 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
     { id: '18', title: 'Material Orders', count: 53, type: 'construction', description: 'Purchase orders and material delivery documentation.', icon: '����', createdOn: '02/05/2024', createdBy: 'Alex Smith', sharedWith: ['Joan Zhao', 'Procurement Team'], rules: ['Document Type = Purchase Order', 'Category = Materials'], autoSync: true, organization: 'The Robertson Foundation' },
   ];
 
+  // Використовуємо передані колекції або fallback до mock даних
+  const allCollectionsData = collections || allCollections;
+
   // Filter collections based on search query and organization
-  const filteredCollections = allCollections
+  const filteredCollections = allCollectionsData
     .filter(collection => {
       // Filter by organization
       if (selectedOrganization && selectedOrganization !== 'all') {
@@ -1843,7 +1908,7 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
           </>
         ) : (
           // Grid/Card View
-          <div className="grid gap-[16px] w-full px-[24px] pt-[24px]" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))' }}>
+          <div className="grid gap-[16px] w-full p-[24px]" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))' }}>
             {filteredCollections.length > 0 ? (
               filteredCollections.map((collection) => (
                 <CollectionCard 
@@ -1883,7 +1948,8 @@ function MainContent({
   selectedOrganization,
   onOrganizationChange,
   pinnedDocumentIds,
-  onPinToggle
+  onPinToggle,
+  allCollections
 }: { 
   viewMode: ViewMode; 
   aiFilter?: string | null;
@@ -1900,6 +1966,7 @@ function MainContent({
   onOrganizationChange?: (orgId: string) => void;
   pinnedDocumentIds?: Set<string>;
   onPinToggle?: (docId: string) => void;
+  allCollections?: any[];
 }) {
   if (viewMode === 'collection-detail' && selectedCollection) {
     return (
@@ -1912,6 +1979,13 @@ function MainContent({
   }
 
   if (viewMode === 'all-documents') {
+    // Отримати список колекцій для передачі
+    const collectionsList = (allCollections || []).map(col => ({
+      id: col.id,
+      title: col.title,
+      icon: col.icon
+    }));
+    
     return (
       <div className="flex-1 overflow-auto bg-white">
         <AllDocumentsTable 
@@ -1921,32 +1995,53 @@ function MainContent({
           organizations={organizations}
           pinnedDocumentIds={pinnedDocumentIds}
           onPinToggle={onPinToggle}
+          collections={collectionsList}
         />
       </div>
     );
   }
 
   if (viewMode === 'recent') {
+    // Отримати список колекцій для передачі
+    const collectionsList = (allCollections || []).map(col => ({
+      id: col.id,
+      title: col.title,
+      icon: col.icon
+    }));
+    
     return (
-      <div className="flex-1 flex flex-col bg-white">
-        <RecentlyOpenedView documents={documents} />
+      <div className="flex-1 overflow-auto bg-white">
+        <RecentlyOpenedView 
+          documents={documents}
+          pinnedDocumentIds={pinnedDocumentIds}
+          onPinToggle={onPinToggle}
+          collections={collectionsList}
+        />
       </div>
     );
   }
 
   if (viewMode === 'pinned') {
+    // Отримати список колекцій для передачі
+    const collectionsList = (allCollections || []).map(col => ({
+      id: col.id,
+      title: col.title,
+      icon: col.icon
+    }));
+    
     return (
       <div className="flex-1 overflow-auto bg-white">
         <PinnedView 
           documents={documents}
           pinnedDocumentIds={pinnedDocumentIds}
           onPinToggle={onPinToggle}
+          collections={collectionsList}
         />
       </div>
     );
   }
 
-  return <CollectionsView onUploadClick={onUploadClick} onNewCollectionClick={onNewCollectionClick} onCollectionClick={onCollectionClick} selectedOrganization={selectedOrganization} />;
+  return <CollectionsView onUploadClick={onUploadClick} onNewCollectionClick={onNewCollectionClick} onCollectionClick={onCollectionClick} selectedOrganization={selectedOrganization} collections={allCollections} />;
 }
 
 // ========================================
@@ -2195,6 +2290,97 @@ interface UploadedDocument {
   uploadedAt: Date;
 }
 
+// Функція для перевірки відповідності документу правилам колекції
+function matchDocumentToRules(document: Document, rules: CollectionRule[]): boolean {
+  if (!rules || rules.length === 0) return false;
+  
+  // Перевіряємо тільки увімкнені правила
+  const enabledRules = rules.filter(rule => rule.enabled);
+  if (enabledRules.length === 0) return false;
+  
+  // Всі увімкнені правила повинні відповідати (AND логіка)
+  return enabledRules.every(rule => {
+    switch (rule.type) {
+      case 'document_type':
+        const docType = document.type.toLowerCase();
+        const ruleValue = rule.value.toLowerCase();
+        if (rule.operator === 'is' || rule.operator === 'equals') {
+          return docType === ruleValue || document.name.toLowerCase().includes(ruleValue);
+        }
+        if (rule.operator === 'contains') {
+          return docType.includes(ruleValue) || document.name.toLowerCase().includes(ruleValue);
+        }
+        if (rule.operator === 'not') {
+          return docType !== ruleValue && !document.name.toLowerCase().includes(ruleValue);
+        }
+        return false;
+        
+      case 'tags':
+        const docTags = document.tags || [];
+        const ruleTags = rule.value.split(',').map(t => t.trim().toLowerCase());
+        if (rule.operator === 'contains') {
+          return ruleTags.some(tag => 
+            docTags.some(docTag => docTag.toLowerCase().includes(tag)) ||
+            document.name.toLowerCase().includes(tag) ||
+            document.description?.toLowerCase().includes(tag)
+          );
+        }
+        if (rule.operator === 'is' || rule.operator === 'equals') {
+          return ruleTags.some(tag => docTags.some(docTag => docTag.toLowerCase() === tag));
+        }
+        return false;
+        
+      case 'keywords':
+        const keyword = rule.value.toLowerCase();
+        const searchText = `${document.name} ${document.description || ''}`.toLowerCase();
+        if (rule.operator === 'contains') {
+          return searchText.includes(keyword);
+        }
+        if (rule.operator === 'is' || rule.operator === 'equals') {
+          return searchText === keyword || document.name.toLowerCase() === keyword;
+        }
+        if (rule.operator === 'not') {
+          return !searchText.includes(keyword);
+        }
+        return false;
+        
+      case 'client':
+        const clientName = rule.value.toLowerCase();
+        const orgMatch = document.organization?.toLowerCase().includes(clientName);
+        const nameMatch = document.name.toLowerCase().includes(clientName);
+        const descMatch = document.description?.toLowerCase().includes(clientName);
+        if (rule.operator === 'is' || rule.operator === 'equals') {
+          return orgMatch || nameMatch || descMatch;
+        }
+        if (rule.operator === 'contains') {
+          return orgMatch || nameMatch || descMatch;
+        }
+        return false;
+        
+      case 'date_range':
+        const year = rule.value;
+        const docDate = document.uploadedOn || '';
+        if (rule.operator === 'is' || rule.operator === 'equals') {
+          return docDate.includes(year);
+        }
+        return false;
+        
+      case 'vendor':
+        const vendorName = rule.value.toLowerCase();
+        const vendorMatch = document.name.toLowerCase().includes(vendorName) ||
+                           document.description?.toLowerCase().includes(vendorName) ||
+                           document.uploadedBy?.toLowerCase().includes(vendorName);
+        if (rule.operator === 'is' || rule.operator === 'equals' || rule.operator === 'contains') {
+          return vendorMatch;
+        }
+        return false;
+        
+      default:
+        return false;
+    }
+  });
+}
+
 export default function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('collections');
   const [aiFilter, setAiFilter] = useState<string | null>(null);
@@ -2206,6 +2392,33 @@ export default function App() {
   const [selectedOrganization, setSelectedOrganization] = useState<string>('all');
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
   const [pinnedDocumentIds, setPinnedDocumentIds] = useState<Set<string>>(new Set());
+  
+  // State для зберігання колекцій
+  const [collections, setCollections] = useState<Collection[]>(() => {
+    // Ініціалізуємо з mock даних, конвертуючи їх у формат Collection
+    return allCollections.map(col => ({
+      id: col.id,
+      title: col.title,
+      description: col.description || '',
+      count: col.count,
+      type: col.type,
+      icon: col.icon,
+      createdBy: col.createdBy || 'Joan Zhao',
+      createdOn: col.createdOn || new Date().toLocaleDateString(),
+      organization: col.organization,
+      sharedWith: col.sharedWith,
+      rules: col.rules ? col.rules.map((rule, idx) => ({
+        id: `rule-${col.id}-${idx}`,
+        type: 'keywords' as const, // Спрощена версія, можна покращити
+        label: 'Rule',
+        value: rule,
+        operator: 'contains' as const,
+        enabled: true
+      })) : undefined,
+      autoSync: col.autoSync,
+      documentIds: []
+    }));
+  });
 
   const handleShowAIFilter = () => {
     setAiFilter('needs-signature');
@@ -2219,7 +2432,7 @@ export default function App() {
     setIsLeftPanelCollapsed(!isLeftPanelCollapsed);
   };
 
-  const handleUploadComplete = (files: any[], collections: string[]) => {
+  const handleUploadComplete = (files: any[], selectedCollections: string[]) => {
     // Create new document entries from uploaded files
     const newDocuments: Document[] = files.map((fileInfo, index) => {
       const fileName = fileInfo.file.name;
@@ -2229,23 +2442,93 @@ export default function App() {
         day: 'numeric', 
         year: 'numeric' 
       });
+      const docId = `DOC-${Date.now()}-${index}`;
       
       return {
+        id: docId,
         name: fileName,
         description: 'Recently uploaded document',
         type: fileExtension.toUpperCase(),
-        attachedTo: collections.length > 0 ? collections : ['Uncategorized'],
+        attachedTo: selectedCollections.length > 0 ? selectedCollections : ['Uncategorized'],
         shared: ['user1'],
         icon: fileExtension,
         status: 'In Review',
         uploadedBy: 'Joan Zhao',
         uploadedOn: currentDate,
-        organization: 'Summation Partners'
+        organization: 'Summation Partners',
+        collectionIds: [],
+        tags: []
       };
     });
 
+    // Автоматично додаємо документи до колекцій на основі правил
+    const updatedCollections = collections.map(collection => {
+      if (!collection.autoSync || !collection.rules) return collection;
+      
+      const matchedDocIds: string[] = [];
+      newDocuments.forEach(doc => {
+        if (matchDocumentToRules(doc, collection.rules!)) {
+          matchedDocIds.push(doc.id!);
+        }
+      });
+      
+      if (matchedDocIds.length > 0) {
+        return {
+          ...collection,
+          documentIds: [...(collection.documentIds || []), ...matchedDocIds],
+          count: (collection.documentIds?.length || 0) + matchedDocIds.length
+        };
+      }
+      
+      return collection;
+    });
+    
+    // Додаємо також до явно вибраних колекцій
+    selectedCollections.forEach(collectionName => {
+      const collection = updatedCollections.find(col => col.title === collectionName);
+      if (collection) {
+        const docIds = newDocuments.map(doc => doc.id!);
+        const index = updatedCollections.indexOf(collection);
+        updatedCollections[index] = {
+          ...collection,
+          documentIds: [...new Set([...(collection.documentIds || []), ...docIds])],
+          count: (collection.documentIds?.length || 0) + docIds.length
+        };
+      }
+    });
+    
+    // Оновлюємо collectionIds в документах
+    const documentsWithCollections = newDocuments.map(doc => {
+      const docCollectionIds: string[] = [];
+      
+      // Додаємо до явно вибраних колекцій
+      selectedCollections.forEach(collectionName => {
+        const collection = updatedCollections.find(col => col.title === collectionName);
+        if (collection) {
+          docCollectionIds.push(collection.id);
+        }
+      });
+      
+      // Додаємо до колекцій, які відповідають правилам
+      updatedCollections.forEach(collection => {
+        if (collection.autoSync && collection.rules && matchDocumentToRules(doc, collection.rules)) {
+          if (!docCollectionIds.includes(collection.id)) {
+            docCollectionIds.push(collection.id);
+          }
+        }
+      });
+      
+      return {
+        ...doc,
+        collectionIds: docCollectionIds
+      };
+    });
+
+    // Оновлюємо колекції
+    setCollections(updatedCollections);
+    
     // Add new documents to the beginning of the list
-    setDocuments(prev => [...newDocuments, ...prev]);
+    setDocuments(prev => [...documentsWithCollections, ...prev]);
     
     // Store uploaded documents for AI banner
     const uploadedDocsForBanner: UploadedDocument[] = files.map((fileInfo, index) => ({
@@ -2283,9 +2566,49 @@ export default function App() {
     });
   };
 
-  const handleCreateCollection = (name: string, description: string, rules: any[]) => {
-    // Here you would typically save the collection to your backend
-    console.log('Creating collection:', { name, description, rules });
+  const handleCreateCollection = (name: string, description: string, rules: CollectionRule[]) => {
+    // Створюємо нову колекцію
+    const newCollection: Collection = {
+      id: `col-${Date.now()}`,
+      title: name,
+      description: description,
+      count: 0,
+      type: 'custom',
+      icon: '📁',
+      createdBy: 'Joan Zhao',
+      createdOn: new Date().toLocaleDateString(),
+      organization: selectedOrganization !== 'all' 
+        ? organizations.find(o => o.id === selectedOrganization)?.name 
+        : undefined,
+      rules: rules,
+      autoSync: true,
+      documentIds: []
+    };
+    
+    // Знаходимо документи, які відповідають правилам
+    const matchingDocuments = documents.filter(doc => 
+      matchDocumentToRules(doc, rules)
+    );
+    
+    // Додаємо ID документів до колекції
+    newCollection.documentIds = matchingDocuments.map(doc => doc.id || '');
+    newCollection.count = matchingDocuments.length;
+    
+    // Оновлюємо документи, додаючи collectionId
+    setDocuments(prev => prev.map(doc => {
+      if (matchingDocuments.some(md => md.id === doc.id)) {
+        return {
+          ...doc,
+          collectionIds: [...(doc.collectionIds || []), newCollection.id]
+        };
+      }
+      return doc;
+    }));
+    
+    // Додаємо колекцію до списку
+    setCollections(prev => [...prev, newCollection]);
+    
+    toast.success(`Collection "${name}" created with ${matchingDocuments.length} documents`);
     
     // Switch to collections view
     setViewMode('collections');

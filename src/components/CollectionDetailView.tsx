@@ -3,6 +3,8 @@ import { Settings, Share, Users, FileText, Plus, ChevronDown, ChevronUp, Search,
 import imgAvatar from "figma:asset/faff2adb1cb08272d6a4e4d91304adea83279eb7.png";
 import imgAvatar1 from "figma:asset/248e51d98c071d09cefd9d4449f99bd2dc3797f1.png";
 import { CollectionDocumentsTable } from './CollectionDocumentsTable';
+import { BulkActionsBar } from './BulkActionsBar';
+import { FilterBar } from './FilterBar';
 import svgPaths from "../imports/svg-ylbe71kelt";
 import { Checkbox } from './ui/checkbox';
 
@@ -401,7 +403,7 @@ export function CollectionDetailHeader({ collection, onBack, onAddDocument }: Co
   }
 
   return (
-    <div className="border-b border-[#e8e8ec] px-[64px] py-[16px] bg-white flex-shrink-0">
+    <div className="border-b border-[#e8e8ec] px-[24px] pt-[16px] pb-[8px] bg-white flex-shrink-0">
       <div>
         {/* Title Row */}
         <div className="flex items-start justify-between mb-[8px]">
@@ -539,10 +541,10 @@ export function CollectionDetailView({ collection, onBack, onAddDocument }: Coll
   const visibleColumnsCount = 11; // Checkbox + Name + Description + Type + Attached to + Shared with + Uploaded by + Uploaded on + Organization + Signature status + Actions
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-white min-w-0 h-full">
+    <div className="flex-1 flex flex-col overflow-hidden bg-white min-w-0 h-full" style={{ paddingTop: '16px' }}>
 
       {/* Details Section */}
-      <div className="border-b border-[#e8e8ec] px-[64px] py-[16px] flex-shrink-0">
+      <div className="border-b border-[#e8e8ec] px-[24px] py-[16px] flex-shrink-0">
         <div className="w-full flex items-center justify-between">
           <h2 className="text-[13px] font-medium text-[#1c2024]">Details</h2>
           <button
@@ -640,112 +642,38 @@ export function CollectionDetailView({ collection, onBack, onAddDocument }: Coll
         )}
       </div>
 
-      {/* Filter Bar */}
-      <div className="border-b border-[#e8e8ec] px-[64px] py-[12px] bg-white flex-shrink-0 min-w-0 w-full max-w-full">
-        <div className="flex items-center justify-between gap-[8px] min-w-0">
-          <div className="flex items-center gap-[8px] min-w-0">
-            {/* Filters Button */}
-            <button className="h-[32px] px-[8px] flex items-center gap-[8px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] bg-white">
-              <SlidersHorizontal className="size-[16px] text-[#60646c]" />
-              <span className="text-[12px] font-semibold">Filters</span>
-            </button>
+      {/* Documents Table with Scroll */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0 flex flex-col relative">
+        {/* Filter Bar */}
+        <FilterBar
+          filterQuery={filterQuery}
+          onFilterChange={setFilterQuery}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          visibleColumnsCount={viewMode === 'table' ? visibleColumnsCount : undefined}
+        />
 
-            {/* Search Input */}
-            <div className="relative" style={{ width: '256px' }}>
-              <input
-                type="text"
-                value={filterQuery}
-                onChange={(e) => setFilterQuery(e.target.value)}
-                placeholder='Filter documents (e.g., "signed last month")...'
-                className="w-full h-[32px] px-[12px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] placeholder:text-[#8b8d98] focus:outline-none focus:ring-2 focus:ring-[#005be2] focus:border-transparent"
-              />
-            </div>
-
-            {/* Apply Button */}
-            <button className="h-[32px] px-[12px] flex items-center gap-[4px] bg-[#f0f0f3] rounded-[6px] text-[13px] text-[#b9bbc6] hover:bg-[#e0e1e6]">
-              <Sparkles className="size-[16px]" />
-              <span className="text-[13px] font-semibold">Apply</span>
-            </button>
-
-            {/* Column Count */}
-            {viewMode === 'table' && (
-              <span className="text-[13px] text-[#60646c] whitespace-nowrap">
-                {visibleColumnsCount}/{visibleColumnsCount} columns
-              </span>
-            )}
-          </div>
-
-          {/* View Switcher (Grid Icon first) - Right side */}
-          <div className="flex items-center border border-[#e0e1e6] rounded-[6px] flex-shrink-0">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`h-[32px] w-[32px] flex items-center justify-center rounded-l-[6px] transition-colors ${
-                viewMode === 'grid' 
-                  ? 'bg-[#f0f0f3] text-[#1c2024]' 
-                  : 'text-[#60646c] hover:bg-[#f9fafb]'
-              }`}
-            >
-              <svg className="size-[16px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect width="18" height="18" x="3" y="3" rx="2"></rect>
-                <path d="M3 9h18"></path>
-                <path d="M3 15h18"></path>
-                <path d="M9 3v18"></path>
-                <path d="M15 3v18"></path>
-              </svg>
-            </button>
-            <button
-              onClick={() => setViewMode('table')}
-              className={`h-[32px] w-[32px] flex items-center justify-center rounded-r-[6px] transition-colors ${
-                viewMode === 'table' 
-                  ? 'bg-[#f0f0f3] text-[#1c2024]' 
-                  : 'text-[#60646c] hover:bg-[#f9fafb]'
-              }`}
-            >
-              <List className="size-[16px]" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Documents Grid */}
-      <div className="flex-1 overflow-hidden pb-[16px] min-w-0 flex flex-col" style={{ paddingTop: viewMode === 'grid' ? '24px' : '0' }}>
         {/* Bulk Actions Bar */}
         {selectedDocuments.length > 0 && (
-          <div className="mb-[16px] px-[24px]">
-            <div className="bg-[#f0f0f3] border border-[#e0e1e6] rounded-[8px] px-[24px] py-[12px] flex items-center justify-between">
-              <div className="flex items-center gap-[12px]">
-                <span className="text-[13px] text-[#1c2024]">{selectedDocuments.length} selected</span>
-                <button 
-                  onClick={() => setSelectedDocuments([])}
-                  className="text-[13px] text-[#60646c] hover:text-[#1c2024]"
-                >
-                  Clear selection
-                </button>
-              </div>
-              <div className="flex items-center gap-[8px]">
-                <button className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb]">
-                  Remove from collection
-                </button>
-                <button className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb]">
-                  Move
-                </button>
-                <button 
-                  disabled={selectedDocuments.length > 1}
-                  className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Rename
-                </button>
-                <button className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb]">
-                  Download
-                </button>
-              </div>
-            </div>
-          </div>
+          <BulkActionsBar
+            selectedCount={selectedDocuments.length}
+            onClearSelection={() => setSelectedDocuments([])}
+            hasQuickFilters={false}
+            showRemoveFromCollection={true}
+            onRemoveFromCollection={() => {}}
+            onMove={() => {}}
+            onRename={() => {}}
+            onDownload={() => {}}
+            onExport={() => {}}
+            onShare={() => {}}
+            onDelete={() => {}}
+          />
         )}
 
-        {viewMode === 'table' ? (
-          filteredDocuments.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center" style={{ paddingTop: '36px' }}>
+        {/* Documents Content */}
+        <div className="pb-[16px] pt-[16px] min-w-0 flex flex-col">
+          {filteredDocuments.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center">
               <div className="bg-[#f0f0f3] text-[#60646c] rounded-[8px] size-[28px] grid place-items-center mb-[16px]">
                 <FileText className="size-[16px]" />
               </div>
@@ -754,9 +682,10 @@ export function CollectionDetailView({ collection, onBack, onAddDocument }: Coll
                 <p className="text-[13px] leading-[20px]">Upload a document to get started</p>
               </div>
             </div>
-          ) : (
+          ) : viewMode === 'table' ? (
             <div className="flex-1 min-w-0 overflow-x-auto overflow-y-auto">
-              <table className="caption-bottom text-sm w-full" style={{ minWidth: 'max-content' }}>
+              <div className="px-[24px]">
+                <table className="caption-bottom text-sm w-full" style={{ minWidth: 'max-content' }}>
                 <thead className="[&_tr]:border-b">
                   <tr className="border-b transition-colors">
                     <th className="h-10 px-2 text-left align-middle w-[40px] min-w-[40px]">
@@ -867,21 +796,10 @@ export function CollectionDetailView({ collection, onBack, onAddDocument }: Coll
                   ))}
                 </tbody>
               </table>
-            </div>
-          )
-        ) : (
-          filteredDocuments.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center px-[24px] pt-[24px]" style={{ paddingTop: '36px' }}>
-              <div className="bg-[#f0f0f3] text-[#60646c] rounded-[8px] size-[28px] grid place-items-center mb-[16px]">
-                <FileText className="size-[16px]" />
-              </div>
-              <div className="text-[#60646c]">
-                <h2 className="text-[16px] font-medium mb-[4px]">No documents to show</h2>
-                <p className="text-[13px] leading-[20px]">Upload a document to get started</p>
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-[16px] px-[24px] pt-[24px] pb-[24px]">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-[16px] p-[24px]">
               {filteredDocuments.map((doc) => (
               <div
                 key={doc.id}
@@ -915,8 +833,8 @@ export function CollectionDetailView({ collection, onBack, onAddDocument }: Coll
               </div>
               ))}
             </div>
-          )
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

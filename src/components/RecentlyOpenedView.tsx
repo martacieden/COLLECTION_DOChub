@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import { Checkbox } from './ui/checkbox';
-import { List, SlidersHorizontal } from 'lucide-react';
+import { FilterBar } from './FilterBar';
+import { BulkActionsBar } from './BulkActionsBar';
+import { DocumentCard } from './DocumentCard';
+import { FileText } from 'lucide-react';
 import svgPaths from "../imports/svg-ylbe71kelt";
 
 interface Document {
+  id: string;
   name: string;
   description?: string;
   type: string;
@@ -14,10 +18,20 @@ interface Document {
   organization?: string;
   signatureStatus?: string;
   lastOpened?: string;
+  collectionIds?: string[];
+}
+
+interface Collection {
+  id: string;
+  title: string;
+  icon?: string;
 }
 
 interface RecentlyOpenedViewProps {
   documents?: Document[];
+  pinnedDocumentIds?: Set<string>;
+  onPinToggle?: (docId: string) => void;
+  collections?: Collection[];
 }
 
 // FileIcon component
@@ -115,6 +129,7 @@ function FileIcon({ type }: { type: string }) {
 // Mock documents data
 const mockDocuments: Document[] = [
   {
+    id: 'DOC-001',
     name: 'Oak Street - Revised Blueprints v3.2',
     description: 'Architectural plans for main floor renovation...',
     type: 'PDF',
@@ -127,6 +142,7 @@ const mockDocuments: Document[] = [
     lastOpened: '2 hours ago'
   },
   {
+    id: 'DOC-002',
     name: 'Building Permit - Oak Street Property',
     description: 'Approved building permit for structural changes...',
     type: 'PDF',
@@ -139,6 +155,7 @@ const mockDocuments: Document[] = [
     lastOpened: '5 hours ago'
   },
   {
+    id: 'DOC-003',
     name: 'General Contractor Agreement - Studio XYZ',
     description: 'Executed contract with Studio XYZ for design...',
     type: 'DOCX',
@@ -151,6 +168,7 @@ const mockDocuments: Document[] = [
     lastOpened: '1 day ago'
   },
   {
+    id: 'DOC-004',
     name: 'Invoice #1247 - Electrical Work Phase 1',
     description: 'Payment invoice for electrical system upgrade...',
     type: 'XLSX',
@@ -163,6 +181,7 @@ const mockDocuments: Document[] = [
     lastOpened: '2 days ago'
   },
   {
+    id: 'DOC-005',
     name: 'Change Order CO-003 - Kitchen Layout',
     description: 'Scope modification for kitchen design changes...',
     type: 'PDF',
@@ -175,6 +194,7 @@ const mockDocuments: Document[] = [
     lastOpened: '3 days ago'
   },
   {
+    id: 'DOC-006',
     name: 'Lien Waiver - ABC Plumbing Inc',
     description: 'Unconditional lien waiver for completed plumbing...',
     type: 'PDF',
@@ -187,6 +207,7 @@ const mockDocuments: Document[] = [
     lastOpened: '4 days ago'
   },
   {
+    id: 'DOC-007',
     name: 'Certificate of Occupancy - Final',
     description: 'Final CO approval for renovated property...',
     type: 'PDF',
@@ -199,6 +220,7 @@ const mockDocuments: Document[] = [
     lastOpened: '1 week ago'
   },
   {
+    id: 'DOC-008',
     name: 'Maple Ave - Site Survey Report',
     description: 'Topographical survey for new construction site...',
     type: 'PDF',
@@ -213,146 +235,182 @@ const mockDocuments: Document[] = [
 ];
 
 export function RecentlyOpenedView({ 
-  documents = mockDocuments
+  documents = mockDocuments,
+  pinnedDocumentIds,
+  onPinToggle,
+  collections = []
 }: RecentlyOpenedViewProps) {
+  const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
+  const [filterQuery, setFilterQuery] = useState<string>('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
-  // For now, show all documents (filtering will be handled by Filters button later)
-  const filteredDocuments = documents;
+  const handleSelectDocument = (docId: string) => {
+    setSelectedDocuments(prev => 
+      prev.includes(docId) 
+        ? prev.filter(id => id !== docId)
+        : [...prev, docId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedDocuments.length === filteredDocuments.length) {
+      setSelectedDocuments([]);
+    } else {
+      setSelectedDocuments(filteredDocuments.map(d => d.id));
+    }
+  };
+
+  // Filter documents based on search query
+  const filteredDocuments = documents.filter(doc => {
+    if (filterQuery.trim() === '') return true;
+    const query = filterQuery.toLowerCase();
+    return doc.name.toLowerCase().includes(query) ||
+           (doc.description?.toLowerCase().includes(query)) ||
+           doc.type.toLowerCase().includes(query) ||
+           (doc.attachedTo?.some(item => item.toLowerCase().includes(query))) ||
+           (doc.sharedWith?.some(item => item.toLowerCase().includes(query))) ||
+           (doc.uploadedBy?.toLowerCase().includes(query)) ||
+           (doc.organization?.toLowerCase().includes(query)) ||
+           (doc.signatureStatus?.toLowerCase().includes(query)) ||
+           (doc.lastOpened?.toLowerCase().includes(query));
+  });
+
+  const handlePinToggle = () => {
+    if (onPinToggle) {
+      // Toggle pin status for all selected documents
+      selectedDocuments.forEach(docId => {
+        onPinToggle(docId);
+      });
+      // Clear selection after pinning/unpinning
+      setSelectedDocuments([]);
+    }
+  };
 
   return (
-    <div className="flex-1 flex flex-col bg-white overflow-hidden">
-      {/* Filter Bar */}
-      <div className="border-b border-[#e8e8ec] bg-white min-w-0 w-full max-w-full">
-        <div className="px-[64px] py-[12px] min-w-0">
-          <div className="flex items-center justify-between min-w-0">
-            {/* Filters Button */}
-            <button className="h-[32px] px-[8px] flex items-center gap-[8px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] bg-white">
-              <SlidersHorizontal className="size-[16px] text-[#60646c]" />
-              <span className="text-[12px] font-semibold">Filters</span>
-            </button>
+    <div className="flex-1 flex flex-col overflow-hidden bg-white min-w-0">
+      {/* Documents Table with Scroll */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0 flex flex-col relative">
+        {/* Filter Bar */}
+        <FilterBar
+          filterQuery={filterQuery}
+          onFilterChange={setFilterQuery}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+        />
 
-            {/* View Toggle */}
-            <div className="flex items-center border border-[#e0e1e6] rounded-[6px]">
-              <button
-                onClick={() => setViewMode('list')}
-                className={`h-[32px] w-[32px] flex items-center justify-center rounded-l-[6px] transition-colors ${
-                  viewMode === 'list'
-                    ? 'bg-[#f0f0f3] text-[#1c2024]'
-                    : 'text-[#60646c] hover:bg-[#f9fafb]'
-                }`}
-              >
-                <List className="size-[16px]" />
-              </button>
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`h-[32px] w-[32px] flex items-center justify-center rounded-r-[6px] transition-colors ${
-                  viewMode === 'grid'
-                    ? 'bg-[#f0f0f3] text-[#1c2024]'
-                    : 'text-[#60646c] hover:bg-[#f9fafb]'
-                }`}
-              >
-                <svg className="size-[16px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect width="18" height="18" x="3" y="3" rx="2"></rect>
-                  <path d="M3 9h18"></path>
-                  <path d="M3 15h18"></path>
-                  <path d="M9 3v18"></path>
-                  <path d="M15 3v18"></path>
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Content Area */}
-      <div className="flex-1 overflow-auto px-[64px] py-[16px]">
-        {viewMode === 'grid' ? (
-          // Grid View
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[16px]">
-            {filteredDocuments.map((doc, index) => (
-              <div
-                key={index}
-                className="border border-[#e0e1e6] rounded-[8px] overflow-hidden hover:border-[#005be2] hover:shadow-sm transition-all cursor-pointer bg-white"
-              >
-                {/* Icon and Type Section */}
-                <div className="bg-[#f5f5f7] h-[100px] flex flex-col items-center justify-center gap-[6px]">
-                  <FileIcon type={doc.type} />
-                  <span className="text-[10px] text-[#8b8d98] uppercase tracking-wider">{doc.type}</span>
-                </div>
-                
-                {/* Content Section */}
-                <div className="p-[12px]">
-                  <h3 className="text-[13px] text-[#1c2024] mb-[4px] line-clamp-1 font-medium">
-                    {doc.name}
-                  </h3>
-                  <p className="text-[11px] text-[#8b8d98] line-clamp-2">
-                    {doc.description || '-'}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          // Table View
-          <div className="relative w-full overflow-x-auto">
-            <table className="w-full caption-bottom text-sm">
-              <thead className="[&_tr]:border-b">
-                <tr className="border-b transition-colors">
-                  <th className="h-10 px-2 text-left align-middle w-[40px]">
-                    <Checkbox />
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap">Name</th>
-                  <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap">Description</th>
-                  <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap">Type</th>
-                  <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap">Last opened</th>
-                  <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap">Uploaded on</th>
-                  <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap">Signature status</th>
-                </tr>
-              </thead>
-              <tbody className="[&_tr:last-child]:border-0">
-                {filteredDocuments.map((doc, index) => (
-                  <tr key={index} className="border-b transition-colors hover:bg-[#f9fafb] cursor-pointer">
-                    <td className="p-2 align-middle">
-                      <Checkbox />
-                    </td>
-                    <td className="p-2 align-middle whitespace-nowrap">
-                      <div className="flex items-center gap-[8px]">
-                        <FileIcon type={doc.type} />
-                        <span className="text-[13px] text-[#1c2024]">{doc.name}</span>
-                      </div>
-                    </td>
-                    <td className="p-2 align-middle whitespace-nowrap">
-                      <span className="text-[13px] text-[#60646c]">{doc.description || '-'}</span>
-                    </td>
-                    <td className="p-2 align-middle whitespace-nowrap">
-                      <span className="text-[13px] text-[#1c2024]">{doc.type}</span>
-                    </td>
-                    <td className="p-2 align-middle whitespace-nowrap">
-                      <span className="text-[13px] text-[#60646c]">{doc.lastOpened || '-'}</span>
-                    </td>
-                    <td className="p-2 align-middle whitespace-nowrap">
-                      <span className="text-[13px] text-[#60646c]">{doc.uploadedOn || '-'}</span>
-                    </td>
-                    <td className="p-2 align-middle whitespace-nowrap">
-                      {doc.signatureStatus && (
-                        <span className={`inline-flex items-center px-[8px] py-[4px] rounded-[6px] text-[12px] font-medium whitespace-nowrap ${
-                          doc.signatureStatus.toLowerCase().includes('signed') || doc.signatureStatus.toLowerCase().includes('approved') || doc.signatureStatus.toLowerCase().includes('paid')
-                            ? 'bg-[#ECFDF5] text-[#059669]'
-                            : doc.signatureStatus.toLowerCase().includes('pending') || doc.signatureStatus.toLowerCase().includes('waiting')
-                            ? 'bg-[#FFF8ED] text-[#B45309]'
-                            : 'bg-[#F5F5F7] text-[#60646c]'
-                        }`}>
-                          {doc.signatureStatus}
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        {/* Bulk Actions Bar */}
+        {selectedDocuments.length > 0 && (
+          <BulkActionsBar
+            selectedCount={selectedDocuments.length}
+            onClearSelection={() => setSelectedDocuments([])}
+            onPinToggle={handlePinToggle}
+            hasQuickFilters={false}
+            onMove={() => {}}
+            onRename={() => {}}
+            onDownload={() => {}}
+          />
         )}
+
+        {/* Documents Content */}
+        <div className="pb-[16px] pt-[16px] min-w-0 flex flex-col">
+          {filteredDocuments.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center">
+              <div className="bg-[#f0f0f3] text-[#60646c] rounded-[8px] size-[28px] grid place-items-center mb-[16px]">
+                <FileText className="size-[16px]" />
+              </div>
+              <div className="text-[#60646c]">
+                <h2 className="text-[16px] font-medium mb-[4px]">No documents to show</h2>
+                <p className="text-[13px] leading-[20px]">Upload a document to get started</p>
+              </div>
+            </div>
+          ) : viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[16px] p-[24px]">
+              {filteredDocuments.map((doc) => {
+                // Знайти колекції, до яких належить документ
+                const docCollections = collections.filter(col => 
+                  doc.collectionIds?.includes(col.id)
+                );
+                
+                return (
+                  <DocumentCard
+                    key={doc.id}
+                    document={doc}
+                    isSelected={selectedDocuments.includes(doc.id)}
+                    onSelect={handleSelectDocument}
+                    isPinned={pinnedDocumentIds?.has(doc.id) || false}
+                    collections={docCollections}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex-1 min-w-0 overflow-x-auto overflow-y-auto">
+              <div className="px-[24px]">
+                <table className="caption-bottom text-sm w-full" style={{ minWidth: 'max-content' }}>
+                  <thead className="[&_tr]:border-b">
+                    <tr className="border-b transition-colors">
+                      <th className="h-10 px-2 text-left align-middle w-[40px] min-w-[40px]">
+                        <Checkbox
+                          checked={selectedDocuments.length === filteredDocuments.length && filteredDocuments.length > 0}
+                          onCheckedChange={handleSelectAll}
+                        />
+                      </th>
+                      <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[150px]">Name</th>
+                      <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[180px]">Description</th>
+                      <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[70px]">Type</th>
+                      <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[120px]">Last opened</th>
+                      <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[120px]">Uploaded on</th>
+                      <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[140px]">Signature status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="[&_tr:last-child]:border-0">
+                    {filteredDocuments.map((doc) => (
+                      <tr key={doc.id} className="border-b transition-colors hover:bg-[#f9fafb] cursor-pointer">
+                        <td className="p-2 align-middle" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedDocuments.includes(doc.id)}
+                            onCheckedChange={() => handleSelectDocument(doc.id)}
+                          />
+                        </td>
+                        <td className="p-2 align-middle whitespace-nowrap">
+                          <div className="flex items-center gap-[8px]">
+                            <FileIcon type={doc.type} />
+                            <span className="text-[13px] text-[#1c2024]">{doc.name}</span>
+                          </div>
+                        </td>
+                        <td className="p-2 align-middle">
+                          <span className="text-[13px] text-[#60646c] truncate block max-w-[220px]">{doc.description || '-'}</span>
+                        </td>
+                        <td className="p-2 align-middle whitespace-nowrap">
+                          <span className="text-[13px] text-[#1c2024]">{doc.type}</span>
+                        </td>
+                        <td className="p-2 align-middle whitespace-nowrap">
+                          <span className="text-[13px] text-[#1c2024]">{doc.lastOpened || '-'}</span>
+                        </td>
+                        <td className="p-2 align-middle whitespace-nowrap">
+                          <span className="text-[13px] text-[#1c2024]">{doc.uploadedOn || '-'}</span>
+                        </td>
+                        <td className="p-2 align-middle whitespace-nowrap">
+                          {doc.signatureStatus && (
+                            <span className={`inline-flex items-center px-[8px] py-[4px] rounded-[6px] text-[12px] font-medium whitespace-nowrap ${
+                              doc.signatureStatus.toLowerCase().includes('signed') || doc.signatureStatus.toLowerCase().includes('approved') || doc.signatureStatus.toLowerCase().includes('paid')
+                                ? 'bg-[#ECFDF5] text-[#059669]'
+                                : doc.signatureStatus.toLowerCase().includes('pending') || doc.signatureStatus.toLowerCase().includes('waiting')
+                                ? 'bg-[#FFF8ED] text-[#B45309]'
+                                : 'bg-[#F5F5F7] text-[#60646c]'
+                            }`}>
+                              {doc.signatureStatus}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
