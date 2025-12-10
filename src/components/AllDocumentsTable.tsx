@@ -42,6 +42,7 @@ interface AllDocumentsTableProps {
   pinnedDocumentIds?: Set<string>;
   onPinToggle?: (docId: string) => void;
   collections?: Collection[];
+  onDelete?: (documentIds: string[]) => void;
 }
 
 // FileIcon component для визначення типу файлу та іконки
@@ -297,7 +298,8 @@ export function AllDocumentsTable({
   organizations = defaultOrganizations,
   pinnedDocumentIds,
   onPinToggle,
-  collections = []
+  collections = [],
+  onDelete
 }: AllDocumentsTableProps) {
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [filterQuery, setFilterQuery] = useState<string>('');
@@ -452,7 +454,12 @@ export function AllDocumentsTable({
             onPinToggle={handlePinToggle}
             hasQuickFilters={true}
             onAddToCollection={() => {}}
-            onDelete={() => {}}
+            onDelete={() => {
+              if (onDelete && selectedDocuments.length > 0) {
+                onDelete(selectedDocuments);
+                setSelectedDocuments([]);
+              }
+            }}
             onExport={() => {}}
             onShare={() => {}}
           />

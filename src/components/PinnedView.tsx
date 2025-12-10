@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { DocumentCard } from './DocumentCard';
 import { FileText } from 'lucide-react';
 import { FilterBar } from './FilterBar';
@@ -98,7 +98,7 @@ export function PinnedView({ documents = [], pinnedDocumentIds, onPinToggle, col
             selectedCount={selectedDocuments.length}
             onClearSelection={() => setSelectedDocuments([])}
             onPinToggle={handlePinToggle}
-            isUnpinMode={true}
+            isUnpinMode
             hasQuickFilters={false}
             onMove={() => {}}
             onRename={() => {}}
@@ -128,7 +128,7 @@ export function PinnedView({ documents = [], pinnedDocumentIds, onPinToggle, col
                 
                 return (
                   <DocumentCard
-                    key={doc.id}
+                    {...{ key: doc.id }}
                     document={doc}
                     isSelected={selectedDocuments.includes(doc.id)}
                     onSelect={handleSelectDocument}

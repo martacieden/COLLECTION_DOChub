@@ -1,3 +1,4 @@
+import React from 'react';
 import { Pin, PinOff, Plus, Trash2, Share2, Download } from 'lucide-react';
 
 interface BulkActionsBarProps {

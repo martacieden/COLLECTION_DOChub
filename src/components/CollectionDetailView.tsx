@@ -22,9 +22,12 @@ interface CollectionDetailViewProps {
     sharedWith?: string[];
     rules?: string[];
     autoSync?: boolean;
+    documentIds?: string[];
   };
   onBack?: () => void;
   onAddDocument?: () => void;
+  onRemoveFromCollection?: (collectionId: string, documentIds: string[]) => void;
+  documents?: any[];
 }
 
 // FileIcon component - same as in App.tsx
@@ -482,7 +485,7 @@ export function CollectionDetailHeader({ collection, onBack, onAddDocument }: Co
   );
 }
 
-export function CollectionDetailView({ collection, onBack, onAddDocument }: CollectionDetailViewProps) {
+export function CollectionDetailView({ collection, onBack, onAddDocument, onRemoveFromCollection, documents }: CollectionDetailViewProps) {
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
@@ -490,12 +493,22 @@ export function CollectionDetailView({ collection, onBack, onAddDocument }: Coll
   const [aiDescription, setAiDescription] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Set organization from collection to all documents
-  const collectionOrganization = collection.organization || 'Summation Partners';
-  const mockCollectionDocuments = baseMockCollectionDocuments.map(doc => ({
-    ...doc,
-    organization: collectionOrganization
-  }));
+  // Захист від undefined/null collection
+  if (!collection) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center text-center">
+        <div className="text-[#60646c]">
+          <h2 className="text-[16px] font-medium mb-[4px]">Collection not found</h2>
+        </div>
+      </div>
+    );
+  }
+
+  // Отримуємо документи колекції з переданих documents або використовуємо mock дані
+  const collectionDocumentIds = collection.documentIds || [];
+  const collectionDocuments = documents && documents.length > 0 
+    ? documents.filter(doc => doc && doc.id && collectionDocumentIds.includes(doc.id))
+    : [];
 
   const handleSelectDocument = (docId: string) => {
     setSelectedDocuments(prev => 
@@ -506,10 +519,18 @@ export function CollectionDetailView({ collection, onBack, onAddDocument }: Coll
   };
 
   const handleSelectAll = () => {
-    if (selectedDocuments.length === mockCollectionDocuments.length) {
+    if (selectedDocuments.length === collectionDocuments.length) {
       setSelectedDocuments([]);
     } else {
-      setSelectedDocuments(mockCollectionDocuments.map(d => d.id));
+      setSelectedDocuments(collectionDocuments.map(d => d.id || ''));
+    }
+  };
+
+  // Handle removal from collection
+  const handleRemoveFromCollection = () => {
+    if (onRemoveFromCollection && selectedDocuments.length > 0) {
+      onRemoveFromCollection(collection.id, selectedDocuments);
+      setSelectedDocuments([]);
     }
   };
 
@@ -528,20 +549,21 @@ export function CollectionDetailView({ collection, onBack, onAddDocument }: Coll
   };
 
   // Filter documents based on search query
-  const filteredDocuments = mockCollectionDocuments.filter(doc => {
-    if (filterQuery.trim() === '') return true;
+  const filteredDocuments = collectionDocuments.filter(doc => {
+    if (!doc || !filterQuery.trim()) return true;
     const query = filterQuery.toLowerCase();
-    return doc.name.toLowerCase().includes(query) ||
-           doc.location.toLowerCase().includes(query) ||
-           doc.category.toLowerCase().includes(query) ||
-           doc.type.toLowerCase().includes(query);
+    return (doc.name?.toLowerCase().includes(query)) ||
+           (doc.location?.toLowerCase().includes(query)) ||
+           (doc.category?.toLowerCase().includes(query)) ||
+           (doc.type?.toLowerCase().includes(query)) ||
+           (doc.description?.toLowerCase().includes(query));
   });
 
   // Count visible columns in table view
   const visibleColumnsCount = 11; // Checkbox + Name + Description + Type + Attached to + Shared with + Uploaded by + Uploaded on + Organization + Signature status + Actions
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-white min-w-0 h-full" style={{ paddingTop: '16px' }}>
+    <div className="flex-1 flex flex-col overflow-hidden bg-white min-w-0 h-full">
 
       {/* Details Section */}
       <div className="border-b border-[#e8e8ec] px-[24px] py-[16px] flex-shrink-0">
@@ -660,7 +682,7 @@ export function CollectionDetailView({ collection, onBack, onAddDocument }: Coll
             onClearSelection={() => setSelectedDocuments([])}
             hasQuickFilters={false}
             showRemoveFromCollection={true}
-            onRemoveFromCollection={() => {}}
+            onRemoveFromCollection={handleRemoveFromCollection}
             onMove={() => {}}
             onRename={() => {}}
             onDownload={() => {}}
@@ -671,9 +693,9 @@ export function CollectionDetailView({ collection, onBack, onAddDocument }: Coll
         )}
 
         {/* Documents Content */}
-        <div className="pb-[16px] pt-[16px] min-w-0 flex flex-col">
+        <div className="pb-[16px] pt-0 min-w-0 flex flex-col">
           {filteredDocuments.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center">
+            <div className="flex-1 flex flex-col items-center justify-center text-center min-h-0">
               <div className="bg-[#f0f0f3] text-[#60646c] rounded-[8px] size-[28px] grid place-items-center mb-[16px]">
                 <FileText className="size-[16px]" />
               </div>
@@ -717,15 +739,15 @@ export function CollectionDetailView({ collection, onBack, onAddDocument }: Coll
                     </td>
                     <td className="p-2 align-middle whitespace-nowrap">
                       <div className="flex items-center gap-[8px]">
-                        <FileIcon type={doc.type} />
-                        <span className="text-[13px] text-[#1c2024]">{doc.name}</span>
+                        <FileIcon type={doc.type || 'file'} />
+                        <span className="text-[13px] text-[#1c2024]">{doc.name || 'Unnamed document'}</span>
                       </div>
                     </td>
                     <td className="p-2 align-middle">
                       <span className="text-[13px] text-[#60646c] truncate block max-w-[220px]">{doc.description || '-'}</span>
                     </td>
                     <td className="p-2 align-middle whitespace-nowrap">
-                      <span className="text-[13px] text-[#1c2024]">{doc.type}</span>
+                      <span className="text-[13px] text-[#1c2024]">{doc.type || 'File'}</span>
                     </td>
                     <td className="p-2 align-middle">
                       <div className="flex flex-wrap gap-[4px]">
@@ -817,17 +839,17 @@ export function CollectionDetailView({ collection, onBack, onAddDocument }: Coll
 
                 {/* Icon and Type Section */}
                 <div className="bg-[#f5f5f7] h-[100px] flex flex-col items-center justify-center gap-[6px]">
-                  <FileIcon type={doc.type} />
-                  <span className="text-[10px] text-[#8b8d98] uppercase tracking-wider">{doc.type}</span>
+                  <FileIcon type={doc.type || 'file'} />
+                  <span className="text-[10px] text-[#8b8d98] uppercase tracking-wider">{doc.type || 'File'}</span>
                 </div>
                 
                 {/* Content Section */}
                 <div className="p-[12px]">
                   <h3 className="text-[13px] text-[#1c2024] mb-[4px] line-clamp-1">
-                    {doc.name}
+                    {doc.name || 'Unnamed document'}
                   </h3>
                   <p className="text-[11px] text-[#8b8d98] line-clamp-2">
-                    {doc.category}...
+                    {doc.category || doc.description || 'No description'}...
                   </p>
                 </div>
               </div>

@@ -1,13 +1,16 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, X, Search, SlidersHorizontal, Upload, MoreVertical, Info, Sparkles, List, FileText, SearchIcon, TrendingUp, Archive, Send, PanelLeft, Paperclip, Mic, Pencil, Eye, Share2, Trash2 } from 'lucide-react';
 import { Checkbox } from './components/ui/checkbox';
 import svgPaths from "./imports/svg-ylbe71kelt";
-import imgAvatar from "figma:asset/faff2adb1cb08272d6a4e4d91304adea83279eb7.png";
-import imgAvatar1 from "figma:asset/248e51d98c071d09cefd9d4449f99bd2dc3797f1.png";
+import svgAudioPaths from "./imports/svg-sp6lr7not4";
+// @ts-ignore
+import imgAvatar from "./assets/faff2adb1cb08272d6a4e4d91304adea83279eb7.png";
+// @ts-ignore
+import imgAvatar1 from "./assets/248e51d98c071d09cefd9d4449f99bd2dc3797f1.png";
 import { UploadModal } from './components/UploadModal';
 import { NewCollectionModal } from './components/NewCollectionModal';
 import { Toaster } from './components/ui/sonner';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { CollectionDetailView, CollectionDetailHeader } from './components/CollectionDetailView';
 import { PageHeader } from './components/PageHeader';
 import { AllDocumentsTable } from './components/AllDocumentsTable';
@@ -48,7 +51,7 @@ interface Collection {
 }
 
 interface Document {
-  id?: string;
+  id: string;
   name: string;
   description: string;
   type: string;
@@ -62,6 +65,7 @@ interface Document {
   collectionIds?: string[]; // IDs колекцій, до яких належить документ
   tags?: string[];
   signatureStatus?: string;
+  category?: string;
 }
 
 interface ContextSuggestion {
@@ -260,6 +264,7 @@ const mockDocuments: Document[] = [
     signatureStatus: 'Signed'
   },
   {
+    id: 'doc-2',
     name: 'Invoice #1247 - Electrical Work Phase 1',
     description: 'Payment invoice for electrical system upgrade...',
     type: 'PDF',
@@ -272,6 +277,7 @@ const mockDocuments: Document[] = [
     organization: 'Summation Partners'
   },
   {
+    id: 'doc-3',
     name: 'Change Order CO-003 - Kitchen Layout',
     description: 'Scope modification for kitchen design changes...',
     type: 'PDF',
@@ -284,6 +290,7 @@ const mockDocuments: Document[] = [
     organization: 'Summation Partners'
   },
   {
+    id: 'doc-4',
     name: 'Lien Waiver - ABC Plumbing Inc',
     description: 'Unconditional lien waiver for completed plumbing...',
     type: 'PDF',
@@ -296,6 +303,7 @@ const mockDocuments: Document[] = [
     organization: 'Summation Partners'
   },
   {
+    id: 'doc-5',
     name: 'Certificate of Occupancy - Oak Street',
     description: 'Final CO approval for renovated property...',
     type: 'PDF',
@@ -308,6 +316,7 @@ const mockDocuments: Document[] = [
     organization: 'Summation Partners'
   },
   {
+    id: 'doc-6',
     name: 'Maple Ave - Site Survey Report',
     description: 'Topographical survey for new construction site...',
     type: 'PDF',
@@ -320,6 +329,7 @@ const mockDocuments: Document[] = [
     organization: 'Summation Partners'
   },
   {
+    id: 'doc-7',
     name: 'Invoice #892 - Foundation Work - Maple Ave',
     description: 'Payment request for foundation and grading...',
     type: 'XLSX',
@@ -332,6 +342,7 @@ const mockDocuments: Document[] = [
     organization: 'Summation Partners'
   },
   {
+    id: 'doc-8',
     name: 'Lien Waiver - Premier Concrete LLC',
     description: 'Conditional lien waiver upon payment...',
     type: 'PDF',
@@ -344,6 +355,7 @@ const mockDocuments: Document[] = [
     organization: 'Summation Partners'
   },
   {
+    id: 'doc-9',
     name: 'Pine Street - HVAC Contract - Signed',
     description: 'Executed agreement for HVAC installation...',
     type: 'DOCX',
@@ -356,6 +368,7 @@ const mockDocuments: Document[] = [
     organization: 'Summation Partners'
   },
   {
+    id: 'doc-10',
     name: 'Environmental Impact Assessment - Pine St',
     description: 'EPA compliance report for retrofit project...',
     type: 'PDF',
@@ -368,6 +381,7 @@ const mockDocuments: Document[] = [
     organization: 'Summation Partners'
   },
   {
+    id: 'doc-11',
     name: 'Change Order CO-011 - Window Specifications',
     description: 'Material upgrade for energy-efficient windows...',
     type: 'PDF',
@@ -380,6 +394,7 @@ const mockDocuments: Document[] = [
     organization: 'Summation Partners'
   },
   {
+    id: 'doc-12',
     name: 'Invoice #3341 - Roofing Materials',
     description: 'Material costs for commercial roofing system...',
     type: 'PDF',
@@ -392,6 +407,7 @@ const mockDocuments: Document[] = [
     organization: 'Summation Partners'
   },
   {
+    id: 'doc-13',
     name: 'Lien Waiver - Summit Roofing Co',
     description: 'Final unconditional lien waiver...',
     type: 'PDF',
@@ -404,6 +420,7 @@ const mockDocuments: Document[] = [
     organization: 'Summation Partners'
   },
   {
+    id: 'doc-14',
     name: 'Insurance Certificate - Builder\'s Risk',
     description: 'Builder\'s risk insurance policy for active projects...',
     type: 'PDF',
@@ -416,6 +433,7 @@ const mockDocuments: Document[] = [
     organization: 'Summation Partners'
   },
   {
+    id: 'doc-15',
     name: 'Payment Application #5 - Oak Street',
     description: 'AIA G702/G703 payment application...',
     type: 'XLSX',
@@ -559,8 +577,8 @@ function FileIcon({ type }: { type: string }) {
           color: 'text-[#CE2C31]',
           svg: (
             <>
-              <path d={svgPaths.p2d891172} fill="currentColor" />
-              <path d={svgPaths.p236c8380} fill="currentColor" />
+              <path d={svgAudioPaths.p2d891172} fill="currentColor" />
+              <path d={svgAudioPaths.p236c8380} fill="currentColor" />
             </>
           )
         };
@@ -1531,30 +1549,10 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // All collections data
-  const allCollections = [
-    { id: '1', title: 'Oak Street Renovation', count: 42, type: 'construction', description: 'All documents related to the Oak Street property renovation project including blueprints, permits, contracts, and vendor documents.', icon: '🏗️', createdOn: '13/10/2025', createdBy: 'Joan Zhao', sharedWith: ['Michael Kim', 'Alex Smith', 'Sarah Johnson'], rules: ['Category is any of Construction, Permits, Contracts', 'Project = Oak Street', 'Status is any of Active, In Progress'], autoSync: true, organization: 'Smith Family Office' },
-    { id: '2', title: 'Executed Contracts', count: 28, type: 'legal', description: 'Signed and executed contractual agreements across all projects and vendors.', icon: '📝', createdOn: '15/09/2025', createdBy: 'Joan Zhao', sharedWith: ['Michael Kim', 'Legal Team'], rules: ['Document Type = Contract', 'Status = Signed'], autoSync: true, organization: 'Johnson Family Trust' },
-    { id: '3', title: 'Permits & Approvals', count: 15, type: 'legal', description: 'Building permits, zoning approvals, and regulatory documentation.', icon: '✅', createdOn: '20/08/2025', createdBy: 'Michael Kim', sharedWith: ['Joan Zhao', 'Alex Smith'], rules: ['Category = Permits', 'Status is any of Approved, Active'], autoSync: true, organization: 'Smith Family Office' },
-    { id: '4', title: 'Financial - Invoices', count: 67, type: 'financial', description: 'Payment invoices and billing documents from all vendors and contractors.', icon: '💰', createdOn: '10/07/2025', createdBy: 'Joan Zhao', sharedWith: ['Finance Team', 'Michael Kim'], rules: ['Document Type = Invoice', 'Date is within last 12 months'], autoSync: true, organization: "Herwitz's Family" },
-    { id: '5', title: 'Change Orders', count: 19, type: 'construction', description: 'Project modification requests and approved change orders.', icon: '🔄', createdOn: '05/06/2025', createdBy: 'Alex Smith', sharedWith: ['Joan Zhao', 'Michael Kim'], rules: ['Document Type = Change Order', 'Project = Oak Street'], autoSync: true, organization: 'Wayne Estate Management' },
-    { id: '6', title: 'Lien Waivers', count: 12, type: 'legal', description: 'Lien waiver documentation from contractors and subcontractors.', icon: '📋', createdOn: '25/05/2025', createdBy: 'Michael Kim', sharedWith: ['Joan Zhao', 'Legal Team'], rules: ['Document Type = Lien Waiver'], autoSync: false, organization: 'The Robertson Foundation' },
-    { id: '7', title: 'Insurance Documents', count: 23, type: 'legal', description: 'Insurance policies, certificates, and liability documentation.', icon: '🛡️', createdOn: '18/04/2025', createdBy: 'Joan Zhao', sharedWith: ['Insurance Team', 'Michael Kim'], rules: ['Category = Insurance', 'Date is within last 24 months'], autoSync: true, organization: 'Smith Family Office' },
-    { id: '8', title: 'Safety Inspections', count: 31, type: 'construction', description: 'Safety inspection reports and compliance documentation.', icon: '⚠️', createdOn: '12/03/2025', createdBy: 'Alex Smith', sharedWith: ['Joan Zhao', 'Safety Team'], rules: ['Document Type = Inspection', 'Category = Safety'], autoSync: true, organization: 'Johnson Family Trust' },
-    { id: '9', title: 'Vendor Contracts', count: 38, type: 'legal', description: 'Agreements with suppliers, contractors, and service providers.', icon: '🤝', createdOn: '08/02/2025', createdBy: 'Joan Zhao', sharedWith: ['Procurement Team', 'Legal Team'], rules: ['Document Type = Contract', 'Party Type = Vendor'], autoSync: true, organization: 'Smith Family Office' },
-    { id: '10', title: 'Property Appraisals', count: 8, type: 'financial', description: 'Property valuation reports and appraisal documents.', icon: '💎', createdOn: '22/01/2025', createdBy: 'Michael Kim', sharedWith: ['Joan Zhao', 'Finance Team'], rules: ['Document Type = Appraisal'], autoSync: false, organization: "Herwitz's Family" },
-    { id: '11', title: 'Meeting Minutes', count: 45, type: 'general', description: 'Project meeting notes, action items, and decision logs.', icon: '📅', createdOn: '15/12/2024', createdBy: 'Joan Zhao', sharedWith: ['All Team Members'], rules: ['Document Type = Meeting Minutes', 'Date is within last 6 months'], autoSync: true, organization: 'Wayne Estate Management' },
-    { id: '12', title: 'Site Photos', count: 156, type: 'construction', description: 'Construction progress photos and site documentation imagery.', icon: '📸', createdOn: '03/11/2024', createdBy: 'Alex Smith', sharedWith: ['Joan Zhao', 'Project Team'], rules: ['File Type = Image', 'Project = Oak Street'], autoSync: true, organization: 'The Robertson Foundation' },
-    { id: '13', title: 'Equipment Rentals', count: 14, type: 'financial', description: 'Equipment rental agreements and related invoices.', icon: '🚜', createdOn: '28/10/2024', createdBy: 'Joan Zhao', sharedWith: ['Operations Team'], rules: ['Category = Equipment', 'Document Type is any of Contract, Invoice'], autoSync: false, organization: 'Smith Family Office' },
-    { id: '14', title: 'Warranty Documents', count: 22, type: 'general', description: 'Product warranties and manufacturer guarantees.', icon: '🔧', createdOn: '19/09/2024', createdBy: 'Michael Kim', sharedWith: ['Joan Zhao', 'Maintenance Team'], rules: ['Document Type = Warranty'], autoSync: true, organization: 'Johnson Family Trust' },
-    { id: '15', title: 'As-Built Drawings', count: 34, type: 'construction', description: 'Final construction drawings reflecting actual built conditions.', icon: '📐', createdOn: '07/08/2024', createdBy: 'Alex Smith', sharedWith: ['Joan Zhao', 'Engineering Team'], rules: ['Document Type = Drawing', 'Status = As-Built'], autoSync: true, organization: 'Smith Family Office' },
-    { id: '16', title: 'Punch Lists', count: 11, type: 'construction', description: 'Outstanding items and completion checklists.', icon: '✓', createdOn: '25/07/2024', createdBy: 'Joan Zhao', sharedWith: ['Project Team'], rules: ['Document Type = Punch List'], autoSync: false, organization: "Herwitz's Family" },
-    { id: '17', title: 'Payment Applications', count: 29, type: 'financial', description: 'Contractor payment requests and progress billing.', icon: '💵', createdOn: '14/06/2024', createdBy: 'Joan Zhao', sharedWith: ['Finance Team', 'Michael Kim'], rules: ['Document Type = Payment Application', 'Project = Oak Street'], autoSync: true, organization: 'Wayne Estate Management' },
-    { id: '18', title: 'Material Orders', count: 53, type: 'construction', description: 'Purchase orders and material delivery documentation.', icon: '����', createdOn: '02/05/2024', createdBy: 'Alex Smith', sharedWith: ['Joan Zhao', 'Procurement Team'], rules: ['Document Type = Purchase Order', 'Category = Materials'], autoSync: true, organization: 'The Robertson Foundation' },
-  ];
 
-  // Використовуємо передані колекції або fallback до mock даних
-  const allCollectionsData = collections || allCollections;
+  // Використовуємо передані колекції (містять mock + новостворені) або fallback до глобальних mock даних
+  // Якщо collections передано і воно не порожнє, використовуємо його, інакше fallback до глобального allCollections
+  const allCollectionsData = (collections && Array.isArray(collections) && collections.length > 0) ? collections : allCollections;
 
   // Filter collections based on search query and organization
   const filteredCollections = allCollectionsData
@@ -1706,7 +1704,7 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
               <div className="grid grid-cols-2 gap-[12px]">
                 {suggestions.slice(0, 2).map((suggestion) => (
                   <AISuggestionCard
-                    key={suggestion.id}
+                    {...{ key: suggestion.id }}
                     suggestion={suggestion}
                     onView={() => handleViewSuggestion(suggestion)}
                     onAccept={() => handleAcceptSuggestion(suggestion.id)}
@@ -1860,7 +1858,7 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
                       </td>
                           <td className="p-2 align-middle">
                         <div className="flex items-center gap-[4px]">
-                          {collection.sharedWith.slice(0, 2).map((person, idx) => (
+                          {collection.sharedWith?.slice(0, 2).map((person, idx) => (
                             <div 
                               key={idx}
                                   className="size-[24px] rounded-full bg-[#e0e1e6] flex items-center justify-center text-[10px] text-[#60646c]"
@@ -1869,7 +1867,7 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
                               {person.split(' ').map(n => n[0]).join('')}
                             </div>
                           ))}
-                          {collection.sharedWith.length > 2 && (
+                          {collection.sharedWith && collection.sharedWith.length > 2 && (
                             <span className="text-[13px] text-[#60646c]">
                               +{collection.sharedWith.length - 2}
                             </span>
@@ -1912,7 +1910,7 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
             {filteredCollections.length > 0 ? (
               filteredCollections.map((collection) => (
                 <CollectionCard 
-                  key={collection.id}
+                  {...{ key: collection.id }}
                   title={collection.title}
                   icon={collection.icon}
                   organization={collection.organization}
@@ -1949,7 +1947,9 @@ function MainContent({
   onOrganizationChange,
   pinnedDocumentIds,
   onPinToggle,
-  allCollections
+  collections,
+  onRemoveFromCollection,
+  onDelete
 }: { 
   viewMode: ViewMode; 
   aiFilter?: string | null;
@@ -1966,7 +1966,9 @@ function MainContent({
   onOrganizationChange?: (orgId: string) => void;
   pinnedDocumentIds?: Set<string>;
   onPinToggle?: (docId: string) => void;
-  allCollections?: any[];
+  collections?: Collection[];
+  onRemoveFromCollection?: (collectionId: string, documentIds: string[]) => void;
+  onDelete?: (documentIds: string[]) => void;
 }) {
   if (viewMode === 'collection-detail' && selectedCollection) {
     return (
@@ -1974,13 +1976,15 @@ function MainContent({
         collection={selectedCollection}
         onBack={onBackFromCollection}
         onAddDocument={onUploadClick}
+        onRemoveFromCollection={onRemoveFromCollection}
+        documents={documents}
       />
     );
   }
 
   if (viewMode === 'all-documents') {
     // Отримати список колекцій для передачі
-    const collectionsList = (allCollections || []).map(col => ({
+    const collectionsList = (collections || []).map(col => ({
       id: col.id,
       title: col.title,
       icon: col.icon
@@ -1996,6 +2000,7 @@ function MainContent({
           pinnedDocumentIds={pinnedDocumentIds}
           onPinToggle={onPinToggle}
           collections={collectionsList}
+          onDelete={onDelete}
         />
       </div>
     );
@@ -2003,7 +2008,7 @@ function MainContent({
 
   if (viewMode === 'recent') {
     // Отримати список колекцій для передачі
-    const collectionsList = (allCollections || []).map(col => ({
+    const collectionsList = (collections || []).map(col => ({
       id: col.id,
       title: col.title,
       icon: col.icon
@@ -2023,7 +2028,7 @@ function MainContent({
 
   if (viewMode === 'pinned') {
     // Отримати список колекцій для передачі
-    const collectionsList = (allCollections || []).map(col => ({
+    const collectionsList = (collections || []).map(col => ({
       id: col.id,
       title: col.title,
       icon: col.icon
@@ -2041,14 +2046,127 @@ function MainContent({
     );
   }
 
-  return <CollectionsView onUploadClick={onUploadClick} onNewCollectionClick={onNewCollectionClick} onCollectionClick={onCollectionClick} selectedOrganization={selectedOrganization} collections={allCollections} />;
+  // Передаємо колекції (завжди мають містити мінімум mock дані)
+  return <CollectionsView onUploadClick={onUploadClick} onNewCollectionClick={onNewCollectionClick} onCollectionClick={onCollectionClick} selectedOrganization={selectedOrganization} collections={collections} />;
 }
 
 // ========================================
 // FOJO AI ASSISTANT PANEL
 // ========================================
 
-function FojoAssistantPanel() {
+function FojoAssistantPanel({ collection, documents }: { collection?: any; documents?: Document[] }) {
+  // Generate AI summary based on collection state
+  const generateSummary = (): string => {
+    if (!collection) {
+      return "Select a collection to see AI-generated insights and suggestions.";
+    }
+
+    const collectionDocumentIds = collection.documentIds || [];
+    const collectionDocuments = documents && documents.length > 0
+      ? documents.filter(doc => doc && doc.id && collectionDocumentIds.includes(doc.id))
+      : [];
+    
+    const hasDocuments = collectionDocuments.length > 0;
+    const hasRules = collection.rules && collection.rules.length > 0;
+    const hasDescription = collection.description && collection.description.trim().length > 0;
+
+    // Case A: Collection has documents
+    if (hasDocuments) {
+      // Analyze document patterns
+      const docTypes = [...new Set(collectionDocuments.map(d => d.type))];
+      const docCategories = [...new Set(collectionDocuments.map(d => d.category).filter((cat): cat is string => Boolean(cat)))];
+      const docOrganizations = [...new Set(collectionDocuments.map(d => d.organization).filter(Boolean))];
+      
+      let summary = `This collection contains ${collectionDocuments.length} ${collectionDocuments.length === 1 ? 'document' : 'documents'}`;
+      
+      if (docTypes.length > 0) {
+        summary += `, including ${docTypes.slice(0, 3).join(', ')}${docTypes.length > 3 ? ' and more' : ''} files`;
+      }
+      
+      if (docCategories.length > 0) {
+        summary += `. Categories: ${docCategories.slice(0, 2).join(', ')}${docCategories.length > 2 ? ' and more' : ''}`;
+      }
+      
+      if (docOrganizations.length > 0) {
+        summary += `. Related to: ${docOrganizations.slice(0, 2).join(', ')}${docOrganizations.length > 2 ? ' and more' : ''}`;
+      }
+      
+      summary += '.';
+      
+      // Suggest improvements if no rules
+      if (!hasRules && collectionDocuments.length >= 3) {
+        summary += ' You may want to add rules to automatically include similar documents.';
+      }
+      
+      return summary;
+    }
+
+    // Case B: Collection has rules but no documents
+    if (hasRules && !hasDocuments) {
+      const rulesDescription = collection.rules.slice(0, 2).join(', ');
+      let summary = `This collection has automation rules configured: ${rulesDescription}`;
+      if (collection.rules.length > 2) {
+        summary += ` and ${collection.rules.length - 2} more`;
+      }
+      summary += '. Documents that match these criteria will be automatically added to this collection.';
+      
+      // Suggest examples
+      if (collection.rules.some((r: string) => r.toLowerCase().includes('tax'))) {
+        summary += ' For example, tax documents matching your criteria would appear here.';
+      } else if (collection.rules.some((r: string) => r.toLowerCase().includes('contract'))) {
+        summary += ' For example, contracts matching your criteria would appear here.';
+      } else {
+        summary += ' Start uploading or creating documents that match your rules to see them appear here.';
+      }
+      
+      return summary;
+    }
+
+    // Case C: Collection has description but no rules and no documents
+    if (hasDescription && !hasRules && !hasDocuments) {
+      let summary = `Based on your description: "${collection.description.substring(0, 100)}${collection.description.length > 100 ? '...' : ''}"`;
+      summary += ' You can add documents manually or set up automation rules to automatically include documents that match your criteria.';
+      summary += ' Consider adding rules to make this collection automatically sync with new documents.';
+      
+      return summary;
+    }
+
+    // Case D: Collection has only a title
+    if (!hasDescription && !hasRules && !hasDocuments) {
+      return `"${collection.title}" is a new collection. Add a description to help AI understand what this collection is for, or start adding documents. You can also set up automation rules to automatically include matching documents.`;
+    }
+
+    return "Analyzing collection...";
+  };
+
+  const generateAssistantMessage = (): string => {
+    if (!collection) {
+      return "Select a collection to get started with AI assistance.";
+    }
+
+    const collectionDocumentIds = collection.documentIds || [];
+    const collectionDocuments = documents && documents.length > 0
+      ? documents.filter(doc => doc && doc.id && collectionDocumentIds.includes(doc.id))
+      : [];
+    
+    const hasDocuments = collectionDocuments.length > 0;
+    const hasRules = collection.rules && collection.rules.length > 0;
+    const hasDescription = collection.description && collection.description.trim().length > 0;
+
+    if (hasDocuments) {
+      return "I've analyzed the documents in this collection. I can help you understand patterns, find relationships, and suggest improvements. What would you like to know?";
+    } else if (hasRules) {
+      return "This collection has automation rules set up. I can help you understand what documents would match these rules and suggest ways to refine them.";
+    } else if (hasDescription) {
+      return "I see you've described what this collection is for. I can help you set up rules, find relevant documents, or refine your description.";
+    } else {
+      return "This is a new collection. I can help you add a description, set up automation rules, or find documents to add. What would you like to do?";
+    }
+  };
+
+  const summary = generateSummary();
+  const assistantMessage = generateAssistantMessage();
+
   return (
     <div className="flex flex-col h-full bg-white overflow-hidden" style={{ width: '400px', minWidth: '400px', maxWidth: '400px' }}>
       {/* Header */}
@@ -2062,7 +2180,7 @@ function FojoAssistantPanel() {
       <div className="flex-1 overflow-hidden flex flex-col">
         {/* Summary Section */}
         <SummaryBox 
-          summary="All documents related to the Oak Street property renovation project including blueprints, permits, contracts, and vendor documents."
+          summary={summary}
         />
 
         {/* Assistant Message - Scrollable Area */}
@@ -2072,7 +2190,7 @@ function FojoAssistantPanel() {
               <div className="flex-1 min-w-0 overflow-hidden">
                 <p className="text-[13px] font-semibold text-[#60646c] mb-[4px]">AI Assistant</p>
                 <p className="text-[14px] text-[#1c2024] leading-[1.6] break-words">
-                  Hey, I'm here to help! I've analyzed this document and can help you understand the content, linked objects, and relationships.
+                  {assistantMessage}
                 </p>
               </div>
             </div>
@@ -2393,9 +2511,63 @@ export default function App() {
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
   const [pinnedDocumentIds, setPinnedDocumentIds] = useState<Set<string>>(new Set());
   
-  // State для зберігання колекцій
+  // State для зберігання колекцій - збереження в localStorage
   const [collections, setCollections] = useState<Collection[]>(() => {
-    // Ініціалізуємо з mock даних, конвертуючи їх у формат Collection
+    // Спочатку пробуємо завантажити з localStorage
+    try {
+      const savedCollections = localStorage.getItem('way2b1_collections');
+      if (savedCollections) {
+        const parsed = JSON.parse(savedCollections);
+        // Перевіряємо, чи це масив
+        if (Array.isArray(parsed)) {
+          // Якщо є збережені колекції, об'єднуємо з mock даними (mock не перезаписуємо)
+          const mockCollections = allCollections.map(col => ({
+            id: col.id,
+            title: col.title,
+            description: col.description || '',
+            count: col.count,
+            type: col.type,
+            icon: col.icon,
+            createdBy: col.createdBy || 'Joan Zhao',
+            createdOn: col.createdOn || new Date().toLocaleDateString(),
+            organization: col.organization,
+            sharedWith: col.sharedWith,
+            rules: col.rules ? col.rules.map((rule, idx) => ({
+              id: `rule-${col.id}-${idx}`,
+              type: 'keywords' as const,
+              label: 'Rule',
+              value: rule,
+              operator: 'contains' as const,
+              enabled: true
+            })) : undefined,
+            autoSync: col.autoSync,
+            documentIds: []
+          }));
+          
+          // Об'єднуємо: mock колекції + збережені користувацькі колекції
+          const mockIds = new Set(mockCollections.map(c => c.id));
+          const userCollections = parsed.filter((c: Collection) => c && c.id && !mockIds.has(c.id));
+          return [...mockCollections, ...userCollections];
+        } else {
+          // Якщо parsed не є масивом, очищаємо localStorage і використовуємо mock дані
+          try {
+            localStorage.removeItem('way2b1_collections');
+          } catch (e) {
+            // Ignore
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading collections from localStorage:', error);
+      // Якщо помилка, очищаємо localStorage
+      try {
+        localStorage.removeItem('way2b1_collections');
+      } catch (e) {
+        // Ignore
+      }
+    }
+    
+    // Якщо немає збережених даних, ініціалізуємо з mock даних
     return allCollections.map(col => ({
       id: col.id,
       title: col.title,
@@ -2409,7 +2581,7 @@ export default function App() {
       sharedWith: col.sharedWith,
       rules: col.rules ? col.rules.map((rule, idx) => ({
         id: `rule-${col.id}-${idx}`,
-        type: 'keywords' as const, // Спрощена версія, можна покращити
+        type: 'keywords' as const,
         label: 'Rule',
         value: rule,
         operator: 'contains' as const,
@@ -2419,6 +2591,18 @@ export default function App() {
       documentIds: []
     }));
   });
+
+  // Функція для збереження колекцій в localStorage
+  const saveCollectionsToStorage = (updatedCollections: Collection[]) => {
+    try {
+      // Зберігаємо тільки користувацькі колекції (не mock)
+      const mockIds = new Set(allCollections.map(c => c.id));
+      const userCollections = updatedCollections.filter(c => !mockIds.has(c.id));
+      localStorage.setItem('way2b1_collections', JSON.stringify(userCollections));
+    } catch (error) {
+      console.error('Error saving collections to localStorage:', error);
+    }
+  };
 
   const handleShowAIFilter = () => {
     setAiFilter('needs-signature');
@@ -2526,6 +2710,8 @@ export default function App() {
 
     // Оновлюємо колекції
     setCollections(updatedCollections);
+    // Зберігаємо в localStorage
+    saveCollectionsToStorage(updatedCollections);
     
     // Add new documents to the beginning of the list
     setDocuments(prev => [...documentsWithCollections, ...prev]);
@@ -2606,12 +2792,18 @@ export default function App() {
     }));
     
     // Додаємо колекцію до списку
-    setCollections(prev => [...prev, newCollection]);
+    setCollections(prev => {
+      const updated = [...prev, newCollection];
+      // Зберігаємо в localStorage
+      saveCollectionsToStorage(updated);
+      return updated;
+    });
     
     toast.success(`Collection "${name}" created with ${matchingDocuments.length} documents`);
     
-    // Switch to collections view
-    setViewMode('collections');
+    // Автоматично відкриваємо створену колекцію
+    setSelectedCollection(newCollection);
+    setViewMode('collection-detail');
   };
 
   const handleCollectionClick = (collection: any) => {
@@ -2622,6 +2814,83 @@ export default function App() {
   const handleBackFromCollection = () => {
     setSelectedCollection(null);
     setViewMode('collections');
+  };
+
+  // Видалення документів з колекції (залишаємо їх в All Documents)
+  const handleRemoveFromCollection = (collectionId: string, documentIds: string[]) => {
+    // Оновлюємо документи - видаляємо collectionId з collectionIds
+    setDocuments(prev => prev.map(doc => {
+      if (documentIds.includes(doc.id || '')) {
+        const updatedCollectionIds = (doc.collectionIds || []).filter(id => id !== collectionId);
+        return {
+          ...doc,
+          collectionIds: updatedCollectionIds
+        };
+      }
+      return doc;
+    }));
+
+    // Оновлюємо колекції - видаляємо documentIds та зберігаємо
+    setCollections(prev => {
+      const updated = prev.map(col => {
+        if (col.id === collectionId) {
+          const updatedDocumentIds = (col.documentIds || []).filter(id => !documentIds.includes(id));
+          return {
+            ...col,
+            documentIds: updatedDocumentIds,
+            count: updatedDocumentIds.length
+          };
+        }
+        return col;
+      });
+      
+      // Зберігаємо в localStorage
+      saveCollectionsToStorage(updated);
+      
+      // Оновлюємо selectedCollection якщо це поточна колекція
+      if (selectedCollection && selectedCollection.id === collectionId) {
+        const updatedCollection = updated.find(col => col.id === collectionId);
+        if (updatedCollection) {
+          setSelectedCollection(updatedCollection);
+        }
+      }
+      
+      return updated;
+    });
+
+    toast.success(`${documentIds.length} ${documentIds.length === 1 ? 'document' : 'documents'} removed from collection`);
+  };
+
+  // Повне видалення документів (тільки на вкладці All Documents)
+  const handleDeleteDocuments = (documentIds: string[]) => {
+    // Видаляємо документи з All Documents (source of truth)
+    setDocuments(prev => prev.filter(doc => !documentIds.includes(doc.id || '')));
+
+    // Видаляємо з pinned
+    setPinnedDocumentIds(prev => {
+      const newSet = new Set(prev);
+      documentIds.forEach(id => newSet.delete(id));
+      return newSet;
+    });
+
+    // Видаляємо documentIds з усіх колекцій (тільки асоціації)
+    setCollections(prev => {
+      const updated = prev.map(col => {
+        const updatedDocumentIds = (col.documentIds || []).filter(id => !documentIds.includes(id));
+        return {
+          ...col,
+          documentIds: updatedDocumentIds,
+          count: updatedDocumentIds.length
+        };
+      });
+      
+      // Зберігаємо оновлені колекції
+      saveCollectionsToStorage(updated);
+      
+      return updated;
+    });
+
+    toast.success(`${documentIds.length} ${documentIds.length === 1 ? 'document' : 'documents'} deleted`);
   };
 
   return (
@@ -2669,10 +2938,13 @@ export default function App() {
             onOrganizationChange={setSelectedOrganization}
             pinnedDocumentIds={pinnedDocumentIds}
             onPinToggle={handlePinToggle}
+            collections={collections}
+            onRemoveFromCollection={handleRemoveFromCollection}
+            onDelete={handleDeleteDocuments}
           />
                   </div>
                   <div className="flex-shrink-0 flex-grow-0 border-l border-[#e8e8ec] overflow-hidden" style={{ width: '400px', minWidth: '400px', maxWidth: '400px' }}>
-                    <FojoAssistantPanel />
+                    <FojoAssistantPanel collection={selectedCollection} documents={documents} />
                   </div>
                 </div>
               </>
@@ -2693,7 +2965,9 @@ export default function App() {
                 onOrganizationChange={setSelectedOrganization}
                 pinnedDocumentIds={pinnedDocumentIds}
                 onPinToggle={handlePinToggle}
-                onOrganizationChange={setSelectedOrganization}
+                collections={collections}
+                onRemoveFromCollection={handleRemoveFromCollection}
+                onDelete={handleDeleteDocuments}
               />
             )}
           </div>

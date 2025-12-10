@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { X, Sparkles, Check, Loader2, Tag, FileText, Calendar, User, Building, ChevronRight, Search, ChevronDown, Plus, Trash2 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface NewCollectionModalProps {
   isOpen: boolean;

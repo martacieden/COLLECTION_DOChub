@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, ChevronDown } from 'lucide-react';
 import { UploadFileTable } from './UploadFileTable';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -73,7 +73,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collectionOrganizatio
   if (!isOpen) return null;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+    const files = Array.from(e.target.files || []) as File[];
     if (files.length > 0) {
       processFiles(files);
     }
@@ -81,7 +81,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collectionOrganizatio
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    const files = Array.from(e.dataTransfer.files);
+    const files = Array.from(e.dataTransfer.files) as File[];
     if (files.length > 0) {
       processFiles(files);
     }
