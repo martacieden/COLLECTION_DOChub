@@ -89,37 +89,37 @@ export function QuickFilters({ documents, activeFilter, onFilterClick, currentUs
     { 
       id: 'expiring-this-month', 
       label: 'Expiring This Month', 
-      icon: <AlertCircle className="size-[14px]" />,
+      icon: <AlertCircle className="size-[12px]" />,
       count: expiringThisMonthCount 
     },
     { 
       id: 'signed', 
       label: 'Signed', 
-      icon: <CheckCircle2 className="size-[14px]" />,
+      icon: <CheckCircle2 className="size-[12px]" />,
       count: signedCount 
     },
     { 
       id: 'pending-signature', 
       label: 'Pending signature', 
-      icon: <Clock className="size-[14px]" />,
+      icon: <Clock className="size-[12px]" />,
       count: pendingCount 
     },
     { 
       id: 'uploaded-by-me', 
       label: 'Uploaded by me', 
-      icon: <Upload className="size-[14px]" />,
+      icon: <Upload className="size-[12px]" />,
       count: uploadedByMeCount 
     },
     { 
       id: 'shared-with-me', 
       label: 'Shared with me', 
-      icon: <Users className="size-[14px]" />,
+      icon: <Users className="size-[12px]" />,
       count: sharedWithMeCount 
     },
     { 
       id: 'recent-uploads', 
       label: 'Recent uploads', 
-      icon: <Calendar className="size-[14px]" />,
+      icon: <Calendar className="size-[12px]" />,
       count: recentUploadsCount 
     },
   ];
@@ -131,7 +131,7 @@ export function QuickFilters({ documents, activeFilter, onFilterClick, currentUs
           <button
             key={filter.id}
             onClick={() => onFilterClick(activeFilter === filter.id ? null : filter.id)}
-            className={`px-[12px] py-[6px] rounded-[6px] text-[13px] font-normal transition-colors border flex items-center gap-[6px] ${
+            className={`px-[8px] py-[4px] rounded-[6px] text-[12px] font-normal transition-colors border flex items-center gap-[4px] ${
               activeFilter === filter.id
                 ? 'bg-[#005be2] text-white border-[#005be2]'
                 : 'bg-white text-[#1c2024] border-[#e0e1e6] hover:bg-[#f9fafb]'
@@ -140,7 +140,7 @@ export function QuickFilters({ documents, activeFilter, onFilterClick, currentUs
             {filter.icon}
             <span>{filter.label}</span>
             {filter.count > 0 && (
-              <span className={`text-[12px] ${
+              <span className={`text-[11px] ${
                 activeFilter === filter.id ? 'text-white/90' : 'text-[#60646c]'
               }`}>
                 ({filter.count})
