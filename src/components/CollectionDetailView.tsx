@@ -659,29 +659,28 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
                 </div>
                 <div className="space-y-[12px]">
                   <div>
-                    <p className="text-[13px] text-[#1c2024] mb-[8px]">
-                      Describe your collection and let AI suggest filtering rules.
-                    </p>
-                    <textarea
+                    <div className="text-[11px] text-[#8b8d98] mb-[4px] uppercase tracking-wider">Description</div>
+                    <input
+                      type="text"
                       value={aiDescription}
                       onChange={(e) => setAiDescription(e.target.value)}
-                      placeholder="e.g. All documents related to our Malibu property&#10;Invoices from all household vendors for 2023–2024&#10;Documents related to tax filings for Client A"
-                      className="w-full min-h-[100px] p-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] resize-none focus:outline-none focus:ring-2 focus:ring-[#005be2]"
+                      placeholder="e.g. All documents related to our Malibu property"
+                      className="w-full h-[36px] p-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#005be2]"
                     />
                   </div>
                   <button
                     onClick={handleGenerateRules}
                     disabled={isGenerating || !aiDescription.trim()}
-                    className="flex items-center gap-[8px] h-[36px] px-[16px] bg-gradient-to-r from-[#005be2] to-[#0047b3] text-white rounded-[8px] text-[13px] hover:from-[#004fc4] hover:to-[#003d99] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="flex items-center gap-[6px] h-[32px] px-[12px] bg-gradient-to-r from-[#005be2] to-[#0047b3] text-white rounded-[8px] text-[12px] hover:from-[#004fc4] hover:to-[#003d99] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     {isGenerating ? (
                       <>
-                        <Loader2 className="size-[16px] animate-spin" />
-                        <span>Analyzing your description...</span>
+                        <Loader2 className="size-[14px] animate-spin" />
+                        <span>Analyzing...</span>
                       </>
                     ) : (
                       <>
-                        <Sparkles className="size-[16px]" />
+                        <Sparkles className="size-[14px]" />
                         <span>Generate rules</span>
                       </>
                     )}
@@ -712,12 +711,6 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
             hasQuickFilters={false}
             showRemoveFromCollection={true}
             onRemoveFromCollection={handleRemoveFromCollection}
-            onMove={() => {}}
-            onRename={() => {}}
-            onDownload={() => {}}
-            onExport={() => {}}
-            onShare={() => {}}
-            onDelete={onDelete ? () => onDelete(selectedDocuments) : undefined}
           />
         )}
 

@@ -121,9 +121,12 @@ function Logo() {
   );
 }
 
-function SidebarMenuItem({ icon, label, isActive = false }: { icon: string; label: string; isActive?: boolean }) {
+function SidebarMenuItem({ icon, label, isActive = false, onClick }: { icon: string; label: string; isActive?: boolean; onClick?: () => void }) {
   return (
-    <div className="relative rounded-[6px] shrink-0 w-full">
+    <div 
+      className="relative rounded-[6px] shrink-0 w-full cursor-pointer"
+      onClick={onClick}
+    >
       <div className="flex flex-col items-center justify-center overflow-clip rounded-[inherit] size-full">
         <div className="box-border content-stretch flex flex-col gap-[2px] items-center justify-center px-[8px] py-[4px] relative w-full">
           <div className={`content-stretch flex gap-[8px] h-[24px] items-center justify-center overflow-clip relative rounded-[6px] shrink-0 w-[32px] ${isActive ? 'bg-[#ebf3ff]' : ''}`}>
@@ -142,7 +145,7 @@ function SidebarMenuItem({ icon, label, isActive = false }: { icon: string; labe
   );
 }
 
-function GlobalSidebar() {
+function GlobalSidebar({ onDocumentsClick }: { onDocumentsClick?: () => void }) {
   return (
     <div className="bg-[#fcfcfd] border-r border-[#e8e8ec] box-border flex flex-col gap-[16px] h-screen items-center px-0 py-[12px] w-[72px] fixed left-0 top-0">
       <Logo />
@@ -152,7 +155,7 @@ function GlobalSidebar() {
         <SidebarMenuItem icon="p29cdf980" label="Decisions" />
         <SidebarMenuItem icon="p3177ad70" label="Tasks" />
         <SidebarMenuItem icon="p18dfc700" label="Objects" />
-        <SidebarMenuItem icon="p2019600" label="Documents" isActive={true} />
+        <SidebarMenuItem icon="p2019600" label="Documents" isActive={true} onClick={onDocumentsClick} />
         <SidebarMenuItem icon="p2b3bb000" label="Budgets" />
         <SidebarMenuItem icon="p2e576200" label="More" />
       </div>
@@ -1975,6 +1978,8 @@ function MainContent({
   onAddToCollection?: (documentIds: string[]) => void;
   onCreateCollection?: (documentIds: string[]) => void;
 }) {
+  // Якщо viewMode === 'collection-detail' але selectedCollection === null, це означає що ми повертаємося назад
+  // В цьому випадку не відображаємо CollectionDetailView, а дозволяємо коду йти далі до CollectionsView
   if (viewMode === 'collection-detail' && selectedCollection) {
     return (
       <CollectionDetailView 
@@ -2595,6 +2600,14 @@ export default function App() {
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
   const [pinnedDocumentIds, setPinnedDocumentIds] = useState<Set<string>>(new Set());
   
+  // Синхронізація стану: якщо selectedCollection стає null, але viewMode все ще 'collection-detail', встановлюємо viewMode на 'collections'
+  // Це запобігає білому екрану при поверненні назад
+  useEffect(() => {
+    if (viewMode === 'collection-detail' && !selectedCollection) {
+      setViewMode('collections');
+    }
+  }, [selectedCollection, viewMode]);
+  
   // State для зберігання колекцій - збереження в localStorage
   const [collections, setCollections] = useState<Collection[]>(() => {
     // Спочатку пробуємо завантажити з localStorage
@@ -2969,8 +2982,24 @@ export default function App() {
   };
 
   const handleBackFromCollection = () => {
+    // Очищаємо selectedCollection і встановлюємо viewMode одночасно
     setSelectedCollection(null);
     setViewMode('collections');
+  };
+
+  const handleDocumentsClick = () => {
+    // Очищаємо вибрану колекцію та повертаємося на дефолтну сторінку
+    setSelectedCollection(null);
+    setViewMode('collections');
+  };
+
+  // Обробник зміни viewMode - очищаємо selectedCollection при переході з детальної сторінки колекції
+  const handleViewModeChange = (newViewMode: ViewMode) => {
+    if (viewMode === 'collection-detail' && newViewMode !== 'collection-detail') {
+      // Якщо переходимо з детальної сторінки колекції на іншу вкладку, очищаємо selectedCollection
+      setSelectedCollection(null);
+    }
+    setViewMode(newViewMode);
   };
 
   // Видалення документів з колекції (залишаємо їх в All Documents)
@@ -3101,7 +3130,7 @@ export default function App() {
 
   return (
     <div className="h-screen w-screen bg-[#f9fafb] flex overflow-hidden">
-      <GlobalSidebar />
+      <GlobalSidebar onDocumentsClick={handleDocumentsClick} />
 
       <div className="flex-1 ml-[72px] flex flex-col min-w-0 overflow-hidden" style={{ width: 'calc(100vw - 72px)', maxWidth: 'calc(100vw - 72px)' }}>
         <WorkspaceHeader onShowAIFilter={handleShowAIFilter} viewMode={viewMode} selectedCollection={selectedCollection} onUploadClick={() => setIsUploadModalOpen(true)} />
@@ -3109,7 +3138,7 @@ export default function App() {
         <div className="flex-1 flex overflow-hidden min-w-0">
           <LeftTabsPanel 
             viewMode={viewMode} 
-            onViewChange={setViewMode}
+            onViewChange={handleViewModeChange}
             isCollapsed={isLeftPanelCollapsed}
             onToggleCollapse={handleToggleLeftPanel}
             selectedOrganization={selectedOrganization}
@@ -3117,7 +3146,7 @@ export default function App() {
             pinnedDocumentIds={pinnedDocumentIds}
           />
           <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-            {viewMode === 'collection-detail' ? (
+            {viewMode === 'collection-detail' && selectedCollection ? (
               <>
                 {/* Header on full width */}
                 <CollectionDetailHeader 
