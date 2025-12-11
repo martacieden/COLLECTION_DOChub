@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, X, Search, SlidersHorizontal, Upload, MoreVertical, Info, Sparkles, List, FileText, SearchIcon, TrendingUp, Archive, Send, PanelLeft, Paperclip, Mic, Pencil, Eye, Share2, Trash2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './components/ui/alert-dialog';
 import { Checkbox } from './components/ui/checkbox';
 import svgPaths from "./imports/svg-ylbe71kelt";
 import svgAudioPaths from "./imports/svg-sp6lr7not4";
@@ -1346,7 +1347,7 @@ const userSets = [
   [{ initials: 'DD', color: 'bg-[#7e22ce]' }, { initials: 'EE', color: 'bg-[#e11d48]' }, { initials: 'FF', color: 'bg-[#0284c7]' }],
 ];
 
-function CollectionCard({ title, organization, onClick, collectionId, sharedWith, icon }: { title: string; organization?: string; onClick?: () => void; collectionId?: string; sharedWith?: string[]; icon?: string }) {
+function CollectionCard({ title, organization, onClick, collectionId, sharedWith, icon, onDelete }: { title: string; organization?: string; onClick?: () => void; collectionId?: string; sharedWith?: string[]; icon?: string; onDelete?: (collectionId: string) => void }) {
   // Use icon prop if provided, take only first emoji character
   // Match emoji including complex emojis (with modifiers, skin tones, etc.)
   const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E0}-\u{1F1FF}]/u;
@@ -1432,7 +1433,9 @@ function CollectionCard({ title, organization, onClick, collectionId, sharedWith
         toast.info('Share collection');
         break;
       case 'delete':
-        toast.error('Delete collection');
+        if (collectionId && onDelete) {
+          onDelete(collectionId);
+        }
         break;
     }
   };
@@ -1561,7 +1564,7 @@ function CollectionCard({ title, organization, onClick, collectionId, sharedWith
   );
 }
 
-function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClick, selectedOrganization, collections, onCreateCollectionFromAI }: { onUploadClick?: () => void; onNewCollectionClick?: () => void; onCollectionClick?: (collection: any) => void; selectedOrganization?: string; collections?: Collection[]; onCreateCollectionFromAI?: (suggestion: AISuggestion) => void }) {
+function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClick, selectedOrganization, collections, onCreateCollectionFromAI, onDeleteCollection }: { onUploadClick?: () => void; onNewCollectionClick?: () => void; onCollectionClick?: (collection: any) => void; selectedOrganization?: string; collections?: Collection[]; onCreateCollectionFromAI?: (suggestion: AISuggestion) => void; onDeleteCollection?: (collectionId: string) => void }) {
   const [question, setQuestion] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<AISuggestion[]>(mockAISuggestions);
@@ -1573,6 +1576,25 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
   const [contextSuggestions, setContextSuggestions] = useState<ContextSuggestion[]>([]);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [tableMenuOpen, setTableMenuOpen] = useState<string | null>(null);
+  const tableMenuRef = useRef<HTMLDivElement>(null);
+
+  // Закриваємо меню при кліку поза ним
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (tableMenuRef.current && !tableMenuRef.current.contains(event.target as Node)) {
+        setTableMenuOpen(null);
+      }
+    };
+
+    if (tableMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [tableMenuOpen]);
 
 
   // Використовуємо передані колекції (містять mock + новостворені) або fallback до глобальних mock даних
@@ -1910,15 +1932,60 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
                           <td className="p-2 align-middle whitespace-nowrap">
                             <span className="text-[13px] text-[#60646c]">{collection.createdOn}</span>
                       </td>
-                          <td className="p-2 align-middle whitespace-nowrap">
-                        <button 
-                              className="p-[4px] hover:bg-[#f0f0f3] rounded-[4px] transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                          }}
-                        >
-                              <MoreVertical className="w-[16px] h-[16px] text-[#60646c]" />
-                        </button>
+                          <td className="p-2 align-middle whitespace-nowrap relative" onClick={(e) => e.stopPropagation()}>
+                        <div className="relative" ref={tableMenuRef}>
+                          <button 
+                                className="p-[4px] hover:bg-[#f0f0f3] rounded-[4px] transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setTableMenuOpen(tableMenuOpen === collection.id ? null : collection.id);
+                            }}
+                          >
+                                <MoreVertical className="w-[16px] h-[16px] text-[#60646c]" />
+                          </button>
+                          
+                          {/* Dropdown menu для табличного вигляду */}
+                          {tableMenuOpen === collection.id && (
+                            <div className="absolute top-[28px] right-0 bg-white border border-[#e8e8ec] rounded-[8px] shadow-lg min-w-[160px] py-[4px] z-20">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setTableMenuOpen(null);
+                                  onCollectionClick?.(collection);
+                                }}
+                                className="w-full px-[12px] py-[8px] flex items-center gap-[8px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] transition-colors text-left"
+                              >
+                                <Eye className="size-[14px] text-[#60646c]" />
+                                <span>View</span>
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setTableMenuOpen(null);
+                                  toast.info('Share collection');
+                                }}
+                                className="w-full px-[12px] py-[8px] flex items-center gap-[8px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] transition-colors text-left"
+                              >
+                                <Share2 className="size-[14px] text-[#60646c]" />
+                                <span>Share</span>
+                              </button>
+                              <div className="border-t border-[#e8e8ec] my-[4px]"></div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setTableMenuOpen(null);
+                                  if (onDeleteCollection) {
+                                    onDeleteCollection(collection.id);
+                                  }
+                                }}
+                                className="w-full px-[12px] py-[8px] flex items-center gap-[8px] text-[13px] text-[#ef4444] hover:bg-[#fef2f2] transition-colors text-left"
+                              >
+                                <Trash2 className="size-[14px] text-[#ef4444]" />
+                                <span>Delete</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -1947,6 +2014,7 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
                   onClick={() => onCollectionClick?.(collection)}
                   collectionId={collection.id}
                   sharedWith={collection.sharedWith}
+                  onDelete={onDeleteCollection}
                 />
               ))
             ) : (
@@ -2670,6 +2738,8 @@ export default function App() {
   const [selectedOrganization, setSelectedOrganization] = useState<string>('all');
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
   const [pinnedDocumentIds, setPinnedDocumentIds] = useState<Set<string>>(new Set());
+  const [collectionToDelete, setCollectionToDelete] = useState<Collection | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   // Синхронізація стану: якщо selectedCollection стає null, але viewMode все ще 'collection-detail', встановлюємо viewMode на 'collections'
   // Це запобігає білому екрану при поверненні назад
@@ -3112,6 +3182,35 @@ export default function App() {
     setSelectedCollection(null);
   };
 
+  // Функція для видалення колекції
+  const handleDeleteCollection = (collectionId: string) => {
+    // Видаляємо колекцію зі списку
+    setCollections(prev => {
+      const updated = prev.filter(col => col.id !== collectionId);
+      saveCollectionsToStorage(updated);
+      return updated;
+    });
+
+    // Видаляємо collectionId з документів
+    setDocuments(prev => prev.map(doc => {
+      if (doc.collectionIds?.includes(collectionId)) {
+        return {
+          ...doc,
+          collectionIds: doc.collectionIds.filter(id => id !== collectionId)
+        };
+      }
+      return doc;
+    }));
+
+    // Якщо видаляється поточна колекція, повертаємося до списку колекцій
+    if (selectedCollection?.id === collectionId) {
+      setViewMode('collections');
+      setSelectedCollection(null);
+    }
+
+    toast.success('Collection deleted successfully');
+  };
+
   // Функція для відкриття модального вікна з правилами
   const handleOpenRulesEditor = () => {
     if (!selectedCollection) return;
@@ -3257,11 +3356,11 @@ export default function App() {
   };
 
   // Додавання документів до колекції
-  const handleAddToCollection = (collectionId: string, documentIds: string[]) => {
-    // Оновлюємо колекцію - додаємо documentIds
+  const handleAddToCollection = (collectionIds: string[], documentIds: string[]) => {
+    // Оновлюємо колекції - додаємо documentIds до кожної вибраної колекції
     setCollections(prev => {
       const updated = prev.map(col => {
-        if (col.id === collectionId) {
+        if (collectionIds.includes(col.id)) {
           const updatedDocumentIds = [...new Set([...(col.documentIds || []), ...documentIds])];
           return {
             ...col,
@@ -3276,8 +3375,8 @@ export default function App() {
       saveCollectionsToStorage(updated);
       
       // Оновлюємо selectedCollection якщо це поточна колекція
-      if (selectedCollection && selectedCollection.id === collectionId) {
-        const updatedCollection = updated.find(col => col.id === collectionId);
+      if (selectedCollection && collectionIds.includes(selectedCollection.id)) {
+        const updatedCollection = updated.find(col => col.id === selectedCollection.id);
         if (updatedCollection) {
           setSelectedCollection(updatedCollection);
         }
@@ -3286,10 +3385,10 @@ export default function App() {
       return updated;
     });
 
-    // Оновлюємо документи - додаємо collectionId
+    // Оновлюємо документи - додаємо всі collectionIds
     setDocuments(prev => prev.map(doc => {
       if (documentIds.includes(doc.id || '')) {
-        const updatedCollectionIds = [...new Set([...(doc.collectionIds || []), collectionId])];
+        const updatedCollectionIds = [...new Set([...(doc.collectionIds || []), ...collectionIds])];
         return {
           ...doc,
           collectionIds: updatedCollectionIds

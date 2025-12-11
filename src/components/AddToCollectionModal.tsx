@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Search } from 'lucide-react';
 import { toast } from 'sonner';
+import { Checkbox } from './ui/checkbox';
 
 interface Collection {
   id: string;
@@ -13,7 +14,7 @@ interface AddToCollectionModalProps {
   onClose: () => void;
   collections: Collection[];
   selectedDocumentIds: string[];
-  onAddToCollection: (collectionId: string, documentIds: string[]) => void;
+  onAddToCollection: (collectionIds: string[], documentIds: string[]) => void;
 }
 
 export function AddToCollectionModal({
@@ -24,7 +25,7 @@ export function AddToCollectionModal({
   onAddToCollection
 }: AddToCollectionModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
+  const [selectedCollectionIds, setSelectedCollectionIds] = useState<Set<string>>(new Set());
 
   if (!isOpen) return null;
 
@@ -32,27 +33,50 @@ export function AddToCollectionModal({
     collection.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleToggleCollection = (collectionId: string) => {
+    setSelectedCollectionIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(collectionId)) {
+        newSet.delete(collectionId);
+      } else {
+        newSet.add(collectionId);
+      }
+      return newSet;
+    });
+  };
+
   const handleAdd = () => {
-    if (!selectedCollectionId) {
-      toast.error('Please select a collection');
+    if (selectedCollectionIds.size === 0) {
+      toast.error('Please select at least one collection');
       return;
     }
 
-    onAddToCollection(selectedCollectionId, selectedDocumentIds);
-    toast.success(`Added ${selectedDocumentIds.length} ${selectedDocumentIds.length === 1 ? 'document' : 'documents'} to collection`);
+    const collectionIdsArray = Array.from(selectedCollectionIds);
+    onAddToCollection(collectionIdsArray, selectedDocumentIds);
+    
+    const collectionsCount = collectionIdsArray.length;
+    const documentsCount = selectedDocumentIds.length;
+    toast.success(
+      `Added ${documentsCount} ${documentsCount === 1 ? 'document' : 'documents'} to ${collectionsCount} ${collectionsCount === 1 ? 'collection' : 'collections'}`
+    );
+    
     onClose();
     setSearchQuery('');
-    setSelectedCollectionId(null);
+    setSelectedCollectionIds(new Set());
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-[24px]">
-      <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl w-[700px] max-w-[90vw] max-h-[80vh]">
+      <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl w-[900px] max-w-[90vw] max-h-[80vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-[24px] py-[20px] border-b border-[#e8e8ec]">
           <h2 className="text-[16px] font-semibold text-[#1c2024]">Add to Collection</h2>
           <button
-            onClick={onClose}
+            onClick={() => {
+              setSearchQuery('');
+              setSelectedCollectionIds(new Set());
+              onClose();
+            }}
             className="size-[32px] flex items-center justify-center rounded-[6px] hover:bg-[#f9fafb] transition-colors"
           >
             <X className="size-[20px] text-[#60646c]" />
@@ -87,33 +111,35 @@ export function AddToCollectionModal({
               </div>
             ) : (
               <div className="space-y-[4px]">
-                {filteredCollections.map((collection) => (
-                  <button
-                    key={collection.id}
-                    onClick={() => setSelectedCollectionId(collection.id)}
-                    className={`w-full flex items-center gap-[12px] px-[12px] py-[10px] rounded-[6px] text-left transition-colors ${
-                      selectedCollectionId === collection.id
-                        ? 'bg-[#ebf3ff] border border-[#005be2]'
-                        : 'hover:bg-[#f9fafb] border border-transparent'
-                    }`}
-                  >
-                    <div className="bg-[#f0f0f3] size-[32px] rounded-[6px] flex items-center justify-center text-[16px] flex-shrink-0">
-                      {collection.icon || '📁'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-medium text-[#1c2024] truncate">
-                        {collection.title}
-                      </p>
-                    </div>
-                    {selectedCollectionId === collection.id && (
-                      <div className="size-[16px] rounded-full bg-[#005be2] flex items-center justify-center flex-shrink-0">
-                        <svg className="size-[10px] text-white" fill="none" viewBox="0 0 16 16">
-                          <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
+                {filteredCollections.map((collection) => {
+                  const isSelected = selectedCollectionIds.has(collection.id);
+                  return (
+                    <button
+                      key={collection.id}
+                      onClick={() => handleToggleCollection(collection.id)}
+                      className={`w-full flex items-center gap-[12px] px-[12px] py-[10px] rounded-[6px] text-left transition-colors ${
+                        isSelected
+                          ? 'bg-[#ebf3ff] border border-[#005be2]'
+                          : 'hover:bg-[#f9fafb] border border-transparent'
+                      }`}
+                    >
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => handleToggleCollection(collection.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex-shrink-0"
+                      />
+                      <div className="bg-[#f0f0f3] size-[32px] rounded-[6px] flex items-center justify-center text-[16px] flex-shrink-0">
+                        {collection.icon || '📁'}
                       </div>
-                    )}
-                  </button>
-                ))}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-medium text-[#1c2024] truncate">
+                          {collection.title}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -121,17 +147,21 @@ export function AddToCollectionModal({
           {/* Footer */}
           <div className="flex items-center justify-end gap-[12px] px-[24px] py-[16px] border-t border-[#e8e8ec]">
             <button
-              onClick={onClose}
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedCollectionIds(new Set());
+                onClose();
+              }}
               className="h-[36px] px-[16px] rounded-[6px] text-[13px] border border-[#e0e1e6] text-[#1c2024] hover:bg-[#f9fafb]"
             >
               Cancel
             </button>
             <button
               onClick={handleAdd}
-              disabled={!selectedCollectionId}
+              disabled={selectedCollectionIds.size === 0}
               className="h-[36px] px-[16px] rounded-[6px] text-[13px] bg-[#005be2] text-white hover:bg-[#0047b3] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Add to Collection
+              Add to {selectedCollectionIds.size > 0 ? `${selectedCollectionIds.size} ` : ''}Collection{selectedCollectionIds.size !== 1 ? 's' : ''}
             </button>
           </div>
         </div>
