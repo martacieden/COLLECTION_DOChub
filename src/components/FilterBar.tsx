@@ -50,11 +50,21 @@ export function FilterBar({
           )}
         </div>
 
-        {/* View Switcher (Grid Icon first) - Right side */}
+        {/* View Switcher (Table Icon first) - Right side */}
         <div className="flex items-center border border-[#e0e1e6] rounded-[6px] flex-shrink-0">
           <button
-            onClick={() => onViewModeChange('grid')}
+            onClick={() => onViewModeChange('table')}
             className={`h-[32px] w-[32px] flex items-center justify-center rounded-l-[6px] transition-colors ${
+              viewMode === 'table' 
+                ? 'bg-[#f0f0f3] text-[#1c2024]' 
+                : 'text-[#60646c] hover:bg-[#f9fafb]'
+            }`}
+          >
+            <List className="size-[16px]" />
+          </button>
+          <button
+            onClick={() => onViewModeChange('grid')}
+            className={`h-[32px] w-[32px] flex items-center justify-center rounded-r-[6px] transition-colors ${
               viewMode === 'grid' 
                 ? 'bg-[#f0f0f3] text-[#1c2024]' 
                 : 'text-[#60646c] hover:bg-[#f9fafb]'
@@ -67,16 +77,6 @@ export function FilterBar({
               <path d="M9 3v18"></path>
               <path d="M15 3v18"></path>
             </svg>
-          </button>
-          <button
-            onClick={() => onViewModeChange('table')}
-            className={`h-[32px] w-[32px] flex items-center justify-center rounded-r-[6px] transition-colors ${
-              viewMode === 'table' 
-                ? 'bg-[#f0f0f3] text-[#1c2024]' 
-                : 'text-[#60646c] hover:bg-[#f9fafb]'
-            }`}
-          >
-            <List className="size-[16px]" />
           </button>
         </div>
       </div>

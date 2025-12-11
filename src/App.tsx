@@ -1099,11 +1099,26 @@ function AISuggestionPreviewModal({
               <div className="flex-1">
                 <h2 className="text-[16px] font-semibold text-[#1c2024] mb-[4px]">{suggestion.name}</h2>
                 <p className="text-[13px] text-[#60646c] mb-[8px]">{suggestion.description}</p>
-                <div className="flex items-center gap-[12px]">
+                <div className="flex items-center gap-[12px] mb-[8px]">
                   <span className="text-[12px] text-[#8b8d98]">{suggestion.documentCount} documents</span>
                   <span className="text-[12px] text-[#8b8d98]">•</span>
                   <span className="text-[12px] text-[#8b8d98]">AI-generated collection</span>
                 </div>
+                {suggestion.rules && suggestion.rules.length > 0 && (
+                  <div className="flex flex-wrap gap-[6px]">
+                    {suggestion.rules.map((rule) => {
+                      const ruleText = `${rule.label || rule.type} ${rule.operator || 'is'} "${rule.value}"`;
+                      return (
+                        <div
+                          key={rule.id}
+                          className="px-[8px] py-[3px] bg-[#f9fafb] border border-[#e8e8ec] rounded-[4px] text-[11px] text-[#60646c]"
+                        >
+                          {ruleText}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-[8px] flex-shrink-0">
@@ -1228,6 +1243,7 @@ interface AISuggestion {
   description: string;
   documentCount: number;
   emoji: string;
+  rules?: CollectionRule[];
 }
 
 const mockAISuggestions: AISuggestion[] = [
@@ -1236,21 +1252,67 @@ const mockAISuggestions: AISuggestion[] = [
     name: 'Architecture & Design - Oak Street',
     description: 'Detected blueprints, plans, and design documents for Oak Street Renovation project.',
     documentCount: 8,
-    emoji: '📐'
+    emoji: '📐',
+    rules: [
+      {
+        id: 'rule-1',
+        type: 'tags',
+        label: 'Category',
+        value: 'Architecture & Design',
+        operator: 'is',
+        enabled: true
+      },
+      {
+        id: 'rule-2',
+        type: 'keywords',
+        label: 'Keywords',
+        value: 'blueprint, plan, design',
+        operator: 'contains',
+        enabled: true
+      }
+    ]
   },
   {
     id: '2',
     name: 'Lien Waivers - All Projects',
     description: 'All lien waiver documents across Oak Street, Maple Ave, and Pine Street projects.',
     documentCount: 5,
-    emoji: '📝'
+    emoji: '📝',
+    rules: [
+      {
+        id: 'rule-3',
+        type: 'tags',
+        label: 'Category',
+        value: 'Lien Waivers',
+        operator: 'is',
+        enabled: true
+      }
+    ]
   },
   {
     id: '3',
     name: 'Change Orders - Q1 2025',
     description: 'Scope modifications and change orders submitted in the first quarter.',
     documentCount: 7,
-    emoji: '🔄'
+    emoji: '🔄',
+    rules: [
+      {
+        id: 'rule-4',
+        type: 'tags',
+        label: 'Category',
+        value: 'Change Orders',
+        operator: 'is',
+        enabled: true
+      },
+      {
+        id: 'rule-5',
+        type: 'date_range',
+        label: 'Date Range',
+        value: '2025-01-01 to 2025-03-31',
+        operator: 'is',
+        enabled: true
+      }
+    ]
   }
 ];
 
@@ -1849,10 +1911,10 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
             
             <button 
               onClick={onNewCollectionClick}
-              className="flex items-center gap-[4px] h-[32px] px-[12px] bg-[#005BE2] rounded-[6px] text-[13px] font-semibold text-white hover:bg-[#0047B3]"
+              className="flex items-center gap-[4px] h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] font-semibold text-[#1c2024] hover:bg-[#f9fafb]"
             >
               <svg className="size-[16px]" fill="none" viewBox="0 0 16 16">
-                <path clipRule="evenodd" d={svgPaths.pf368500} fill="white" fillRule="evenodd" />
+                <path clipRule="evenodd" d={svgPaths.pf368500} fill="currentColor" fillRule="evenodd" />
               </svg>
               <span>New collection</span>
             </button>
@@ -3696,7 +3758,8 @@ export default function App() {
         collections={collections.map(col => ({
           id: col.id,
           title: col.title,
-          icon: col.icon
+          icon: col.icon,
+          rules: col.rules
         }))}
         selectedDocumentIds={selectedDocumentsForCollection}
         onAddToCollection={handleAddToCollection}

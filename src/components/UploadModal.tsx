@@ -134,7 +134,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collectionOrganizatio
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-[24px]">
-      <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl transition-all h-[700px] w-[800px] max-w-[90vw]">
+      <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl transition-all h-[650px] w-[850px] max-w-[90vw]">
         {/* Header */}
         <div className="flex items-center justify-between px-[24px] py-[20px] border-b border-[#e8e8ec]">
           <h2 className="text-[#1c2024]">Upload documents</h2>
@@ -203,7 +203,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collectionOrganizatio
                 <div
                   onDrop={handleDrop}
                   onDragOver={(e) => e.preventDefault()}
-                  className="border-2 border-dashed border-[#e0e1e6] rounded-[12px] p-[120px_32px] flex flex-col items-center justify-center cursor-pointer hover:border-[#005be2] hover:bg-[#fafafa] transition-all min-h-[400px]"
+                  className="border-2 border-dashed border-[#e0e1e6] rounded-[12px] p-[80px_32px] flex flex-col items-center justify-center cursor-pointer hover:border-[#005be2] hover:bg-[#fafafa] transition-all min-h-[300px]"
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <div className="text-center">

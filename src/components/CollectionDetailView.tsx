@@ -510,7 +510,7 @@ export function CollectionDetailHeader({ collection, onBack, onAddDocument, onSe
 
 export function CollectionDetailView({ collection, onBack, onAddDocument, onRemoveFromCollection, onDelete, onSettingsClick, onShareClick, onFiltersClick, onCustomizeFiltersClick, documents }: CollectionDetailViewProps) {
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [filterQuery, setFilterQuery] = useState<string>('');
 
@@ -570,7 +570,7 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
   const visibleColumnsCount = 11; // Checkbox + Name + Description + Type + Attached to + Shared with + Uploaded by + Uploaded on + Organization + Signature status + Actions
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-white min-w-0 h-full">
+    <div className="flex-1 flex flex-col overflow-hidden bg-white min-w-0 h-full pt-[12px]">
 
       {/* Details Section */}
       <div className="border-b border-[#e8e8ec] px-[24px] py-[16px] flex-shrink-0">

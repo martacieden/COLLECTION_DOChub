@@ -310,7 +310,7 @@ export function AllDocumentsTable({
 }: AllDocumentsTableProps) {
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [filterQuery, setFilterQuery] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(null);
 
   const handleSelectDocument = (docId: string) => {

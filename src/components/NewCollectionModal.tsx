@@ -237,12 +237,6 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
       setShowRulesBlock(true);
       setIsRulesExpanded(true); // Auto-expand for testing
       toast.success('Test rules loaded successfully');
-      
-      // Відкриваємо модальне вікно для редагування правил
-      if (onOpenRulesEditor && collectionName.trim()) {
-        onOpenRulesEditor(testRules, collectionName, description);
-        // Не закриваємо модальне вікно, воно залишиться відкритим
-      }
       return;
     }
 
@@ -377,12 +371,6 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
     setIsRulesExpanded(false);
 
     toast.success('AI rules generated successfully');
-
-    // Відкриваємо модальне вікно для редагування правил
-    if (onOpenRulesEditor && collectionName.trim() && rules.length > 0) {
-      onOpenRulesEditor(rules, collectionName, description);
-      // Не закриваємо модальне вікно, воно залишиться відкритим
-    }
   };
 
   const toggleRule = (ruleId: string) => {

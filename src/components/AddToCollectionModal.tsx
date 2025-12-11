@@ -3,10 +3,20 @@ import { X, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Checkbox } from './ui/checkbox';
 
+interface CollectionRule {
+  id: string;
+  type: 'document_type' | 'tags' | 'client' | 'keywords' | 'date_range' | 'vendor';
+  label: string;
+  value: string;
+  operator: 'is' | 'contains' | 'equals' | 'not';
+  enabled: boolean;
+}
+
 interface Collection {
   id: string;
   title: string;
   icon?: string;
+  rules?: CollectionRule[];
 }
 
 interface AddToCollectionModalProps {
@@ -51,7 +61,7 @@ export function AddToCollectionModal({
       return;
     }
 
-    const collectionIdsArray = Array.from(selectedCollectionIds);
+    const collectionIdsArray = Array.from(selectedCollectionIds) as string[];
     onAddToCollection(collectionIdsArray, selectedDocumentIds);
     
     const collectionsCount = collectionIdsArray.length;
@@ -136,6 +146,26 @@ export function AddToCollectionModal({
                         <p className="text-[13px] font-medium text-[#1c2024] truncate">
                           {collection.title}
                         </p>
+                        {collection.rules && collection.rules.length > 0 && (
+                          <div className="flex flex-wrap gap-[4px] mt-[6px]">
+                            {collection.rules.slice(0, 3).map((rule) => {
+                              const ruleText = `${rule.label || rule.type} ${rule.operator || 'is'} "${rule.value}"`;
+                              return (
+                                <div
+                                  key={rule.id}
+                                  className="px-[6px] py-[2px] bg-[#f9fafb] border border-[#e8e8ec] rounded-[4px] text-[10px] text-[#60646c]"
+                                >
+                                  {ruleText}
+                                </div>
+                              );
+                            })}
+                            {collection.rules.length > 3 && (
+                              <div className="px-[6px] py-[2px] bg-[#f9fafb] border border-[#e8e8ec] rounded-[4px] text-[10px] text-[#60646c]">
+                                +{collection.rules.length - 3}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </button>
                   );
