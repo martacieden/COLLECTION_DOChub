@@ -3218,7 +3218,8 @@ export default function App() {
         ? organizations.find(o => o.id === selectedOrganization)?.name 
         : undefined,
       autoSync: false, // AI колекції не синхронізуються автоматично
-      documentIds: []
+      documentIds: [],
+      rules: suggestion.rules || [] // Зберігаємо правила з AI suggestion
     };
     
     // Використовуємо перші N документів з mockDocuments, як у preview

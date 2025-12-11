@@ -612,9 +612,17 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
                   <div className="flex flex-wrap gap-[6px]">
                     {collection.rules.map((rule, index) => {
                       // Обробляємо як об'єкт CollectionRule або як рядок
-                      const ruleText = typeof rule === 'string' 
-                        ? rule 
-                        : `${rule.label || rule.type} ${rule.operator || 'is'} "${rule.value}"`;
+                      // Використовуємо ту саму логіку форматування, що й в AISuggestionPreviewModal
+                      let ruleText: string;
+                      if (typeof rule === 'string') {
+                        ruleText = rule;
+                      } else {
+                        // Форматуємо так само, як в AISuggestionPreviewModal
+                        const label = rule.label || rule.type;
+                        const operator = rule.operator || 'is';
+                        const value = rule.value || '';
+                        ruleText = `${label} ${operator} "${value}"`;
+                      }
                       return (
                         <div
                           key={typeof rule === 'string' ? index : rule.id}
