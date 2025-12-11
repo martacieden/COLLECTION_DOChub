@@ -54,7 +54,6 @@ export function CollectionSettingsModal({
 }: CollectionSettingsModalProps) {
   const [collectionName, setCollectionName] = useState(collection.title);
   const [collectionIcon, setCollectionIcon] = useState(collection.icon || '📁');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [nameError, setNameError] = useState('');
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
@@ -71,7 +70,6 @@ export function CollectionSettingsModal({
     if (isOpen) {
       setCollectionName(collection.title);
       setCollectionIcon(getEmojiFromIcon(collection.icon));
-      setShowDeleteConfirm(false);
       setNameError('');
       setIsEmojiPickerOpen(false);
     }
@@ -225,46 +223,13 @@ export function CollectionSettingsModal({
                 </p>
               </div>
 
-              {!showDeleteConfirm ? (
-                <button
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="h-[36px] px-[16px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#ef4444] hover:bg-[#fef2f2] transition-colors flex items-center gap-[8px]"
-                >
-                  <Trash2 className="size-[16px]" />
-                  <span>Delete Collection</span>
-                </button>
-              ) : (
-                <div className="space-y-[12px]">
-                  <div className="p-[16px] bg-[#fef2f2] border border-[#fee2e2] rounded-[8px]">
-                    <div className="flex items-start gap-[12px]">
-                      <div className="bg-[#fee2e2] size-[32px] rounded-[8px] flex items-center justify-center flex-shrink-0">
-                        <Trash2 className="size-[16px] text-[#ef4444]" />
-                      </div>
-                      <div>
-                        <h4 className="text-[13px] font-semibold text-[#1c2024] mb-[4px]">Delete Collection</h4>
-                        <p className="text-[11px] text-[#60646c]">
-                          Once you delete a collection, there is no going back. Please be certain.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-[8px]">
-                    <button
-                      onClick={handleDelete}
-                      className="h-[36px] px-[16px] border border-[#ef4444] rounded-[6px] text-[13px] text-[#ef4444] hover:bg-[#fef2f2] transition-colors flex items-center gap-[8px]"
-                    >
-                      <Trash2 className="size-[16px]" />
-                      <span>Delete Collection</span>
-                    </button>
-                    <button
-                      onClick={() => setShowDeleteConfirm(false)}
-                      className="h-[36px] px-[16px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
+              <button
+                onClick={handleDelete}
+                className="h-[36px] px-[16px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#ef4444] hover:bg-[#fef2f2] transition-colors flex items-center gap-[8px]"
+              >
+                <Trash2 className="size-[16px]" />
+                <span>Delete Collection</span>
+              </button>
             </div>
           </div>
         </div>
