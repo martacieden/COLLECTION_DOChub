@@ -3105,20 +3105,6 @@ export default function App() {
       uploadedAt: new Date()
     }));
     setUploadedDocuments(uploadedDocsForBanner);
-    
-    // Show success toast
-    const fileCount = files.length;
-    const collectionCount = collections.length;
-    
-    if (collectionCount > 0) {
-      toast.success(
-        `${fileCount} ${fileCount === 1 ? 'document' : 'documents'} added to ${collectionCount} ${collectionCount === 1 ? 'collection' : 'collections'}`
-      );
-    } else {
-      toast.success(
-        `${fileCount} ${fileCount === 1 ? 'document' : 'documents'} uploaded successfully`
-      );
-    }
   };
 
   const handlePinToggle = (docId: string) => {
@@ -3722,11 +3708,9 @@ export default function App() {
       <AIAssistantBanner
         uploadedDocuments={uploadedDocuments}
         onAddToCollection={(collectionName, docs) => {
-          toast.success(`Added ${docs.length} documents to ${collectionName} collection`);
           setUploadedDocuments([]);
         }}
         onCreateCollection={(collectionName, docs) => {
-          toast.success(`Created new collection "${collectionName}" with ${docs.length} documents`);
           setUploadedDocuments([]);
         }}
         onViewDetails={(suggestion) => {

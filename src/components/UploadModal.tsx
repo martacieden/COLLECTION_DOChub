@@ -134,7 +134,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collectionOrganizatio
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-[24px]">
-      <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl transition-all h-[650px] w-[850px] max-w-[90vw]">
+      <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl transition-all h-[650px] w-[850px] max-h-[650px] max-w-[850px]">
         {/* Header */}
         <div className="flex items-center justify-between px-[24px] py-[20px] border-b border-[#e8e8ec]">
           <h2 className="text-[#1c2024]">Upload documents</h2>
@@ -158,7 +158,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collectionOrganizatio
                 {/* Organization Dropdown */}
                 <div className="mb-[24px]">
                   <label className="block text-[14px] text-[#1c2024] mb-[8px]">
-                    Choose organization <span className="text-[#d4183d]">*</span>
+                    Choose organization
                   </label>
                   <div className="relative" ref={orgDropdownRef}>
                     <button
@@ -237,7 +237,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collectionOrganizatio
                 {/* Organization Info */}
                 <div className="mb-[20px]">
                   <label className="block text-[14px] text-[#1c2024] mb-[8px]">
-                    Choose organization <span className="text-[#d4183d]\">*</span>
+                    Choose organization
                   </label>
                   <div className="relative" ref={orgDropdownUploadingRef}>
                     <button

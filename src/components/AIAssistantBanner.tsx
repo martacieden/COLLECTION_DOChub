@@ -268,7 +268,7 @@ export function AIAssistantBanner({
       </div>
 
       {/* Actions */}
-      <div className="px-[24px] pb-[16px]">
+      <div className="px-[24px] pb-[12px]">
         <button 
           onClick={() => onViewDetails?.(suggestion)}
           className="h-[24px] px-[10px] border border-[#e0e1e6] bg-white rounded-[6px] text-[11px] font-medium text-[#1c2024] hover:bg-[#f9fafb] transition-colors"
