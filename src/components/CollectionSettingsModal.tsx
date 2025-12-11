@@ -216,6 +216,9 @@ export function CollectionSettingsModal({
 
             {/* Delete Section */}
             <div className="border-t border-[#e8e8ec] pt-[24px]">
+              <h3 className="text-[14px] font-semibold text-[#1c2024] mb-[12px]">
+                Delete collection?
+              </h3>
               <div className="mb-[16px]">
                 <p className="text-[11px] text-[#60646c]">
                   Once you delete a collection, there is no going back. Please be certain.
