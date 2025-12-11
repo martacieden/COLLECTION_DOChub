@@ -170,13 +170,13 @@ export function AIAssistantBanner({
     };
   }, [uploadedDocuments]);
 
-  // Автоматичне закриття через 30 секунд після появи
+  // Автоматичне закриття через 12 секунд після появи
   useEffect(() => {
     if (!isVisible) return;
 
     const autoCloseTimer = setTimeout(() => {
       handleClose();
-    }, 30000);
+    }, 12000);
 
     return () => {
       clearTimeout(autoCloseTimer);
