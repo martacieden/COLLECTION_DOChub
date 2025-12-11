@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, X, Search, SlidersHorizontal, Upload, MoreVertical, Info, Sparkles, List, FileText, SearchIcon, TrendingUp, Archive, Send, PanelLeft, Paperclip, Mic, Pencil, Eye, Share2, Trash2 } from 'lucide-react';
+import { ChevronDown, X, Search, SlidersHorizontal, Upload, MoreVertical, Info, Sparkles, List, FileText, SearchIcon, TrendingUp, Archive, Send, PanelLeft, Paperclip, Mic, Pencil, Eye, Share2, Trash2, Plus } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './components/ui/alert-dialog';
 import { Checkbox } from './components/ui/checkbox';
 import svgPaths from "./imports/svg-ylbe71kelt";
@@ -725,7 +725,7 @@ function ContextSuggestionsDropdown({
 // RESULT BLOCKS
 // ========================================
 
-function DocumentCardBlock({ documents }: { documents: Document[] }) {
+function DocumentCardBlock({ documents, onCreateCollection }: { documents: Document[]; onCreateCollection?: () => void }) {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
 
   return (
@@ -817,6 +817,19 @@ function DocumentCardBlock({ documents }: { documents: Document[] }) {
           ))}
         </div>
       )}
+      
+      {/* Create Collection Button */}
+      {onCreateCollection && (
+        <div className="mt-[16px] pt-[16px] border-t border-[#e8e8ec]">
+          <button
+            onClick={onCreateCollection}
+            className="w-full h-[36px] px-[16px] bg-[#005be2] rounded-[6px] text-[13px] text-white hover:bg-[#004fc4] transition-colors flex items-center justify-center gap-[8px]"
+          >
+            <Plus className="size-[16px]" />
+            <span>Create collection</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -891,11 +904,13 @@ function SummaryBlock({ insights }: { insights: string[] }) {
 function AIChatModal({ 
   initialQuestion, 
   onClose,
-  contextType
+  contextType,
+  onCreateCollection
 }: { 
   initialQuestion: string; 
   onClose: () => void;
   contextType: string;
+  onCreateCollection?: () => void;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -1017,7 +1032,7 @@ function AIChatModal({
                       </div>
                       {message.resultBlocks?.map((block, blockIndex) => (
                         <div key={blockIndex}>
-                          {block.type === 'document-cards' && <DocumentCardBlock documents={block.data} />}
+                          {block.type === 'document-cards' && <DocumentCardBlock documents={block.data} onCreateCollection={onCreateCollection} />}
                           {block.type === 'metadata' && <MetadataBlock metadata={block.data} />}
                           {block.type === 'search-results' && <SearchResultBlock results={block.data} />}
                           {block.type === 'summary' && <SummaryBlock insights={block.data} />}
@@ -1838,6 +1853,7 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
           initialQuestion={question} 
           onClose={() => setIsModalOpen(false)}
           contextType="Oak Street Renovation"
+          onCreateCollection={onNewCollectionClick}
         />
       )}
       
@@ -2065,7 +2081,7 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
           <div className="grid gap-[16px] w-full px-[24px] pb-[80px]" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))' }}>
             {filteredCollections.length > 0 ? (
               filteredCollections.map((collection) => (
-                <CollectionCard 
+                <CollectionCard
                   key={collection.id}
                   title={collection.title}
                   icon={collection.icon}
