@@ -1071,7 +1071,9 @@ function AISuggestionPreviewModal({
 }) {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
   // Mock documents for the preview
-  const previewDocuments = mockDocuments.slice(0, suggestion.documentCount);
+  // Гарантуємо мінімум 8 документів у preview
+  const minDocumentsCount = Math.max(8, suggestion.documentCount);
+  const previewDocuments = mockDocuments.slice(0, minDocumentsCount);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -1374,8 +1376,21 @@ function CollectionCard({ title, organization, onClick, collectionId, sharedWith
   const users = sharedWith && sharedWith.length > 0 
     ? getUsersFromSharedWith(sharedWith)
     : (() => {
-        const cardIndex = collectionId ? parseInt(collectionId) % userSets.length : Math.floor(Math.random() * userSets.length);
-        return userSets[cardIndex].map(user => ({
+        if (!userSets || userSets.length === 0) {
+          return [];
+        }
+        let cardIndex: number;
+        if (collectionId) {
+          const parsed = parseInt(collectionId);
+          cardIndex = isNaN(parsed) ? 0 : parsed % userSets.length;
+        } else {
+          cardIndex = Math.floor(Math.random() * userSets.length);
+        }
+        const selectedUserSet = userSets[cardIndex];
+        if (!selectedUserSet || !Array.isArray(selectedUserSet)) {
+          return [];
+        }
+        return selectedUserSet.map(user => ({
           ...user,
           color: 'bg-[#e0e1e6]',
           textColor: 'text-[#60646c]'
@@ -1540,7 +1555,7 @@ function CollectionCard({ title, organization, onClick, collectionId, sharedWith
   );
 }
 
-function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClick, selectedOrganization, collections }: { onUploadClick?: () => void; onNewCollectionClick?: () => void; onCollectionClick?: (collection: any) => void; selectedOrganization?: string; collections?: Collection[] }) {
+function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClick, selectedOrganization, collections, onCreateCollectionFromAI }: { onUploadClick?: () => void; onNewCollectionClick?: () => void; onCollectionClick?: (collection: any) => void; selectedOrganization?: string; collections?: Collection[]; onCreateCollectionFromAI?: (suggestion: AISuggestion) => void }) {
   const [question, setQuestion] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<AISuggestion[]>(mockAISuggestions);
@@ -1632,9 +1647,14 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
   };
 
   const handleAcceptSuggestion = (id: string) => {
-    // In a real app, this would add the collection to the user's collections
-    alert('Collection added to your collections!');
-    handleDismissSuggestion(id);
+    // Знаходимо suggestion за id
+    const suggestion = suggestions.find(s => s.id === id);
+    if (suggestion && onCreateCollectionFromAI) {
+      // Створюємо колекцію з AI suggestion
+      onCreateCollectionFromAI(suggestion);
+      // Прибираємо suggestion зі списку
+      handleDismissSuggestion(id);
+    }
   };
 
   const handleViewSuggestion = (suggestion: AISuggestion) => {
@@ -1708,7 +1728,7 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
               <div className="grid grid-cols-2 gap-[12px]">
                 {suggestions.slice(0, 2).map((suggestion) => (
                   <AISuggestionCard
-                    {...{ key: suggestion.id }}
+                    key={suggestion.id}
                     suggestion={suggestion}
                     onView={() => handleViewSuggestion(suggestion)}
                     onAccept={() => handleAcceptSuggestion(suggestion.id)}
@@ -1914,7 +1934,7 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
             {filteredCollections.length > 0 ? (
               filteredCollections.map((collection) => (
                 <CollectionCard 
-                  {...{ key: collection.id }}
+                  key={collection.id}
                   title={collection.title}
                   icon={collection.icon}
                   organization={collection.organization}
@@ -1955,7 +1975,8 @@ function MainContent({
   onRemoveFromCollection,
   onDelete,
   onAddToCollection,
-  onCreateCollection
+  onCreateCollection,
+  onCreateCollectionFromAI
 }: { 
   viewMode: ViewMode; 
   aiFilter?: string | null;
@@ -1977,6 +1998,7 @@ function MainContent({
   onDelete?: (documentIds: string[]) => void;
   onAddToCollection?: (documentIds: string[]) => void;
   onCreateCollection?: (documentIds: string[]) => void;
+  onCreateCollectionFromAI?: (suggestion: AISuggestion) => void;
 }) {
   // Якщо viewMode === 'collection-detail' але selectedCollection === null, це означає що ми повертаємося назад
   // В цьому випадку не відображаємо CollectionDetailView, а дозволяємо коду йти далі до CollectionsView
@@ -2060,7 +2082,9 @@ function MainContent({
   }
 
   // Передаємо колекції (завжди мають містити мінімум mock дані)
-  return <CollectionsView onUploadClick={onUploadClick} onNewCollectionClick={onNewCollectionClick} onCollectionClick={onCollectionClick} selectedOrganization={selectedOrganization} collections={collections} />;
+  // Переконаємося, що collections завжди є масивом
+  const safeCollections = Array.isArray(collections) ? collections : [];
+  return <CollectionsView onUploadClick={onUploadClick} onNewCollectionClick={onNewCollectionClick} onCollectionClick={onCollectionClick} selectedOrganization={selectedOrganization} collections={safeCollections} onCreateCollectionFromAI={onCreateCollectionFromAI} />;
 }
 
 // ========================================
@@ -2603,10 +2627,13 @@ export default function App() {
   // Синхронізація стану: якщо selectedCollection стає null, але viewMode все ще 'collection-detail', встановлюємо viewMode на 'collections'
   // Це запобігає білому екрану при поверненні назад
   useEffect(() => {
+    // Перевіряємо поточний стан перед зміною, щоб уникнути зайвих оновлень
+    // Якщо viewMode === 'collection-detail' але selectedCollection === null, встановлюємо viewMode на 'collections'
+    // Це запобігає білому екрану при поверненні назад
     if (viewMode === 'collection-detail' && !selectedCollection) {
       setViewMode('collections');
     }
-  }, [selectedCollection, viewMode]);
+  }, [selectedCollection]); // Залежить тільки від selectedCollection, щоб уникнути зайвих викликів
   
   // State для зберігання колекцій - збереження в localStorage
   const [collections, setCollections] = useState<Collection[]>(() => {
@@ -2976,6 +3003,56 @@ export default function App() {
     toast.success(`Collection "${name}" created with ${newCollection.count} ${newCollection.count === 1 ? 'document' : 'documents'}`);
   };
 
+  // Функція для створення колекції з AI suggestion
+  const handleCreateCollectionFromAI = (suggestion: AISuggestion) => {
+    // Створюємо нову колекцію з даними з AI suggestion
+    const newCollection: Collection = {
+      id: `col-${Date.now()}`,
+      title: suggestion.name,
+      description: suggestion.description,
+      count: 0,
+      type: 'custom',
+      icon: suggestion.emoji || '📁',
+      createdBy: 'Joan Zhao',
+      createdOn: new Date().toLocaleDateString(),
+      organization: selectedOrganization !== 'all' 
+        ? organizations.find(o => o.id === selectedOrganization)?.name 
+        : undefined,
+      autoSync: false, // AI колекції не синхронізуються автоматично
+      documentIds: []
+    };
+    
+    // Використовуємо перші N документів з mockDocuments, як у preview
+    // Гарантуємо мінімум 8 документів у кожній колекції
+    const minDocumentsCount = Math.max(8, suggestion.documentCount);
+    const matchingDocuments = mockDocuments.slice(0, minDocumentsCount);
+    
+    // Додаємо ID документів до колекції
+    newCollection.documentIds = matchingDocuments.map(doc => doc.id || '').filter(id => id !== '');
+    newCollection.count = newCollection.documentIds.length;
+    
+    // Оновлюємо документи, додаючи collectionId
+    setDocuments(prev => prev.map(doc => {
+      if (matchingDocuments.some(md => md.id === doc.id)) {
+        return {
+          ...doc,
+          collectionIds: [...new Set([...(doc.collectionIds || []), newCollection.id])]
+        };
+      }
+      return doc;
+    }));
+    
+    // Додаємо колекцію до списку
+    setCollections(prev => {
+      const updated = [...prev, newCollection];
+      // Зберігаємо в localStorage
+      saveCollectionsToStorage(updated);
+      return updated;
+    });
+    
+    toast.success(`Collection "${suggestion.name}" created with ${newCollection.count} ${newCollection.count === 1 ? 'document' : 'documents'}`);
+  };
+
   const handleCollectionClick = (collection: any) => {
     setSelectedCollection(collection);
     setViewMode('collection-detail');
@@ -2983,8 +3060,9 @@ export default function App() {
 
   const handleBackFromCollection = () => {
     // Очищаємо selectedCollection і встановлюємо viewMode одночасно
-    setSelectedCollection(null);
+    // React об'єднає ці оновлення в один рендер, тому не буде білого екрану
     setViewMode('collections');
+    setSelectedCollection(null);
   };
 
   const handleDocumentsClick = () => {
@@ -3181,6 +3259,7 @@ export default function App() {
             onDelete={handleDeleteDocuments}
             onAddToCollection={handleOpenAddToCollection}
             onCreateCollection={handleCreateCollectionFromSelection}
+            onCreateCollectionFromAI={handleCreateCollectionFromAI}
           />
                   </div>
                   <div className="flex-shrink-0 flex-grow-0 border-l border-[#e8e8ec] overflow-hidden" style={{ width: '400px', minWidth: '400px', maxWidth: '400px' }}>
@@ -3210,6 +3289,7 @@ export default function App() {
                 onDelete={handleDeleteDocuments}
                 onAddToCollection={handleOpenAddToCollection}
                 onCreateCollection={handleCreateCollectionFromSelection}
+                onCreateCollectionFromAI={handleCreateCollectionFromAI}
               />
             )}
           </div>
