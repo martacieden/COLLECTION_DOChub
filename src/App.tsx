@@ -3406,6 +3406,7 @@ export default function App() {
   const [documents, setDocuments] = useState<Document[]>(mockDocuments);
   const [selectedOrganization, setSelectedOrganization] = useState<string>('all');
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
+  const [aiBannerSuggestionDetails, setAiBannerSuggestionDetails] = useState<any>(null);
   const [pinnedDocumentIds, setPinnedDocumentIds] = useState<Set<string>>(new Set());
   const [collectionToDelete, setCollectionToDelete] = useState<Collection | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -4305,12 +4306,28 @@ export default function App() {
         }}
         onViewDetails={(suggestion) => {
           // Open modal with details
-          console.log('View details for:', suggestion);
+          setAiBannerSuggestionDetails(suggestion);
         }}
         onDismiss={() => {
           setUploadedDocuments([]);
         }}
       />
+
+      {/* AI Banner Suggestion Details Modal */}
+      {aiBannerSuggestionDetails && (
+        <AIBannerSuggestionDetailsModal
+          suggestion={aiBannerSuggestionDetails}
+          onClose={() => setAiBannerSuggestionDetails(null)}
+          onAddToCollection={(collectionName, docs) => {
+            setUploadedDocuments([]);
+            setAiBannerSuggestionDetails(null);
+          }}
+          onCreateCollection={(collectionName, docs) => {
+            setUploadedDocuments([]);
+            setAiBannerSuggestionDetails(null);
+          }}
+        />
+      )}
 
       <NewCollectionModal
         isOpen={isNewCollectionModalOpen}
