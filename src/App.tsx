@@ -21,6 +21,7 @@ import { AIAssistantBanner } from './components/AIAssistantBanner';
 import { SummaryBox } from './components/SummaryBox';
 import { PinnedView } from './components/PinnedView';
 import { RulesEditorModal } from './components/RulesEditorModal';
+import { CollectionSettingsModal } from './components/CollectionSettingsModal';
 import { getOrganizationAvatar } from './utils/organizationUtils';
 
 // ========================================
@@ -1791,7 +1792,7 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
       )}
       
       {/* Collections section */}
-      <div className="bg-white flex-1 flex flex-col overflow-hidden min-w-0">
+      <div className="bg-white flex-1 flex flex-col overflow-y-auto min-w-0">
         <div className="px-[24px] py-[16px] flex items-center justify-between flex-shrink-0">
           <h2 className="text-[13px] font-semibold text-[#60646c]">Collections</h2>
           <div className="flex items-center gap-[8px]">
@@ -1862,7 +1863,7 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
           <>
             
             {/* Table View */}
-            <div className="flex-1 overflow-hidden pb-[16px] min-w-0 flex flex-col">
+            <div className="flex-1 overflow-y-auto pb-[80px] min-w-0 flex flex-col">
               <div className="flex-1 min-w-0 overflow-x-auto overflow-y-auto">
                 <table className="caption-bottom text-sm w-full" style={{ minWidth: 'max-content' }}>
                   <thead className="[&_tr]:border-b">
@@ -1874,7 +1875,6 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
                         />
                       </th>
                       <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[200px]">Name</th>
-                      <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[300px]">Description</th>
                       <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[130px]">Created by</th>
                       <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[120px]">Shared with</th>
                       <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[100px]">Documents</th>
@@ -1901,9 +1901,6 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
                           <span className="text-[20px]">{collection.icon}</span>
                           <span className="text-[13px] text-[#1c2024]">{collection.title}</span>
                         </div>
-                      </td>
-                          <td className="p-2 align-middle">
-                            <span className="text-[13px] text-[#60646c] truncate block max-w-[300px]">{collection.description}</span>
                       </td>
                           <td className="p-2 align-middle whitespace-nowrap">
                             <span className="text-[13px] text-[#1c2024]">{collection.createdBy}</span>
@@ -2003,7 +2000,7 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
           </>
         ) : (
           // Grid/Card View
-          <div className="grid gap-[16px] w-full px-[24px] pb-[24px]" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))' }}>
+          <div className="grid gap-[16px] w-full px-[24px] pb-[80px]" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))' }}>
             {filteredCollections.length > 0 ? (
               filteredCollections.map((collection) => (
                 <CollectionCard 
@@ -2052,7 +2049,8 @@ function MainContent({
   onCreateCollection,
   onCreateCollectionFromAI,
   onCustomizeFiltersClick,
-  onDeleteCollection
+  onDeleteCollection,
+  onSettingsClick
 }: { 
   viewMode: ViewMode; 
   aiFilter?: string | null;
@@ -2077,6 +2075,7 @@ function MainContent({
   onCreateCollectionFromAI?: (suggestion: AISuggestion) => void;
   onCustomizeFiltersClick?: () => void;
   onDeleteCollection?: (collectionId: string) => void;
+  onSettingsClick?: () => void;
 }) {
   // Якщо viewMode === 'collection-detail' але selectedCollection === null, це означає що ми повертаємося назад
   // В цьому випадку не відображаємо CollectionDetailView, а дозволяємо коду йти далі до CollectionsView
@@ -2090,6 +2089,7 @@ function MainContent({
         onDelete={onDelete}
         onCustomizeFiltersClick={onCustomizeFiltersClick}
         documents={documents}
+        onSettingsClick={onSettingsClick}
       />
     );
   }
@@ -2147,6 +2147,9 @@ function MainContent({
           onPinToggle={onPinToggle}
           collections={collectionsList}
           onCollectionClick={handleCollectionClickFromTooltip}
+          onDelete={onDelete}
+          onAddToCollection={onAddToCollection}
+          onCreateCollection={onCreateCollection}
         />
       </div>
     );
@@ -2745,6 +2748,7 @@ export default function App() {
   const [isNewCollectionModalOpen, setIsNewCollectionModalOpen] = useState(false);
   const [isAddToCollectionModalOpen, setIsAddToCollectionModalOpen] = useState(false);
   const [isRulesEditorModalOpen, setIsRulesEditorModalOpen] = useState(false);
+  const [isCollectionSettingsModalOpen, setIsCollectionSettingsModalOpen] = useState(false);
   const [pendingCollectionData, setPendingCollectionData] = useState<{ name: string; description: string; rules: CollectionRule[] } | null>(null);
   const [selectedDocumentsForCollection, setSelectedDocumentsForCollection] = useState<string[]>([]);
   const [selectedDocumentsForNewCollection, setSelectedDocumentsForNewCollection] = useState<Document[]>([]);
@@ -3126,19 +3130,28 @@ export default function App() {
       return doc;
     }));
     
-    // Додаємо колекцію до списку
+    // Додаємо колекцію до списку (на початок)
     setCollections(prev => {
-      const updated = [...prev, newCollection];
+      const updated = [newCollection, ...prev];
       // Зберігаємо в localStorage
       saveCollectionsToStorage(updated);
       return updated;
     });
     
-    // Автоматично відкриваємо створену колекцію (після оновлення списку)
-    setSelectedCollection(newCollection);
-    setViewMode('collection-detail');
-    
-    toast.success(`Collection "${name}" created with ${newCollection.count} ${newCollection.count === 1 ? 'document' : 'documents'}`);
+    // Показуємо toast з кнопкою для відкриття колекції (без автоматичного редіректу)
+    toast.success(
+      `Collection "${name}" created successfully! ${newCollection.count} ${newCollection.count === 1 ? 'document' : 'documents'} added.`,
+      {
+        action: {
+          label: 'Open collection',
+          onClick: () => {
+            setSelectedCollection(newCollection);
+            setViewMode('collection-detail');
+          }
+        },
+        duration: 5000, // 5 секунд
+      }
+    );
   };
 
   // Функція для створення колекції з AI suggestion
@@ -3180,15 +3193,28 @@ export default function App() {
       return doc;
     }));
     
-    // Додаємо колекцію до списку
+    // Додаємо колекцію до списку (на початок)
     setCollections(prev => {
-      const updated = [...prev, newCollection];
+      const updated = [newCollection, ...prev];
       // Зберігаємо в localStorage
       saveCollectionsToStorage(updated);
       return updated;
     });
     
-    toast.success(`Collection "${suggestion.name}" created with ${newCollection.count} ${newCollection.count === 1 ? 'document' : 'documents'}`);
+    // Показуємо toast з кнопкою для відкриття колекції (без автоматичного редіректу)
+    toast.success(
+      `Collection "${suggestion.name}" created successfully! ${newCollection.count} ${newCollection.count === 1 ? 'document' : 'documents'} added.`,
+      {
+        action: {
+          label: 'Open collection',
+          onClick: () => {
+            setSelectedCollection(newCollection);
+            setViewMode('collection-detail');
+          }
+        },
+        duration: 5000, // 5 секунд
+      }
+    );
   };
 
   const handleCollectionClick = (collection: any) => {
@@ -3201,6 +3227,50 @@ export default function App() {
     // React об'єднає ці оновлення в один рендер, тому не буде білого екрану
     setViewMode('collections');
     setSelectedCollection(null);
+  };
+
+  // Функція для перейменування колекції
+  const handleRenameCollection = (collectionId: string, newName: string) => {
+    // Оновлюємо колекцію в списку
+    setCollections(prev => {
+      const updated = prev.map(col => 
+        col.id === collectionId 
+          ? { ...col, title: newName }
+          : col
+      );
+      saveCollectionsToStorage(updated);
+      return updated;
+    });
+
+    // Оновлюємо selectedCollection, якщо це поточна колекція
+    if (selectedCollection?.id === collectionId) {
+      setSelectedCollection((prev: any) => ({
+        ...prev,
+        title: newName
+      }));
+    }
+  };
+
+  // Функція для зміни іконки колекції
+  const handleChangeCollectionIcon = (collectionId: string, newIcon: string) => {
+    // Оновлюємо колекцію в списку
+    setCollections(prev => {
+      const updated = prev.map(col => 
+        col.id === collectionId 
+          ? { ...col, icon: newIcon }
+          : col
+      );
+      saveCollectionsToStorage(updated);
+      return updated;
+    });
+
+    // Оновлюємо selectedCollection, якщо це поточна колекція
+    if (selectedCollection?.id === collectionId) {
+      setSelectedCollection((prev: any) => ({
+        ...prev,
+        icon: newIcon
+      }));
+    }
   };
 
   // Функція для видалення колекції
@@ -3230,6 +3300,12 @@ export default function App() {
     }
 
     toast.success('Collection deleted successfully');
+  };
+
+  // Функція для відкриття модального вікна налаштувань колекції
+  const handleOpenCollectionSettings = () => {
+    if (!selectedCollection) return;
+    setIsCollectionSettingsModalOpen(true);
   };
 
   // Функція для відкриття модального вікна з правилами
@@ -3329,6 +3405,8 @@ export default function App() {
   // Функція для відкриття RulesEditorModal з правилами нової колекції
   const handleOpenRulesEditorForNewCollection = (rules: CollectionRule[], collectionName: string, description: string) => {
     setPendingCollectionData({ name: collectionName, description, rules });
+    // Закриваємо NewCollectionModal, щоб уникнути оверлепу
+    setIsNewCollectionModalOpen(false);
     setIsRulesEditorModalOpen(true);
   };
 
@@ -3498,7 +3576,7 @@ export default function App() {
                   collection={selectedCollection}
                   onBack={handleBackFromCollection}
                   onAddDocument={() => setIsUploadModalOpen(true)}
-                  onSettingsClick={() => toast.info('Collection settings - coming soon')}
+                  onSettingsClick={handleOpenCollectionSettings}
                   onShareClick={() => toast.info('Share collection - coming soon')}
                   onFiltersClick={() => toast.info('Collection filters - coming soon')}
                 />
@@ -3529,6 +3607,7 @@ export default function App() {
             onCreateCollectionFromAI={handleCreateCollectionFromAI}
             onCustomizeFiltersClick={handleOpenRulesEditor}
             onDeleteCollection={handleDeleteCollection}
+            onSettingsClick={handleOpenCollectionSettings}
           />
                   </div>
                   <div className="flex-shrink-0 flex-grow-0 border-l border-[#e8e8ec] overflow-hidden" style={{ width: '400px', minWidth: '400px', maxWidth: '400px' }}>
@@ -3563,6 +3642,7 @@ export default function App() {
                 onCreateCollection={handleCreateCollectionFromSelection}
                 onCreateCollectionFromAI={handleCreateCollectionFromAI}
                 onDeleteCollection={handleDeleteCollection}
+                onSettingsClick={handleOpenCollectionSettings}
               />
             )}
           </div>
@@ -3626,13 +3706,28 @@ export default function App() {
         isOpen={isRulesEditorModalOpen}
         onClose={() => {
           setIsRulesEditorModalOpen(false);
-          setPendingCollectionData(null);
+          // Якщо є pendingCollectionData, відкриваємо NewCollectionModal знову
+          if (pendingCollectionData) {
+            setIsNewCollectionModalOpen(true);
+            // Не очищаємо pendingCollectionData, щоб зберегти дані
+          } else {
+            setPendingCollectionData(null);
+          }
         }}
         onSave={handleSaveRules}
         initialRules={pendingCollectionData?.rules || selectedCollection?.rules || []}
         initialDescription={pendingCollectionData?.description || selectedCollection?.description || ''}
         matchedDocumentsCount={selectedCollection?.count || 0}
         onFindMatchingDocuments={findMatchingDocumentsCount}
+      />
+
+      <CollectionSettingsModal
+        isOpen={isCollectionSettingsModalOpen}
+        onClose={() => setIsCollectionSettingsModalOpen(false)}
+        collection={selectedCollection || { id: '', title: '', icon: '📁' }}
+        onRename={handleRenameCollection}
+        onDelete={handleDeleteCollection}
+        onIconChange={handleChangeCollectionIcon}
       />
       
       <Toaster position="top-right" />

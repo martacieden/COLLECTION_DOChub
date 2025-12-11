@@ -33,6 +33,9 @@ interface RecentlyOpenedViewProps {
   onPinToggle?: (docId: string) => void;
   collections?: Collection[];
   onCollectionClick?: (collection: Collection) => void;
+  onDelete?: (documentIds: string[]) => void;
+  onAddToCollection?: (documentIds: string[]) => void;
+  onCreateCollection?: (documentIds: string[]) => void;
 }
 
 // FileIcon component
@@ -240,7 +243,10 @@ export function RecentlyOpenedView({
   pinnedDocumentIds,
   onPinToggle,
   collections = [],
-  onCollectionClick
+  onCollectionClick,
+  onDelete,
+  onAddToCollection,
+  onCreateCollection
 }: RecentlyOpenedViewProps) {
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [filterQuery, setFilterQuery] = useState<string>('');
@@ -307,9 +313,16 @@ export function RecentlyOpenedView({
             onClearSelection={() => setSelectedDocuments([])}
             onPinToggle={handlePinToggle}
             hasQuickFilters={false}
-            onMove={() => {}}
-            onRename={() => {}}
-            onDownload={() => {}}
+            onAddToCollection={onAddToCollection ? () => onAddToCollection(selectedDocuments) : undefined}
+            onCreateCollection={onCreateCollection ? () => onCreateCollection(selectedDocuments) : undefined}
+            onDelete={() => {
+              if (onDelete && selectedDocuments.length > 0) {
+                onDelete(selectedDocuments);
+                setSelectedDocuments([]);
+              }
+            }}
+            onExport={() => {}}
+            onShare={() => {}}
           />
         )}
 

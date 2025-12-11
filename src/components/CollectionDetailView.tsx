@@ -587,14 +587,6 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
         
         {isDetailsExpanded && (
           <div className="mt-[24px] space-y-[24px]">
-            {/* Description Section */}
-            <div>
-              <div className="text-[11px] text-[#8b8d98] uppercase tracking-wider mb-[8px]">Description</div>
-              <p className="text-[13px] text-[#1c2024] leading-[20px]">
-                {collection.description || 'No description provided. Click "Customize" to add a description and AI rules.'}
-              </p>
-            </div>
-
             {/* Filters Section */}
             <div>
               <div className="flex items-center justify-between mb-[8px]">

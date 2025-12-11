@@ -52,6 +52,7 @@ export function BulkActionsBar({
           </button>
         </div>
         <div className="flex items-center gap-[8px]">
+          {/* 1. Pin — перша */}
           {onPinToggle && (
             <button
               onClick={onPinToggle}
@@ -70,32 +71,36 @@ export function BulkActionsBar({
               )}
             </button>
           )}
-          {onCreateCollection && (
+          {/* 2. Download (раніше Export) — друга */}
+          {onDownload && (
             <button 
-              onClick={onCreateCollection}
-              className="h-[32px] px-[12px] bg-[#005be2] rounded-[6px] text-[13px] text-white hover:bg-[#0047b3] flex items-center gap-[6px]"
-            >
-              <Plus className="size-[14px]" />
-              <span>Create Collection</span>
-            </button>
-          )}
-          {onAddToCollection && (
-            <button 
-              onClick={onAddToCollection}
+              onClick={onDownload}
               className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px]"
             >
-              <Plus className="size-[14px]" />
-              <span>Add to Collection</span>
+              <Download className="size-[14px]" />
+              <span>Download</span>
             </button>
           )}
-          {showRemoveFromCollection && (
+          {onExport && (
             <button 
-              onClick={onRemoveFromCollection}
-              className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb]"
+              onClick={onExport}
+              className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px]"
             >
-              Remove from collection
+              <Download className="size-[14px]" />
+              <span>Download</span>
             </button>
           )}
+          {/* 3. Share — третя */}
+          {onShare && (
+            <button 
+              onClick={onShare}
+              className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px]"
+            >
+              <Share2 className="size-[14px]" />
+              <span>Share</span>
+            </button>
+          )}
+          {/* 4. Delete — четверта */}
           {onDelete && (
             <button 
               onClick={onDelete}
@@ -105,22 +110,33 @@ export function BulkActionsBar({
               <span>Delete</span>
             </button>
           )}
-          {onExport && (
+          {/* 5. Add to Collection — п'ята */}
+          {onAddToCollection && (
             <button 
-              onClick={onExport}
+              onClick={onAddToCollection}
               className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px]"
             >
-              <Download className="size-[14px]" />
-              <span>Export</span>
+              <Plus className="size-[14px]" />
+              <span>Add to Collection</span>
             </button>
           )}
-          {onShare && (
+          {/* 6. Create Collection — шоста */}
+          {onCreateCollection && (
             <button 
-              onClick={onShare}
-              className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px]"
+              onClick={onCreateCollection}
+              className="h-[32px] px-[12px] bg-[#005be2] rounded-[6px] text-[13px] text-white hover:bg-[#0047b3] flex items-center gap-[6px]"
             >
-              <Share2 className="size-[14px]" />
-              <span>Share</span>
+              <Plus className="size-[14px]" />
+              <span>Create Collection</span>
+            </button>
+          )}
+          {/* Інші кнопки */}
+          {showRemoveFromCollection && (
+            <button 
+              onClick={onRemoveFromCollection}
+              className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb]"
+            >
+              Remove from collection
             </button>
           )}
           {onMove && (
@@ -138,15 +154,6 @@ export function BulkActionsBar({
               className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Rename
-            </button>
-          )}
-          {onDownload && (
-            <button 
-              onClick={onDownload}
-              className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px]"
-            >
-              <Download className="size-[14px]" />
-              <span>Download</span>
             </button>
           )}
         </div>

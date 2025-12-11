@@ -1,4 +1,4 @@
-import { ChevronDown } from 'lucide-react';
+import { Upload } from 'lucide-react';
 import svgPaths from '../imports/svg-ylbe71kelt';
 
 interface PageHeaderProps {
@@ -15,10 +15,10 @@ export function PageHeader({ title, onShowAIFilter, onUploadClick }: PageHeaderP
       <div className="flex items-center gap-[24px] flex-shrink-0">
         <button 
           onClick={onUploadClick}
-          className="flex items-center gap-[4px] h-[32px] px-[16px] py-[6px] bg-[#005BE2] border border-[#005BE2] rounded-[6px] text-[13px] font-semibold text-white hover:bg-[#0047B3] transition-colors flex-shrink-0"
+          className="flex items-center gap-[4px] h-[32px] px-[16px] py-[6px] bg-white border border-[#e0e1e6] rounded-[6px] text-[13px] font-semibold text-[#1c2024] hover:bg-[#f9fafb] transition-colors flex-shrink-0"
         >
+          <Upload className="size-[16px]" />
           <span>Upload</span>
-          <ChevronDown className="size-[16px]" />
         </button>
       </div>
     </div>

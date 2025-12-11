@@ -74,7 +74,7 @@ export function DocumentCard({ document, isSelected, onSelect, isPinned = false,
                   <path d="M12 3.24963C12.4142 3.24963 12.75 3.58542 12.75 3.99963C12.75 4.41385 12.4142 4.74963 12 4.74963H4C3.58579 4.74963 3.25 4.41385 3.25 3.99963C3.25 3.58542 3.58579 3.24963 4 3.24963H12Z" fill="#60646C"/>
                 </svg>
               </div>
-              <span>{collections.length}</span>
+              <span>{collections.length} {collections.length === 1 ? 'collection' : 'collections'}</span>
             </div>
             
             {/* Tooltip with collections list */}

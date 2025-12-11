@@ -438,7 +438,7 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
     }
 
     onCreateCollection(collectionName, description, generatedRules);
-    toast.success(`Collection "${collectionName}" created successfully`);
+    // Toast показується в handleCreateCollection в App.tsx
     handleClose();
   };
 
