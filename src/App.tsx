@@ -1503,6 +1503,182 @@ function AISuggestionPreviewModal({
 }
 
 // ========================================
+// AI GENERATED COLLECTION PREVIEW MODAL
+// ========================================
+
+function AIGeneratedCollectionPreviewModal({
+  rules,
+  documents,
+  onClose,
+  onCreateCollection
+}: {
+  rules: CollectionRule[];
+  documents: Document[];
+  onClose: () => void;
+  onCreateCollection: () => void;
+}) {
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
+  
+  // Генеруємо назву колекції на основі правил
+  const documentType = rules[0]?.value || 'documents';
+  const collectionName = `All ${documentType.charAt(0).toUpperCase() + documentType.slice(1)}s`;
+  const description = `Collection of all ${documentType} documents`;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/50" 
+        onClick={onClose}
+      />
+      
+      {/* Modal */}
+      <div className="relative bg-white rounded-[12px] shadow-xl max-w-[900px] w-full mx-[24px] max-h-[80vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="border-b border-[#e8e8ec] px-[24px] py-[16px]">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-[12px] flex-1">
+              <div className="bg-gradient-to-br from-[#f5f3ff] to-[#ede9fe] size-[40px] rounded-[8px] flex items-center justify-center flex-shrink-0">
+                <Sparkles className="size-[20px] text-[#7c3aed]" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-[16px] font-semibold text-[#1c2024] mb-[4px]">{collectionName}</h2>
+                <p className="text-[13px] text-[#60646c] mb-[8px]">{description}</p>
+                <div className="flex items-center gap-[12px] mb-[8px]">
+                  <span className="text-[12px] text-[#8b8d98]">{documents.length} documents</span>
+                  <span className="text-[12px] text-[#8b8d98]">•</span>
+                  <span className="text-[12px] text-[#8b8d98]">AI-generated collection</span>
+                </div>
+                {rules && rules.length > 0 && (
+                  <div className="flex flex-wrap gap-[6px]">
+                    {rules.map((rule) => {
+                      const ruleText = `${rule.label || rule.type} ${rule.operator || 'is'} "${rule.value}"`;
+                      return (
+                        <div
+                          key={rule.id}
+                          className="px-[8px] py-[3px] bg-[#f9fafb] border border-[#e8e8ec] rounded-[4px] text-[11px] text-[#60646c]"
+                        >
+                          {ruleText}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-[8px] flex-shrink-0">
+              {/* View toggle buttons */}
+              <div className="flex items-center gap-[4px] border border-[#e0e1e6] rounded-[6px] p-[2px]">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`size-[28px] rounded-[4px] flex items-center justify-center transition-colors ${
+                    viewMode === 'grid' ? 'bg-[#f0f0f3]' : 'hover:bg-[#f9fafb]'
+                  }`}
+                >
+                  <svg className="size-[16px] text-[#60646c]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+                    <path d="M3 9h18"></path>
+                    <path d="M3 15h18"></path>
+                    <path d="M9 3v18"></path>
+                    <path d="M15 3v18"></path>
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`size-[28px] rounded-[4px] flex items-center justify-center transition-colors ${
+                    viewMode === 'list' ? 'bg-[#f0f0f3]' : 'hover:bg-[#f9fafb]'
+                  }`}
+                >
+                  <List className="size-[16px] text-[#60646c]" />
+                </button>
+              </div>
+              <button 
+                onClick={onClose}
+                className="size-[32px] rounded-[6px] flex items-center justify-center hover:bg-[#f9fafb] transition-colors"
+              >
+                <X className="size-[16px] text-[#60646c]" />
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        {/* Content */}
+        <div className="flex-1 overflow-auto px-[24px] py-[16px]">
+          {viewMode === 'list' ? (
+            // List view
+            <div className="space-y-[6px]">
+              {documents.map((doc, index) => (
+                <div 
+                  key={doc.id || index}
+                  className="flex items-center gap-[8px] p-[8px] border border-[#e8e8ec] rounded-[6px] hover:bg-[#f9fafb] transition-colors cursor-pointer"
+                >
+                  <div className="flex-shrink-0">
+                    <FileIcon type={doc.type} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] text-[#1c2024] truncate">{doc.name}</p>
+                    <p className="text-[11px] text-[#60646c] truncate">{doc.description}</p>
+                  </div>
+                  <span className="text-[11px] text-[#8b8d98] flex-shrink-0">{doc.type}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            // Grid view
+            <div className="grid grid-cols-4 gap-[12px]">
+              {documents.map((doc, index) => (
+                <div 
+                  key={doc.id || index}
+                  className="flex flex-col border border-[#e8e8ec] rounded-[8px] overflow-hidden hover:border-[#005be2] transition-colors cursor-pointer"
+                >
+                  {/* Document preview/thumbnail */}
+                  <div className="aspect-[3/2] bg-gradient-to-br from-[#f9fafb] to-[#f0f0f3] flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-[8px]">
+                      <div className="size-[32px] flex items-center justify-center">
+                        <FileIcon type={doc.type} />
+                      </div>
+                      <span className="text-[10px] font-semibold text-[#8b8d98] uppercase tracking-wider">{doc.type}</span>
+                    </div>
+                  </div>
+                  {/* Document info */}
+                  <div className="p-[12px]">
+                    <p className="text-[13px] font-semibold text-[#1c2024] truncate mb-[4px]">{doc.name}</p>
+                    <p className="text-[12px] text-[#60646c] line-clamp-2 min-h-[32px]">{doc.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        {/* Footer */}
+        <div className="border-t border-[#e8e8ec] px-[24px] py-[16px] bg-[#f9fafb]">
+          <div className="flex items-center justify-between">
+            <p className="text-[12px] text-[#60646c]">
+              Preview of AI-suggested collection
+            </p>
+            <div className="flex items-center gap-[8px]">
+              <button 
+                onClick={onClose}
+                className="h-[32px] px-[12px] border border-[#e0e1e6] rounded-[6px] text-[13px] font-semibold text-[#1c2024] bg-white hover:bg-[#f9fafb] transition-colors"
+              >
+                Dismiss
+              </button>
+              <button 
+                onClick={onCreateCollection}
+                className="h-[32px] px-[12px] bg-[#005be2] border border-[#005be2] rounded-[6px] text-[13px] font-semibold text-white hover:bg-[#004fc4] transition-colors"
+              >
+                Create Collection
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ========================================
 // MAIN CONTENT AREA
 // ========================================
 
@@ -2209,56 +2385,19 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
         />
       )}
       
-      {/* AI Collection Preview Section */}
-      {showAICollectionPreview && aiGeneratedRules && (
-        <div className="bg-white border-b border-[#e8e8ec] px-[24px] py-[24px]">
-          <div className="max-w-[1200px] mx-auto">
-            {/* Rules Display */}
-            <div className="mb-[24px]">
-              <h3 className="text-[14px] font-semibold text-[#1c2024] mb-[12px]">Collection Rules</h3>
-              <div className="bg-[#f9fafb] border border-[#e0e1e6] rounded-[8px] p-[16px]">
-                {aiGeneratedRules.map((rule) => (
-                  <div key={rule.id} className="flex items-center gap-[8px] text-[13px] text-[#1c2024]">
-                    <span className="font-medium">{rule.label}:</span>
-                    <span className="text-[#60646c]">{rule.value}</span>
-                    <span className="text-[#60646c]">({rule.operator})</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            {/* Documents Preview */}
-            <div className="mb-[24px]">
-              <h3 className="text-[14px] font-semibold text-[#1c2024] mb-[12px]">
-                Matching Documents ({aiGeneratedDocuments.length})
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[12px] max-h-[400px] overflow-y-auto">
-                {aiGeneratedDocuments.slice(0, 8).map((doc) => (
-                  <div key={doc.id} className="bg-[#f9fafb] border border-[#e0e1e6] rounded-[6px] p-[12px]">
-                    <div className="flex items-center gap-[8px] mb-[4px]">
-                      <span className="text-[16px]">{doc.icon || '📄'}</span>
-                      <span className="text-[13px] font-medium text-[#1c2024] truncate">{doc.name}</span>
-                    </div>
-                    {doc.description && (
-                      <p className="text-[12px] text-[#60646c] line-clamp-2">{doc.description}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            {/* Create Collection Button */}
-            <div className="flex justify-center">
-              <button
-                onClick={handleCreateCollectionFromAIRules}
-                className="h-[28px] px-[12px] bg-[#005be2] text-white rounded-[6px] text-[12px] font-semibold hover:bg-[#0048b8] transition-colors flex items-center gap-[6px]"
-              >
-                <Plus className="size-[14px]" />
-                <span>Create Collection</span>
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* AI Generated Collection Preview Modal */}
+      {showAICollectionPreview && aiGeneratedRules && aiGeneratedDocuments.length > 0 && (
+        <AIGeneratedCollectionPreviewModal
+          rules={aiGeneratedRules}
+          documents={aiGeneratedDocuments}
+          onClose={() => {
+            setShowAICollectionPreview(false);
+            setAiGeneratedRules(null);
+            setAiGeneratedDocuments([]);
+            setQuestion('');
+          }}
+          onCreateCollection={handleCreateCollectionFromAIRules}
+        />
       )}
       
       {/* Collections section */}
