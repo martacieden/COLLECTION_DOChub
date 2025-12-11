@@ -3,6 +3,7 @@ import { Checkbox } from './ui/checkbox';
 import { MoreVertical, FileText } from 'lucide-react';
 import svgPaths from "../imports/svg-ylbe71kelt";
 import { DocumentCard } from './DocumentCard';
+import { getOrganizationAvatar } from '../utils/organizationUtils';
 import { FilterBar } from './FilterBar';
 import { BulkActionsBar } from './BulkActionsBar';
 import { QuickFilters } from './QuickFilters';
@@ -45,6 +46,7 @@ interface AllDocumentsTableProps {
   onDelete?: (documentIds: string[]) => void;
   onAddToCollection?: (documentIds: string[]) => void;
   onCreateCollection?: (documentIds: string[]) => void;
+  onCollectionClick?: (collection: Collection) => void;
 }
 
 // FileIcon component для визначення типу файлу та іконки
@@ -303,7 +305,8 @@ export function AllDocumentsTable({
   collections = [],
   onDelete,
   onAddToCollection,
-  onCreateCollection
+  onCreateCollection,
+  onCollectionClick
 }: AllDocumentsTableProps) {
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [filterQuery, setFilterQuery] = useState<string>('');
@@ -499,6 +502,7 @@ export function AllDocumentsTable({
                   onSelect={handleSelectDocument}
                   isPinned={pinnedDocumentIds?.has(doc.id) || false}
                   collections={docCollections}
+                  onCollectionClick={onCollectionClick}
                 />
               );
             })}
@@ -598,12 +602,21 @@ export function AllDocumentsTable({
                       <span className="text-[13px] text-[#1c2024]">{doc.uploadedOn || new Date(doc.lastUpdate || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                     </td>
                     <td className="p-2 align-middle whitespace-nowrap">
-                      <div className="flex items-center gap-[8px]">
-                        <div className="w-[20px] h-[20px] rounded-[4px] bg-[#f0f0f3] flex items-center justify-center text-[10px] text-[#60646c] font-medium">
-                          {doc.organization?.[0] || 'S'}
-                        </div>
-                        <span className="text-[13px] text-[#1c2024]">{doc.organization || 'Summation Partners'}</span>
-                      </div>
+                      {(() => {
+                        const orgName = doc.organization || 'Summation Partners';
+                        const orgAvatar = getOrganizationAvatar(orgName);
+                        return (
+                          <div className="flex items-center gap-[8px]">
+                            <div 
+                              className="w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] text-white font-medium"
+                              style={{ backgroundColor: orgAvatar.color }}
+                            >
+                              {orgAvatar.initial}
+                            </div>
+                            <span className="text-[13px] text-[#1c2024]">{orgName}</span>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="p-2 align-middle whitespace-nowrap">
                       <StatusBadge status={doc.signatureStatus} />

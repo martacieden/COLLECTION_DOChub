@@ -419,14 +419,15 @@ export function CollectionDetailHeader({ collection, onBack, onAddDocument, onSe
   }
 
   return (
-    <div className="border-b border-[#e8e8ec] px-[24px] pt-[16px] pb-[8px] bg-white flex-shrink-0">
-      <div className="pt-[16px]">
+    <div className="border-b border-[#e8e8ec] px-[24px] pt-[12px] pb-[12px] bg-white flex-shrink-0">
+      <div>
         {/* Title Row */}
         <div className="flex items-start justify-between mb-[8px]">
           <div className="flex items-start gap-[12px]">
             {/* Back Button */}
             {onBack && (
               <button 
+                type="button"
                 onClick={onBack}
                 className="h-[36px] w-[36px] border border-[#e0e1e6] rounded-[6px] flex items-center justify-center hover:bg-[#f9fafb] mt-[2px]"
               >
@@ -448,14 +449,20 @@ export function CollectionDetailHeader({ collection, onBack, onAddDocument, onSe
             <div>
               <div className="flex items-center gap-[12px] mb-[4px]">
                 <h1 className="text-[#1c2024] tracking-[-0.08px]">{collection.title}</h1>
-                {collection.organization && (
-                  <div className="flex items-center gap-[8px]">
-                    <div className="size-[20px] rounded-full bg-[#e0e1e6] flex items-center justify-center text-[10px] text-[#60646c] font-medium">
-                      {collection.organization[0]}
+                {collection.organization && (() => {
+                  const orgAvatar = getOrganizationAvatar(collection.organization);
+                  return (
+                    <div className="flex items-center gap-[8px]">
+                      <div 
+                        className="size-[20px] rounded-full flex items-center justify-center text-[10px] text-white font-medium"
+                        style={{ backgroundColor: orgAvatar.color }}
+                      >
+                        {orgAvatar.initial}
+                      </div>
+                      <span className="text-[12px] text-[#80838d]">{collection.organization}</span>
                     </div>
-                    <span className="text-[12px] text-[#80838d]">{collection.organization}</span>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
               <div className="flex items-center gap-[8px] text-[13px] text-[#60646c]">
                 <span>{Math.min(collection.count, 7)} items</span>
@@ -483,14 +490,6 @@ export function CollectionDetailHeader({ collection, onBack, onAddDocument, onSe
             >
               <Share className="size-[16px] text-[#60646c]" />
               <span>Share</span>
-            </button>
-
-            <button 
-              onClick={onFiltersClick}
-              className="h-[36px] px-[12px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px]"
-            >
-              <FileText className="size-[16px] text-[#60646c]" />
-              <span>Filters</span>
             </button>
 
             <button 
@@ -718,13 +717,20 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
         <div className="pb-[16px] pt-0 min-w-0 flex flex-col flex-1">
           {filteredDocuments.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center py-[120px]">
-              <div className="bg-[#f0f0f3] text-[#60646c] rounded-[8px] size-[28px] grid place-items-center mb-[16px]">
-                <FileText className="size-[16px]" />
+              <div className="bg-[#f0f0f3] text-[#60646c] rounded-[8px] size-[48px] flex items-center justify-center mb-[16px]">
+                <FileText className="size-[20px]" />
               </div>
-              <div className="text-[#60646c]">
+              <div className="text-[#60646c] mb-[24px]">
                 <h2 className="text-[16px] font-medium mb-[4px]">No documents to show</h2>
                 <p className="text-[13px] leading-[20px]">Upload a document to get started</p>
               </div>
+              <button
+                onClick={onAddDocument}
+                className="h-[36px] px-[16px] bg-[#005be2] rounded-[6px] text-[13px] text-white hover:bg-[#0047b3] flex items-center gap-[6px] transition-colors"
+              >
+                <Upload className="size-[16px]" />
+                <span>Upload Document</span>
+              </button>
             </div>
           ) : viewMode === 'table' ? (
             <div className="flex-1 min-w-0 overflow-x-auto overflow-y-auto">
@@ -821,12 +827,21 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
                       <span className="text-[13px] text-[#1c2024]">{doc.uploadedOn || new Date(doc.lastUpdate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                     </td>
                     <td className="p-2 align-middle whitespace-nowrap">
-                      <div className="flex items-center gap-[8px]">
-                        <div className="w-[20px] h-[20px] rounded-[4px] bg-[#f0f0f3] flex items-center justify-center text-[10px] text-[#60646c] font-medium">
-                          {doc.organization?.[0] || 'S'}
-                        </div>
-                        <span className="text-[13px] text-[#1c2024]">{doc.organization || 'Summation Partners'}</span>
-                      </div>
+                      {(() => {
+                        const orgName = doc.organization || 'Summation Partners';
+                        const orgAvatar = getOrganizationAvatar(orgName);
+                        return (
+                          <div className="flex items-center gap-[8px]">
+                            <div 
+                              className="w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] text-white font-medium"
+                              style={{ backgroundColor: orgAvatar.color }}
+                            >
+                              {orgAvatar.initial}
+                            </div>
+                            <span className="text-[13px] text-[#1c2024]">{orgName}</span>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="p-2 align-middle whitespace-nowrap">
                       <StatusBadge status={doc.signatureStatus} />

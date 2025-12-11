@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FileText, MoreVertical, Info } from 'lucide-react';
 import { Checkbox } from './ui/checkbox';
+import { getOrganizationAvatar } from '../utils/organizationUtils';
 
 interface Document {
   name: string;
@@ -428,10 +429,21 @@ export function AllColumnsTable({ documents = [] }: AllColumnsTableProps) {
                 </td>
                 <td className="px-[16px] py-[8px]">
                   <div className="flex items-center gap-[8px]">
-                    <div className="w-[20px] h-[20px] rounded-[4px] bg-[#f0f0f3] flex items-center justify-center text-[10px] text-[#60646c] font-medium">
-                      {doc.organization?.[0] || 'S'}
-                    </div>
-                    <span className="text-[13px] text-[#1c2024]">{doc.organization || 'Summation Partners'}</span>
+                    {(() => {
+                      const orgName = doc.organization || 'Summation Partners';
+                      const orgAvatar = getOrganizationAvatar(orgName);
+                      return (
+                        <>
+                          <div 
+                            className="w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] text-white font-medium"
+                            style={{ backgroundColor: orgAvatar.color }}
+                          >
+                            {orgAvatar.initial}
+                          </div>
+                          <span className="text-[13px] text-[#1c2024]">{orgName}</span>
+                        </>
+                      );
+                    })()}
                   </div>
                 </td>
                 <td className="px-[16px] py-[8px]">

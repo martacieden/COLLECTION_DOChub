@@ -17,9 +17,9 @@ export function SummaryBox({ summary, onEdit }: SummaryBoxProps) {
         {onEdit && (
           <button 
             onClick={onEdit}
-            className="size-[24px] rounded-[6px] bg-[#f0f0f3] flex items-center justify-center hover:bg-[#e0e1e6] transition-colors"
+            className="text-[13px] text-[#005be2] hover:underline transition-colors"
           >
-            <Pencil className="size-[14px] text-[#60646c]" />
+            Customize
           </button>
         )}
       </div>

@@ -19,6 +19,8 @@ import { RecentlyOpenedView } from './components/RecentlyOpenedView';
 import { AIAssistantBanner } from './components/AIAssistantBanner';
 import { SummaryBox } from './components/SummaryBox';
 import { PinnedView } from './components/PinnedView';
+import { RulesEditorModal } from './components/RulesEditorModal';
+import { getOrganizationAvatar } from './utils/organizationUtils';
 
 // ========================================
 // TYPES
@@ -1528,14 +1530,20 @@ function CollectionCard({ title, organization, onClick, collectionId, sharedWith
       </div>
       
       {/* Organization row */}
-      {organization && (
-        <div className="flex items-center gap-[8px]">
-          <div className="size-[20px] rounded-full bg-[#e0e1e6] flex items-center justify-center text-[10px] text-[#60646c] font-medium">
-            {orgInitials}
+      {organization && (() => {
+        const orgAvatar = getOrganizationAvatar(organization);
+        return (
+          <div className="flex items-center gap-[8px]">
+            <div 
+              className="size-[20px] rounded-full flex items-center justify-center text-[10px] text-white font-medium"
+              style={{ backgroundColor: orgAvatar.color }}
+            >
+              {orgAvatar.initial}
+            </div>
+            <span className="text-[12px] text-[#80838d]">{organization}</span>
           </div>
-          <span className="text-[12px] text-[#80838d]">{organization}</span>
-        </div>
-      )}
+        );
+      })()}
       
       {/* Bottom row: item count + user stack */}
       <div className="flex items-center justify-between">
@@ -2015,6 +2023,16 @@ function MainContent({
     );
   }
 
+  // Функція для переходу до колекції з тултіпа
+  const handleCollectionClickFromTooltip = (collection: { id: string; title: string; icon?: string }) => {
+    if (!onCollectionClick || !collections) return;
+    // Знайти повну колекцію за ID
+    const fullCollection = collections.find(col => col.id === collection.id);
+    if (fullCollection) {
+      onCollectionClick(fullCollection);
+    }
+  };
+
   if (viewMode === 'all-documents') {
     // Отримати список колекцій для передачі
     const collectionsList = (collections || []).map(col => ({
@@ -2036,6 +2054,7 @@ function MainContent({
           onDelete={onDelete}
           onAddToCollection={onAddToCollection}
           onCreateCollection={onCreateCollection}
+          onCollectionClick={handleCollectionClickFromTooltip}
         />
       </div>
     );
@@ -2056,6 +2075,7 @@ function MainContent({
           pinnedDocumentIds={pinnedDocumentIds}
           onPinToggle={onPinToggle}
           collections={collectionsList}
+          onCollectionClick={handleCollectionClickFromTooltip}
         />
       </div>
     );
@@ -2076,6 +2096,7 @@ function MainContent({
           pinnedDocumentIds={pinnedDocumentIds}
           onPinToggle={onPinToggle}
           collections={collectionsList}
+          onCollectionClick={handleCollectionClickFromTooltip}
         />
       </div>
     );
@@ -2091,7 +2112,7 @@ function MainContent({
 // FOJO AI ASSISTANT PANEL
 // ========================================
 
-function FojoAssistantPanel({ collection, documents }: { collection?: any; documents?: Document[] }) {
+function FojoAssistantPanel({ collection, documents, onCustomizeClick }: { collection?: any; documents?: Document[]; onCustomizeClick?: () => void }) {
   // Generate AI summary based on collection state
   // Fojo analyzes in priority order: Documents > Rules > Description > Title
   const generateSummary = (): string => {
@@ -2235,7 +2256,7 @@ function FojoAssistantPanel({ collection, documents }: { collection?: any; docum
     // Case D: Collection has only a title
     // Fojo must NOT hallucinate - explicitly say what's missing
     if (!hasDescription && !hasRules && !hasDocuments) {
-      return `"${collection.title}" is a new collection with no content yet. To help me understand what this collection is for, please add a description. You can also start adding documents manually, or set up automation rules to automatically include matching documents.`;
+      return `"${collection.title}" is a new collection with no content yet. Start by uploading documents to get started. You can also add a description or set up automation rules to automatically include matching documents.`;
     }
 
     return "Analyzing collection...";
@@ -2270,12 +2291,27 @@ function FojoAssistantPanel({ collection, documents }: { collection?: any; docum
     } 
     // Case D: Only title - must not hallucinate
     else {
-      return "This is a new collection. To help me assist you better, please add a description explaining what this collection is meant for. I can then help you set up automation rules or find documents to add. What would you like this collection to contain?";
+      return "This is a new collection. Start by uploading documents to get started. You can also add a description or set up automation rules to automatically include matching documents.";
     }
   };
 
   const summary = generateSummary();
   const assistantMessage = generateAssistantMessage();
+
+  // Перевіряємо, чи колекція пуста (немає документів, правил, опису)
+  // Використовуємо ту саму логіку, що й в generateSummary
+  const isEmptyCollection = (() => {
+    if (!collection) return false;
+    const collectionDocumentIds = collection.documentIds || [];
+    const collectionDocuments = documents && documents.length > 0
+      ? documents.filter(doc => doc && doc.id && collectionDocumentIds.includes(doc.id))
+      : [];
+    const hasDocuments = collectionDocuments.length > 0;
+    const enabledRules = collection.rules ? collection.rules.filter((r: CollectionRule) => r.enabled) : [];
+    const hasRules = enabledRules.length > 0;
+    const hasDescription = collection.description && collection.description.trim().length > 0;
+    return !hasDescription && !hasRules && !hasDocuments;
+  })();
 
   return (
     <div className="flex flex-col h-full bg-white overflow-hidden" style={{ width: '400px', minWidth: '400px', maxWidth: '400px' }}>
@@ -2291,6 +2327,7 @@ function FojoAssistantPanel({ collection, documents }: { collection?: any; docum
         {/* Summary Section */}
         <SummaryBox 
           summary={summary}
+          onEdit={collection?.rules && collection.rules.length > 0 ? onCustomizeClick : undefined}
         />
 
         {/* Assistant Message - Scrollable Area */}
@@ -2305,18 +2342,20 @@ function FojoAssistantPanel({ collection, documents }: { collection?: any; docum
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-col gap-[8px]">
-              <button className="w-full px-[12px] py-[8px] bg-[#f9fafb] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f0f0f3] text-left transition-colors">
-                Summarize key clauses
-              </button>
-              <button className="w-full px-[12px] py-[8px] bg-[#f9fafb] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f0f0f3] text-left transition-colors">
-                Show linked objects
-              </button>
-              <button className="w-full px-[12px] py-[8px] bg-[#f9fafb] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f0f0f3] text-left transition-colors">
-                Who is the executor?
-              </button>
-            </div>
+            {/* Action Buttons - показуємо тільки якщо колекція не пуста */}
+            {!isEmptyCollection && (
+              <div className="flex flex-col gap-[8px]">
+                <button className="w-full px-[12px] py-[8px] bg-[#f9fafb] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f0f0f3] text-left transition-colors">
+                  Summarize key clauses
+                </button>
+                <button className="w-full px-[12px] py-[8px] bg-[#f9fafb] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f0f0f3] text-left transition-colors">
+                  Show linked objects
+                </button>
+                <button className="w-full px-[12px] py-[8px] bg-[#f9fafb] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f0f0f3] text-left transition-colors">
+                  Who is the executor?
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -2441,17 +2480,23 @@ function LeftTabsPanel({
                       selectedOrganization === org.id ? 'bg-[#ebf3ff] text-[#005be2]' : 'text-[#1c2024]'
                     }`}
                   >
-                    {org.initials ? (
-                      <div className="size-[20px] rounded-full bg-[#e0e1e6] flex items-center justify-center text-[10px] text-[#60646c] font-medium">
-                        {org.initials}
-                      </div>
-                    ) : (
+                    {org.id === 'all' ? (
                       <div className="bg-[#f0f0f3] p-[4px] rounded-[4px]">
                         <svg className="size-[12px]" fill="none" viewBox="0 0 12 12">
                           <path clipRule="evenodd" d={svgPaths.p3ed9dc80} fill="#60646C" fillRule="evenodd" />
                         </svg>
                       </div>
-                    )}
+                    ) : (() => {
+                      const orgAvatar = getOrganizationAvatar(org.name);
+                      return (
+                        <div 
+                          className="size-[20px] rounded-full flex items-center justify-center text-[10px] text-white font-medium"
+                          style={{ backgroundColor: orgAvatar.color }}
+                        >
+                          {orgAvatar.initial}
+                        </div>
+                      );
+                    })()}
                     <span className="flex-1 text-left truncate">{org.name}</span>
                   </button>
                 ))}
@@ -2615,6 +2660,8 @@ export default function App() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isNewCollectionModalOpen, setIsNewCollectionModalOpen] = useState(false);
   const [isAddToCollectionModalOpen, setIsAddToCollectionModalOpen] = useState(false);
+  const [isRulesEditorModalOpen, setIsRulesEditorModalOpen] = useState(false);
+  const [pendingCollectionData, setPendingCollectionData] = useState<{ name: string; description: string; rules: CollectionRule[] } | null>(null);
   const [selectedDocumentsForCollection, setSelectedDocumentsForCollection] = useState<string[]>([]);
   const [selectedDocumentsForNewCollection, setSelectedDocumentsForNewCollection] = useState<Document[]>([]);
   const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState(false);
@@ -3065,6 +3112,53 @@ export default function App() {
     setSelectedCollection(null);
   };
 
+  // Функція для відкриття модального вікна з правилами
+  const handleOpenRulesEditor = () => {
+    if (!selectedCollection) return;
+    setIsRulesEditorModalOpen(true);
+  };
+
+  // Функція для збереження правил
+  const handleSaveRules = (rules: CollectionRule[]) => {
+    // Якщо є тимчасові дані колекції (створення нової колекції)
+    if (pendingCollectionData) {
+      // Створюємо колекцію з правилами
+      handleCreateCollection(pendingCollectionData.name, pendingCollectionData.description, rules);
+      setPendingCollectionData(null);
+      setIsRulesEditorModalOpen(false);
+      setIsNewCollectionModalOpen(false);
+      return;
+    }
+
+    // Якщо редагуємо існуючу колекцію
+    if (!selectedCollection) return;
+    
+    // Оновлюємо колекцію з новими правилами
+    setCollections(prev => {
+      const updated = prev.map(col => 
+        col.id === selectedCollection.id 
+          ? { ...col, rules: rules }
+          : col
+      );
+      saveCollectionsToStorage(updated);
+      return updated;
+    });
+
+    // Оновлюємо selectedCollection, щоб UI відразу відобразив зміни
+    setSelectedCollection((prev: any) => ({
+      ...prev,
+      rules: rules
+    }));
+
+    setIsRulesEditorModalOpen(false);
+  };
+
+  // Функція для відкриття RulesEditorModal з правилами нової колекції
+  const handleOpenRulesEditorForNewCollection = (rules: CollectionRule[], collectionName: string, description: string) => {
+    setPendingCollectionData({ name: collectionName, description, rules });
+    setIsRulesEditorModalOpen(true);
+  };
+
   const handleDocumentsClick = () => {
     // Очищаємо вибрану колекцію та повертаємося на дефолтну сторінку
     setSelectedCollection(null);
@@ -3263,7 +3357,11 @@ export default function App() {
           />
                   </div>
                   <div className="flex-shrink-0 flex-grow-0 border-l border-[#e8e8ec] overflow-hidden" style={{ width: '400px', minWidth: '400px', maxWidth: '400px' }}>
-                    <FojoAssistantPanel collection={selectedCollection} documents={documents} />
+                    <FojoAssistantPanel 
+                      collection={selectedCollection} 
+                      documents={documents} 
+                      onCustomizeClick={handleOpenRulesEditor}
+                    />
                   </div>
                 </div>
               </>
@@ -3328,9 +3426,11 @@ export default function App() {
         onClose={() => {
           setIsNewCollectionModalOpen(false);
           setSelectedDocumentsForNewCollection([]);
+          setPendingCollectionData(null);
         }}
         onCreateCollection={handleCreateCollection}
         selectedDocuments={selectedDocumentsForNewCollection}
+        onOpenRulesEditor={handleOpenRulesEditorForNewCollection}
       />
       <AddToCollectionModal
         isOpen={isAddToCollectionModalOpen}
@@ -3345,6 +3445,17 @@ export default function App() {
         }))}
         selectedDocumentIds={selectedDocumentsForCollection}
         onAddToCollection={handleAddToCollection}
+      />
+
+      <RulesEditorModal
+        isOpen={isRulesEditorModalOpen}
+        onClose={() => {
+          setIsRulesEditorModalOpen(false);
+          setPendingCollectionData(null);
+        }}
+        onSave={handleSaveRules}
+        initialRules={pendingCollectionData?.rules || selectedCollection?.rules || []}
+        matchedDocumentsCount={selectedCollection?.count || 0}
       />
       
       <Toaster position="top-right" />

@@ -29,9 +29,10 @@ interface PinnedViewProps {
   pinnedDocumentIds?: Set<string>;
   onPinToggle?: (docId: string) => void;
   collections?: Collection[];
+  onCollectionClick?: (collection: Collection) => void;
 }
 
-export function PinnedView({ documents = [], pinnedDocumentIds, onPinToggle, collections = [] }: PinnedViewProps) {
+export function PinnedView({ documents = [], pinnedDocumentIds, onPinToggle, collections = [], onCollectionClick }: PinnedViewProps) {
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [filterQuery, setFilterQuery] = useState<string>('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -128,12 +129,13 @@ export function PinnedView({ documents = [], pinnedDocumentIds, onPinToggle, col
                 
                 return (
                   <DocumentCard
-                    {...{ key: doc.id }}
+                    key={doc.id}
                     document={doc}
                     isSelected={selectedDocuments.includes(doc.id)}
                     onSelect={handleSelectDocument}
                     isPinned={true}
                     collections={docCollections}
+                    onCollectionClick={onCollectionClick}
                   />
                 );
               })}

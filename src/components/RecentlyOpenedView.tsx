@@ -32,6 +32,7 @@ interface RecentlyOpenedViewProps {
   pinnedDocumentIds?: Set<string>;
   onPinToggle?: (docId: string) => void;
   collections?: Collection[];
+  onCollectionClick?: (collection: Collection) => void;
 }
 
 // FileIcon component
@@ -238,7 +239,8 @@ export function RecentlyOpenedView({
   documents = mockDocuments,
   pinnedDocumentIds,
   onPinToggle,
-  collections = []
+  collections = [],
+  onCollectionClick
 }: RecentlyOpenedViewProps) {
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [filterQuery, setFilterQuery] = useState<string>('');
@@ -339,6 +341,7 @@ export function RecentlyOpenedView({
                     onSelect={handleSelectDocument}
                     isPinned={pinnedDocumentIds?.has(doc.id) || false}
                     collections={docCollections}
+                    onCollectionClick={onCollectionClick}
                   />
                 );
               })}

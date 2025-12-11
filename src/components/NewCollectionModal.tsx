@@ -17,6 +17,7 @@ interface NewCollectionModalProps {
   onClose: () => void;
   onCreateCollection: (name: string, description: string, rules: CollectionRule[]) => void;
   selectedDocuments?: Document[]; // Документи для створення колекції
+  onOpenRulesEditor?: (rules: CollectionRule[], collectionName: string, description: string) => void; // Callback для відкриття RulesEditorModal
 }
 
 interface CollectionRule {
@@ -46,7 +47,7 @@ const ruleTypeColors = {
   vendor: 'bg-[#FEF8E6] text-[#D97706]',
 };
 
-export function NewCollectionModal({ isOpen, onClose, onCreateCollection, selectedDocuments = [] }: NewCollectionModalProps) {
+export function NewCollectionModal({ isOpen, onClose, onCreateCollection, selectedDocuments = [], onOpenRulesEditor }: NewCollectionModalProps) {
   const [collectionName, setCollectionName] = useState('');
   const [description, setDescription] = useState('');
   const [generatedRules, setGeneratedRules] = useState<CollectionRule[]>([]);
@@ -236,6 +237,12 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
       setShowRulesBlock(true);
       setIsRulesExpanded(true); // Auto-expand for testing
       toast.success('Test rules loaded successfully');
+      
+      // Відкриваємо модальне вікно для редагування правил
+      if (onOpenRulesEditor && collectionName.trim()) {
+        onOpenRulesEditor(testRules, collectionName, description);
+        // Не закриваємо модальне вікно, воно залишиться відкритим
+      }
       return;
     }
 
@@ -370,6 +377,12 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
     setIsRulesExpanded(false);
 
     toast.success('AI rules generated successfully');
+
+    // Відкриваємо модальне вікно для редагування правил
+    if (onOpenRulesEditor && collectionName.trim() && rules.length > 0) {
+      onOpenRulesEditor(rules, collectionName, description);
+      // Не закриваємо модальне вікно, воно залишиться відкритим
+    }
   };
 
   const toggleRule = (ruleId: string) => {
