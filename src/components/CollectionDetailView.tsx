@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, Share, Users, FileText, Plus, ChevronDown, ChevronUp, Search, SlidersHorizontal, List, TrendingUp, ArrowLeft, Upload, Sparkles, ChevronRight, MoreVertical, Loader2 } from 'lucide-react';
+import { Settings, Share, Users, FileText, Plus, ChevronDown, ChevronUp, Search, SlidersHorizontal, List, TrendingUp, ArrowLeft, Upload, ChevronRight, MoreVertical } from 'lucide-react';
 import imgAvatar from "figma:asset/faff2adb1cb08272d6a4e4d91304adea83279eb7.png";
 import imgAvatar1 from "figma:asset/248e51d98c071d09cefd9d4449f99bd2dc3797f1.png";
 import { CollectionDocumentsTable } from './CollectionDocumentsTable';
@@ -513,8 +513,6 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [filterQuery, setFilterQuery] = useState<string>('');
-  const [aiDescription, setAiDescription] = useState<string>('');
-  const [isGenerating, setIsGenerating] = useState(false);
 
   // Захист від undefined/null collection
   if (!collection) {
@@ -557,20 +555,6 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
     }
   };
 
-  // Handle AI rules generation
-  const handleGenerateRules = async () => {
-    if (!aiDescription.trim()) return;
-
-    setIsGenerating(true);
-    // Simulate AI processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsGenerating(false);
-    
-    // In a real app, this would call an API to generate rules
-    // For now, we'll just show a success message
-    // The rules would be added to collection.rules
-  };
-
   // Filter documents based on search query
   const filteredDocuments = collectionDocuments.filter(doc => {
     if (!doc || !filterQuery.trim()) return true;
@@ -603,95 +587,59 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
         
         {isDetailsExpanded && (
           <div className="mt-[24px] space-y-[24px]">
-            {/* Filter Criteria */}
-            {collection.rules && collection.rules.length > 0 ? (
-              <div>
-                <div className="flex items-center justify-between mb-[8px]">
-                  <div>
-                    <div className="text-[11px] text-[#8b8d98] uppercase tracking-wider mb-[4px]">Filters</div>
-                    <p className="text-[13px] text-[#1c2024]">
-                      {collection.description || 'Premium assets worth over $1M with high ratings and active status. This smart collection automatically includes properties, aviation, and maritime assets that meet our premium criteria.'}
-                    </p>
-                    {collection.autoSync && (
-                      <div className="flex items-center gap-[6px] text-[11px] text-[#60646c] mt-[4px]">
-                        <svg className="size-[12px]" fill="none" viewBox="0 0 12 12">
-                          <path d="M6 1v2M6 9v2M1 6h2M9 6h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                        </svg>
-                        <span>Auto-sync enabled - collection updates automatically when rules change</span>
-                      </div>
-                    )}
-                  </div>
-                  <button 
-                    onClick={onCustomizeFiltersClick}
-                    className="text-[13px] text-[#005be2] hover:underline flex items-center gap-[4px] transition-colors"
-                  >
-                    <span>Customize</span>
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-[6px]">
-                  {collection.rules.map((rule, index) => {
-                    // Обробляємо як об'єкт CollectionRule або як рядок
-                    const ruleText = typeof rule === 'string' 
-                      ? rule 
-                      : `${rule.label || rule.type} ${rule.operator || 'is'} "${rule.value}"`;
-                    return (
-                      <div
-                        key={typeof rule === 'string' ? index : rule.id}
-                        className="px-[8px] py-[3px] bg-[#f9fafb] border border-[#e8e8ec] rounded-[4px] text-[11px] text-[#60646c]"
-                      >
-                        {ruleText}
-                      </div>
-                    );
-                  })}
-                </div>
+            {/* Description Section */}
+            <div>
+              <div className="text-[11px] text-[#8b8d98] uppercase tracking-wider mb-[8px]">Description</div>
+              <p className="text-[13px] text-[#1c2024] leading-[20px]">
+                {collection.description || 'No description provided. Click "Customize" to add a description and AI rules.'}
+              </p>
+            </div>
+
+            {/* Filters Section */}
+            <div>
+              <div className="flex items-center justify-between mb-[8px]">
+                <div className="text-[11px] text-[#8b8d98] uppercase tracking-wider">Filters</div>
+                <button 
+                  onClick={onCustomizeFiltersClick}
+                  className="text-[13px] text-[#005be2] hover:underline flex items-center gap-[4px] transition-colors"
+                >
+                  <span>Customize</span>
+                </button>
               </div>
-            ) : (
-              <div>
-                <div className="mb-[8px]">
-                  <div className="text-[11px] text-[#8b8d98] mb-[4px] uppercase tracking-wider">Filters</div>
-                  <p className="text-[13px] text-[#1c2024] mb-[4px]">
-                    {collection.description || 'Premium assets worth over $1M with high ratings and active status. This smart collection automatically includes properties, aviation, and maritime assets that meet our premium criteria.'}
-                  </p>
+              
+              {collection.rules && collection.rules.length > 0 ? (
+                <div>
                   {collection.autoSync && (
-                    <div className="flex items-center gap-[6px] text-[11px] text-[#60646c]">
+                    <div className="flex items-center gap-[6px] text-[11px] text-[#60646c] mb-[12px]">
                       <svg className="size-[12px]" fill="none" viewBox="0 0 12 12">
                         <path d="M6 1v2M6 9v2M1 6h2M9 6h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                       </svg>
                       <span>Auto-sync enabled - collection updates automatically when rules change</span>
                     </div>
                   )}
-                </div>
-                <div className="space-y-[12px]">
-                  <div>
-                    <div className="text-[11px] text-[#8b8d98] mb-[4px] uppercase tracking-wider">Description</div>
-                    <input
-                      type="text"
-                      value={aiDescription}
-                      onChange={(e) => setAiDescription(e.target.value)}
-                      placeholder="e.g. All documents related to our Malibu property"
-                      className="w-full h-[36px] p-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#005be2]"
-                    />
+                  <div className="flex flex-wrap gap-[6px]">
+                    {collection.rules.map((rule, index) => {
+                      // Обробляємо як об'єкт CollectionRule або як рядок
+                      const ruleText = typeof rule === 'string' 
+                        ? rule 
+                        : `${rule.label || rule.type} ${rule.operator || 'is'} "${rule.value}"`;
+                      return (
+                        <div
+                          key={typeof rule === 'string' ? index : rule.id}
+                          className="px-[8px] py-[3px] bg-[#f9fafb] border border-[#e8e8ec] rounded-[4px] text-[11px] text-[#60646c]"
+                        >
+                          {ruleText}
+                        </div>
+                      );
+                    })}
                   </div>
-                  <button
-                    onClick={handleGenerateRules}
-                    disabled={isGenerating || !aiDescription.trim()}
-                    className="flex items-center gap-[6px] h-[32px] px-[12px] bg-gradient-to-r from-[#005be2] to-[#0047b3] text-white rounded-[8px] text-[12px] hover:from-[#004fc4] hover:to-[#003d99] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  >
-                    {isGenerating ? (
-                      <>
-                        <Loader2 className="size-[14px] animate-spin" />
-                        <span>Analyzing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="size-[14px]" />
-                        <span>Generate rules</span>
-                      </>
-                    )}
-                  </button>
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="text-[13px] text-[#60646c]">
+                  No filters defined. Click "Customize" to add filtering rules.
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

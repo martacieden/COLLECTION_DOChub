@@ -18,6 +18,7 @@ interface RulesEditorModalProps {
   initialRules: CollectionRule[];
   initialDescription?: string;
   matchedDocumentsCount?: number;
+  onFindMatchingDocuments?: (rules: CollectionRule[]) => number; // Функція для пошуку відповідних документів
 }
 
 const ruleTypeOptions = [
@@ -42,7 +43,8 @@ export function RulesEditorModal({
   onSave,
   initialRules,
   initialDescription = '',
-  matchedDocumentsCount = 0
+  matchedDocumentsCount = 0,
+  onFindMatchingDocuments
 }: RulesEditorModalProps) {
   const [rules, setRules] = useState<CollectionRule[]>([]);
   const [description, setDescription] = useState<string>('');
@@ -53,21 +55,29 @@ export function RulesEditorModal({
 
   useEffect(() => {
     if (isOpen) {
-      setRules(initialRules.length > 0 ? [...initialRules] : []);
+      const rulesToSet = initialRules.length > 0 ? [...initialRules] : [];
+      setRules(rulesToSet);
       setDescription(initialDescription || '');
       setShowRulesBlock(initialRules.length > 0);
       setIsRulesExpanded(initialRules.length > 0);
-      setMatchedDocCount(matchedDocumentsCount);
+      
+      // Знаходимо реальну кількість відповідних документів
+      if (onFindMatchingDocuments && rulesToSet.length > 0) {
+        const realCount = onFindMatchingDocuments(rulesToSet);
+        setMatchedDocCount(realCount);
+      } else {
+        setMatchedDocCount(matchedDocumentsCount);
+      }
     }
-  }, [isOpen, initialRules, initialDescription, matchedDocumentsCount]);
+  }, [isOpen, initialRules, initialDescription, matchedDocumentsCount, onFindMatchingDocuments]);
 
   if (!isOpen) return null;
 
   const enabledRulesCount = rules.filter(r => r.enabled).length;
 
   const updateRuleType = (ruleId: string, newType: CollectionRule['type']) => {
-    setRules(prev =>
-      prev.map(rule =>
+    setRules(prev => {
+      const updated = prev.map(rule =>
         rule.id === ruleId 
           ? { 
               ...rule, 
@@ -75,36 +85,78 @@ export function RulesEditorModal({
               label: ruleTypeOptions.find(opt => opt.value === newType)?.label || rule.label
             } 
           : rule
-      )
-    );
+      );
+      
+      // Оновлюємо кількість відповідних документів при зміні типу
+      if (onFindMatchingDocuments) {
+        const realCount = onFindMatchingDocuments(updated);
+        setMatchedDocCount(realCount);
+      }
+      
+      return updated;
+    });
   };
 
   const updateRuleOperator = (ruleId: string, newOperator: CollectionRule['operator']) => {
-    setRules(prev =>
-      prev.map(rule =>
+    setRules(prev => {
+      const updated = prev.map(rule =>
         rule.id === ruleId ? { ...rule, operator: newOperator } : rule
-      )
-    );
+      );
+      
+      // Оновлюємо кількість відповідних документів при зміні оператора
+      if (onFindMatchingDocuments) {
+        const realCount = onFindMatchingDocuments(updated);
+        setMatchedDocCount(realCount);
+      }
+      
+      return updated;
+    });
   };
 
   const updateRuleValue = (ruleId: string, newValue: string) => {
-    setRules(prev =>
-      prev.map(rule =>
+    setRules(prev => {
+      const updated = prev.map(rule =>
         rule.id === ruleId ? { ...rule, value: newValue } : rule
-      )
-    );
+      );
+      
+      // Оновлюємо кількість відповідних документів при зміні значення
+      if (onFindMatchingDocuments) {
+        const realCount = onFindMatchingDocuments(updated);
+        setMatchedDocCount(realCount);
+      }
+      
+      return updated;
+    });
   };
 
   const toggleRuleEnabled = (ruleId: string) => {
-    setRules(prev =>
-      prev.map(rule =>
+    setRules(prev => {
+      const updated = prev.map(rule =>
         rule.id === ruleId ? { ...rule, enabled: !rule.enabled } : rule
-      )
-    );
+      );
+      
+      // Оновлюємо кількість відповідних документів при зміні правил
+      if (onFindMatchingDocuments) {
+        const realCount = onFindMatchingDocuments(updated);
+        setMatchedDocCount(realCount);
+      }
+      
+      return updated;
+    });
   };
 
   const deleteRule = (ruleId: string) => {
-    setRules(prev => prev.filter(rule => rule.id !== ruleId));
+    setRules(prev => {
+      const updated = prev.filter(rule => rule.id !== ruleId);
+      
+      // Оновлюємо кількість відповідних документів при видаленні правила
+      if (onFindMatchingDocuments) {
+        const realCount = onFindMatchingDocuments(updated);
+        setMatchedDocCount(realCount);
+      }
+      
+      return updated;
+    });
   };
 
   const addNewRule = () => {
@@ -116,7 +168,17 @@ export function RulesEditorModal({
       operator: 'is',
       enabled: true,
     };
-    setRules(prev => [...prev, newRule]);
+    setRules(prev => {
+      const updated = [...prev, newRule];
+      
+      // Оновлюємо кількість відповідних документів при додаванні правила
+      if (onFindMatchingDocuments) {
+        const realCount = onFindMatchingDocuments(updated);
+        setMatchedDocCount(realCount);
+      }
+      
+      return updated;
+    });
     if (!showRulesBlock) {
       setShowRulesBlock(true);
       setIsRulesExpanded(true);
@@ -234,9 +296,15 @@ export function RulesEditorModal({
     setRules(generatedRules);
     setIsGenerating(false);
 
-    // Simulate matched document count
-    const enabledCount = generatedRules.filter(r => r.enabled).length;
-    setMatchedDocCount(Math.floor(Math.random() * 50) + enabledCount * 10);
+    // Знаходимо реальну кількість відповідних документів
+    if (onFindMatchingDocuments) {
+      const realCount = onFindMatchingDocuments(generatedRules);
+      setMatchedDocCount(realCount);
+    } else {
+      // Якщо функція не передана, використовуємо симуляцію
+      const enabledCount = generatedRules.filter(r => r.enabled).length;
+      setMatchedDocCount(Math.floor(Math.random() * 50) + enabledCount * 10);
+    }
     
     // Show the mini-block with collapsed rules
     setShowRulesBlock(true);

@@ -2051,7 +2051,8 @@ function MainContent({
   onAddToCollection,
   onCreateCollection,
   onCreateCollectionFromAI,
-  onCustomizeFiltersClick
+  onCustomizeFiltersClick,
+  onDeleteCollection
 }: { 
   viewMode: ViewMode; 
   aiFilter?: string | null;
@@ -2075,6 +2076,7 @@ function MainContent({
   onCreateCollection?: (documentIds: string[]) => void;
   onCreateCollectionFromAI?: (suggestion: AISuggestion) => void;
   onCustomizeFiltersClick?: () => void;
+  onDeleteCollection?: (collectionId: string) => void;
 }) {
   // Якщо viewMode === 'collection-detail' але selectedCollection === null, це означає що ми повертаємося назад
   // В цьому випадку не відображаємо CollectionDetailView, а дозволяємо коду йти далі до CollectionsView
@@ -2174,7 +2176,7 @@ function MainContent({
   // Передаємо колекції (завжди мають містити мінімум mock дані)
   // Переконаємося, що collections завжди є масивом
   const safeCollections = Array.isArray(collections) ? collections : [];
-  return <CollectionsView onUploadClick={onUploadClick} onNewCollectionClick={onNewCollectionClick} onCollectionClick={onCollectionClick} selectedOrganization={selectedOrganization} collections={safeCollections} onCreateCollectionFromAI={onCreateCollectionFromAI} />;
+  return <CollectionsView onUploadClick={onUploadClick} onNewCollectionClick={onNewCollectionClick} onCollectionClick={onCollectionClick} selectedOrganization={selectedOrganization} collections={safeCollections} onCreateCollectionFromAI={onCreateCollectionFromAI} onDeleteCollection={onDeleteCollection} />;
 }
 
 // ========================================
@@ -2643,16 +2645,30 @@ function matchDocumentToRules(document: Document, rules: CollectionRule[]): bool
   return enabledRules.every(rule => {
     switch (rule.type) {
       case 'document_type':
-        const docType = document.type.toLowerCase();
-        const ruleValue = rule.value.toLowerCase();
+        const docTypeForRule = document.type.toLowerCase();
+        const ruleValueForType = rule.value.toLowerCase();
+        const docNameForType = document.name.toLowerCase();
+        const docDescForType = (document.description || '').toLowerCase();
+        const docTagsForType = (document.tags || []).map(t => t.toLowerCase());
+        const docCategoryForType = (document.category || '').toLowerCase();
+        const docAttachedToForType = (document.attachedTo || []).map(a => a.toLowerCase());
+        
+        // Перевіряємо в різних полях документа
+        const matchesInName = docNameForType.includes(ruleValueForType);
+        const matchesInDesc = docDescForType.includes(ruleValueForType);
+        const matchesInTags = docTagsForType.some(tag => tag.includes(ruleValueForType));
+        const matchesInCategory = docCategoryForType.includes(ruleValueForType);
+        const matchesInAttachedTo = docAttachedToForType.some(att => att.includes(ruleValueForType));
+        const matchesInType = docTypeForRule === ruleValueForType || docTypeForRule.includes(ruleValueForType);
+        
         if (rule.operator === 'is' || rule.operator === 'equals') {
-          return docType === ruleValue || document.name.toLowerCase().includes(ruleValue);
+          return matchesInName || matchesInDesc || matchesInTags || matchesInCategory || matchesInAttachedTo || matchesInType;
         }
         if (rule.operator === 'contains') {
-          return docType.includes(ruleValue) || document.name.toLowerCase().includes(ruleValue);
+          return matchesInName || matchesInDesc || matchesInTags || matchesInCategory || matchesInAttachedTo || matchesInType;
         }
         if (rule.operator === 'not') {
-          return docType !== ruleValue && !document.name.toLowerCase().includes(ruleValue);
+          return !matchesInName && !matchesInDesc && !matchesInTags && !matchesInCategory && !matchesInAttachedTo && !matchesInType;
         }
         return false;
         
@@ -3083,11 +3099,16 @@ export default function App() {
       matchingDocuments = selectedDocumentsForNewCollection;
       // Очищаємо вибрані документи
       setSelectedDocumentsForNewCollection([]);
-    } else {
-      // Інакше знаходимо документи, які відповідають правилам
-      matchingDocuments = documents.filter(doc => 
-        matchDocumentToRules(doc, rules)
-      );
+    } else if (rules && rules.length > 0) {
+      // Фільтруємо тільки увімкнені правила зі значеннями
+      const validRules = rules.filter(rule => rule.enabled && rule.value && rule.value.trim() !== '');
+      
+      if (validRules.length > 0) {
+        // Знаходимо документи, які відповідають правилам
+        matchingDocuments = documents.filter(doc => 
+          matchDocumentToRules(doc, validRules)
+        );
+      }
     }
     
     // Додаємо ID документів до колекції
@@ -3217,6 +3238,19 @@ export default function App() {
     setIsRulesEditorModalOpen(true);
   };
 
+  // Функція для пошуку документів, які відповідають правилам
+  const findMatchingDocumentsCount = (rules: CollectionRule[]): number => {
+    if (!rules || rules.length === 0) return 0;
+    
+    // Фільтруємо тільки увімкнені правила зі значеннями
+    const validRules = rules.filter(rule => rule.enabled && rule.value && rule.value.trim() !== '');
+    
+    if (validRules.length === 0) return 0;
+    
+    const matchingDocs = documents.filter(doc => matchDocumentToRules(doc, validRules));
+    return matchingDocs.length;
+  };
+
   // Функція для збереження правил
   const handleSaveRules = (rules: CollectionRule[], description?: string) => {
     // Якщо є тимчасові дані колекції (створення нової колекції)
@@ -3232,14 +3266,24 @@ export default function App() {
     // Якщо редагуємо існуючу колекцію
     if (!selectedCollection) return;
     
-    // Оновлюємо колекцію з новими правилами та описом
+    // Знаходимо документи, які відповідають новим правилам
+    const matchingDocuments = documents.filter(doc => 
+      matchDocumentToRules(doc, rules)
+    );
+    
+    // Отримуємо ID документів, які відповідають правилам
+    const matchingDocumentIds = matchingDocuments.map(doc => doc.id || '').filter(id => id !== '');
+    
+    // Оновлюємо колекцію з новими правилами, описом та документами
     setCollections(prev => {
       const updated = prev.map(col => 
         col.id === selectedCollection.id 
           ? { 
               ...col, 
               rules: rules,
-              description: description || col.description
+              description: description || col.description,
+              documentIds: matchingDocumentIds,
+              count: matchingDocumentIds.length
             }
           : col
       );
@@ -3247,14 +3291,39 @@ export default function App() {
       return updated;
     });
 
+    // Оновлюємо документи, додаючи collectionId для нових відповідних документів
+    setDocuments(prev => prev.map(doc => {
+      const isMatching = matchingDocuments.some(md => md.id === doc.id);
+      const hasCollectionId = doc.collectionIds?.includes(selectedCollection.id);
+      
+      if (isMatching && !hasCollectionId) {
+        // Додаємо collectionId до документа
+        return {
+          ...doc,
+          collectionIds: [...new Set([...(doc.collectionIds || []), selectedCollection.id])]
+        };
+      } else if (!isMatching && hasCollectionId) {
+        // Видаляємо collectionId, якщо документ більше не відповідає правилам
+        return {
+          ...doc,
+          collectionIds: doc.collectionIds?.filter(id => id !== selectedCollection.id) || []
+        };
+      }
+      return doc;
+    }));
+
     // Оновлюємо selectedCollection, щоб UI відразу відобразив зміни
     setSelectedCollection((prev: any) => ({
       ...prev,
       rules: rules,
-      description: description || prev.description
+      description: description || prev.description,
+      documentIds: matchingDocumentIds,
+      count: matchingDocumentIds.length
     }));
 
     setIsRulesEditorModalOpen(false);
+    
+    toast.success(`Collection updated. ${matchingDocumentIds.length} ${matchingDocumentIds.length === 1 ? 'document' : 'documents'} matched.`);
   };
 
   // Функція для відкриття RulesEditorModal з правилами нової колекції
@@ -3459,6 +3528,7 @@ export default function App() {
             onCreateCollection={handleCreateCollectionFromSelection}
             onCreateCollectionFromAI={handleCreateCollectionFromAI}
             onCustomizeFiltersClick={handleOpenRulesEditor}
+            onDeleteCollection={handleDeleteCollection}
           />
                   </div>
                   <div className="flex-shrink-0 flex-grow-0 border-l border-[#e8e8ec] overflow-hidden" style={{ width: '400px', minWidth: '400px', maxWidth: '400px' }}>
@@ -3492,6 +3562,7 @@ export default function App() {
                 onAddToCollection={handleOpenAddToCollection}
                 onCreateCollection={handleCreateCollectionFromSelection}
                 onCreateCollectionFromAI={handleCreateCollectionFromAI}
+                onDeleteCollection={handleDeleteCollection}
               />
             )}
           </div>
@@ -3561,6 +3632,7 @@ export default function App() {
         initialRules={pendingCollectionData?.rules || selectedCollection?.rules || []}
         initialDescription={pendingCollectionData?.description || selectedCollection?.description || ''}
         matchedDocumentsCount={selectedCollection?.count || 0}
+        onFindMatchingDocuments={findMatchingDocumentsCount}
       />
       
       <Toaster position="top-right" />
