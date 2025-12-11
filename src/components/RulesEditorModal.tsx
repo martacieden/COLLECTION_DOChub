@@ -201,8 +201,8 @@ export function RulesEditorModal({
     const generatedRules: CollectionRule[] = [];
     const descLower = description.toLowerCase();
 
-    // Document type detection
-    if (descLower.includes('invoice') || descLower.includes('payment') || descLower.includes('billing')) {
+    // Document type detection - покращена логіка для Invoice
+    if (descLower.includes('invoice') || descLower.includes('invoices') || descLower.includes('payment') || descLower.includes('billing')) {
       generatedRules.push({
         id: `rule-type-${Date.now()}-1`,
         type: 'document_type',

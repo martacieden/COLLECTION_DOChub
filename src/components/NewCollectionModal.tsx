@@ -243,8 +243,8 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
     // Generate smart rules based on description
     const rules: CollectionRule[] = [];
 
-    // Document type detection
-    if (descLower.includes('invoice')) {
+    // Document type detection - покращена логіка для Invoice
+    if (descLower.includes('invoice') || descLower.includes('invoices')) {
       rules.push({
         id: '1',
         type: 'document_type',

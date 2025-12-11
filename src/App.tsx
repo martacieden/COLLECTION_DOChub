@@ -71,6 +71,7 @@ interface Document {
   tags?: string[];
   signatureStatus?: string;
   category?: string;
+  vendor?: string; // Назва постачальника/вендора
 }
 
 interface ContextSuggestion {
@@ -282,7 +283,10 @@ const mockDocuments: Document[] = [
     status: 'Paid',
     uploadedBy: 'David Park',
     uploadedOn: 'Nov 20, 2024',
-    organization: 'Summation Partners'
+    organization: 'Summation Partners',
+    category: 'Invoice',
+    tags: ['Invoice', 'Electrical', 'Payment'],
+    vendor: 'ABC Electrical Services'
   },
   {
     id: 'doc-3',
@@ -347,7 +351,10 @@ const mockDocuments: Document[] = [
     status: 'Pending Payment',
     uploadedBy: 'David Park',
     uploadedOn: 'Nov 18, 2024',
-    organization: 'Summation Partners'
+    organization: 'Summation Partners',
+    category: 'Invoice',
+    tags: ['Invoice', 'Foundation', 'Payment'],
+    vendor: 'Premier Concrete LLC'
   },
   {
     id: 'doc-8',
@@ -412,7 +419,10 @@ const mockDocuments: Document[] = [
     status: 'Paid',
     uploadedBy: 'Michael Chen',
     uploadedOn: 'Oct 30, 2024',
-    organization: 'Summation Partners'
+    organization: 'Summation Partners',
+    category: 'Invoice',
+    tags: ['Invoice', 'Roofing', 'Materials'],
+    vendor: 'Summit Roofing Co'
   },
   {
     id: 'doc-13',
@@ -451,7 +461,251 @@ const mockDocuments: Document[] = [
     status: 'In Review',
     uploadedBy: 'David Park',
     uploadedOn: 'Nov 29, 2024',
-    organization: 'Summation Partners'
+    organization: 'Summation Partners',
+    category: 'Invoice',
+    tags: ['Invoice', 'Payment', 'Oak Street'],
+    vendor: 'Studio XYZ'
+  },
+  // Додаткові Invoice документи для тестування
+  {
+    id: 'doc-16',
+    name: 'Invoice #2156 - Plumbing Services',
+    description: 'Monthly invoice for plumbing maintenance and repairs...',
+    type: 'PDF',
+    attachedTo: ['Oak Street Renovation'],
+    shared: ['user18'],
+    icon: 'pdf',
+    status: 'Paid',
+    uploadedBy: 'David Park',
+    uploadedOn: 'Dec 1, 2024',
+    organization: 'Summation Partners',
+    category: 'Invoice',
+    tags: ['Invoice', 'Plumbing', 'Maintenance'],
+    vendor: 'ABC Plumbing Inc'
+  },
+  {
+    id: 'doc-17',
+    name: 'Invoice #3012 - HVAC Installation',
+    description: 'Final invoice for HVAC system installation and commissioning...',
+    type: 'PDF',
+    attachedTo: ['Pine Street Retrofit'],
+    shared: ['user19'],
+    icon: 'pdf',
+    status: 'Pending Payment',
+    uploadedBy: 'Michael Chen',
+    uploadedOn: 'Nov 28, 2024',
+    organization: 'Summation Partners',
+    category: 'Invoice',
+    tags: ['Invoice', 'HVAC', 'Installation'],
+    vendor: 'Climate Control Systems'
+  },
+  {
+    id: 'doc-18',
+    name: 'Invoice #4457 - Landscaping Services',
+    description: 'Quarterly invoice for landscaping and grounds maintenance...',
+    type: 'PDF',
+    attachedTo: ['Maple Ave Development'],
+    shared: ['user20'],
+    icon: 'pdf',
+    status: 'Paid',
+    uploadedBy: 'Sarah Miller',
+    uploadedOn: 'Nov 25, 2024',
+    organization: 'Summation Partners',
+    category: 'Invoice',
+    tags: ['Invoice', 'Landscaping', 'Maintenance'],
+    vendor: 'Green Thumb Landscaping'
+  },
+  {
+    id: 'doc-19',
+    name: 'Invoice #5234 - Window Replacement',
+    description: 'Invoice for window replacement project at Oak Street property...',
+    type: 'PDF',
+    attachedTo: ['Oak Street Renovation'],
+    shared: ['user21'],
+    icon: 'pdf',
+    status: 'In Review',
+    uploadedBy: 'David Park',
+    uploadedOn: 'Nov 22, 2024',
+    organization: 'Summation Partners',
+    category: 'Invoice',
+    tags: ['Invoice', 'Windows', 'Renovation'],
+    vendor: 'Premium Windows & Doors'
+  },
+  {
+    id: 'doc-20',
+    name: 'Invoice #6789 - Flooring Installation',
+    description: 'Invoice for hardwood flooring installation and materials...',
+    type: 'PDF',
+    attachedTo: ['Pine Street Retrofit'],
+    shared: ['user22'],
+    icon: 'pdf',
+    status: 'Paid',
+    uploadedBy: 'Joan Zhao',
+    uploadedOn: 'Nov 18, 2024',
+    organization: 'Summation Partners',
+    category: 'Invoice',
+    tags: ['Invoice', 'Flooring', 'Installation'],
+    vendor: 'Elite Flooring Solutions'
+  },
+  {
+    id: 'doc-21',
+    name: 'Invoice #7890 - Painting Services',
+    description: 'Interior and exterior painting services invoice...',
+    type: 'PDF',
+    attachedTo: ['Maple Ave Development'],
+    shared: ['user23'],
+    icon: 'pdf',
+    status: 'Pending Payment',
+    uploadedBy: 'Michael Chen',
+    uploadedOn: 'Nov 15, 2024',
+    organization: 'Summation Partners',
+    category: 'Invoice',
+    tags: ['Invoice', 'Painting', 'Services'],
+    vendor: 'Perfect Paint Co'
+  },
+  {
+    id: 'doc-22',
+    name: 'Invoice #8901 - Electrical Panel Upgrade',
+    description: 'Invoice for electrical panel upgrade and safety improvements...',
+    type: 'PDF',
+    attachedTo: ['Oak Street Renovation'],
+    shared: ['user24'],
+    icon: 'pdf',
+    status: 'Paid',
+    uploadedBy: 'Sarah Miller',
+    uploadedOn: 'Nov 12, 2024',
+    organization: 'Summation Partners',
+    category: 'Invoice',
+    tags: ['Invoice', 'Electrical', 'Upgrade'],
+    vendor: 'ABC Electrical Services'
+  },
+  {
+    id: 'doc-23',
+    name: 'Invoice #9012 - Roof Repair',
+    description: 'Emergency roof repair invoice after storm damage...',
+    type: 'PDF',
+    attachedTo: ['Pine Street Retrofit'],
+    shared: ['user25'],
+    icon: 'pdf',
+    status: 'Paid',
+    uploadedBy: 'David Park',
+    uploadedOn: 'Nov 8, 2024',
+    organization: 'Summation Partners',
+    category: 'Invoice',
+    tags: ['Invoice', 'Roof', 'Repair'],
+    vendor: 'Summit Roofing Co'
+  },
+  {
+    id: 'doc-24',
+    name: 'Invoice #0123 - Security System Installation',
+    description: 'Invoice for security system installation and monitoring setup...',
+    type: 'PDF',
+    attachedTo: ['Maple Ave Development'],
+    shared: ['user26'],
+    icon: 'pdf',
+    status: 'In Review',
+    uploadedBy: 'Joan Zhao',
+    uploadedOn: 'Nov 5, 2024',
+    organization: 'Summation Partners',
+    category: 'Invoice',
+    tags: ['Invoice', 'Security', 'Installation'],
+    vendor: 'SecureGuard Systems'
+  },
+  {
+    id: 'doc-25',
+    name: 'Invoice #1234 - Appliance Installation',
+    description: 'Invoice for kitchen and laundry appliance installation...',
+    type: 'PDF',
+    attachedTo: ['Oak Street Renovation'],
+    shared: ['user27'],
+    icon: 'pdf',
+    status: 'Paid',
+    uploadedBy: 'Michael Chen',
+    uploadedOn: 'Nov 1, 2024',
+    organization: 'Summation Partners',
+    category: 'Invoice',
+    tags: ['Invoice', 'Appliances', 'Installation'],
+    vendor: 'Home Appliance Pro'
+  },
+  {
+    id: 'doc-26',
+    name: 'Invoice #2345 - Fence Installation',
+    description: 'Invoice for perimeter fence installation and gates...',
+    type: 'PDF',
+    attachedTo: ['Pine Street Retrofit'],
+    shared: ['user28'],
+    icon: 'pdf',
+    status: 'Pending Payment',
+    uploadedBy: 'Sarah Miller',
+    uploadedOn: 'Oct 28, 2024',
+    organization: 'Summation Partners',
+    category: 'Invoice',
+    tags: ['Invoice', 'Fence', 'Installation'],
+    vendor: 'Fence Masters Inc'
+  },
+  {
+    id: 'doc-27',
+    name: 'Invoice #3456 - Deck Construction',
+    description: 'Invoice for deck construction and materials...',
+    type: 'PDF',
+    attachedTo: ['Maple Ave Development'],
+    shared: ['user29'],
+    icon: 'pdf',
+    status: 'Paid',
+    uploadedBy: 'David Park',
+    uploadedOn: 'Oct 25, 2024',
+    organization: 'Summation Partners',
+    category: 'Invoice',
+    tags: ['Invoice', 'Deck', 'Construction'],
+    vendor: 'Deck Builders Plus'
+  },
+  {
+    id: 'doc-28',
+    name: 'Invoice #4567 - Garage Door Replacement',
+    description: 'Invoice for garage door replacement and opener installation...',
+    type: 'PDF',
+    attachedTo: ['Oak Street Renovation'],
+    shared: ['user30'],
+    icon: 'pdf',
+    status: 'In Review',
+    uploadedBy: 'Joan Zhao',
+    uploadedOn: 'Oct 22, 2024',
+    organization: 'Summation Partners',
+    category: 'Invoice',
+    tags: ['Invoice', 'Garage', 'Replacement'],
+    vendor: 'Garage Door Experts'
+  },
+  {
+    id: 'doc-29',
+    name: 'Invoice #5678 - Bathroom Renovation',
+    description: 'Invoice for master bathroom renovation and fixtures...',
+    type: 'PDF',
+    attachedTo: ['Pine Street Retrofit'],
+    shared: ['user31'],
+    icon: 'pdf',
+    status: 'Paid',
+    uploadedBy: 'Michael Chen',
+    uploadedOn: 'Oct 18, 2024',
+    organization: 'Summation Partners',
+    category: 'Invoice',
+    tags: ['Invoice', 'Bathroom', 'Renovation'],
+    vendor: 'Luxury Bath Solutions'
+  },
+  {
+    id: 'doc-30',
+    name: 'Invoice #6789 - Driveway Paving',
+    description: 'Invoice for driveway paving and drainage improvements...',
+    type: 'PDF',
+    attachedTo: ['Maple Ave Development'],
+    shared: ['user32'],
+    icon: 'pdf',
+    status: 'Pending Payment',
+    uploadedBy: 'Sarah Miller',
+    uploadedOn: 'Oct 15, 2024',
+    organization: 'Summation Partners',
+    category: 'Invoice',
+    tags: ['Invoice', 'Driveway', 'Paving'],
+    vendor: 'Premier Concrete LLC'
   }
 ];
 
@@ -823,9 +1077,9 @@ function DocumentCardBlock({ documents, onCreateCollection }: { documents: Docum
         <div className="mt-[16px] pt-[16px] border-t border-[#e8e8ec]">
           <button
             onClick={onCreateCollection}
-            className="w-full h-[36px] px-[16px] bg-[#005be2] rounded-[6px] text-[13px] text-white hover:bg-[#004fc4] transition-colors flex items-center justify-center gap-[8px]"
+            className="h-[28px] px-[12px] bg-[#005be2] rounded-[6px] text-[12px] text-white hover:bg-[#004fc4] transition-colors flex items-center justify-center gap-[6px]"
           >
-            <Plus className="size-[16px]" />
+            <Plus className="size-[14px]" />
             <span>Create collection</span>
           </button>
         </div>
@@ -1642,7 +1896,7 @@ function CollectionCard({ title, organization, onClick, collectionId, sharedWith
   );
 }
 
-function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClick, selectedOrganization, collections, onCreateCollectionFromAI, onDeleteCollection }: { onUploadClick?: () => void; onNewCollectionClick?: () => void; onCollectionClick?: (collection: any) => void; selectedOrganization?: string; collections?: Collection[]; onCreateCollectionFromAI?: (suggestion: AISuggestion) => void; onDeleteCollection?: (collectionId: string) => void }) {
+function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClick, selectedOrganization, collections, onCreateCollectionFromAI, onDeleteCollection, documents, onCreateCollection }: { onUploadClick?: () => void; onNewCollectionClick?: () => void; onCollectionClick?: (collection: any) => void; selectedOrganization?: string; collections?: Collection[]; onCreateCollectionFromAI?: (suggestion: AISuggestion) => void; onDeleteCollection?: (collectionId: string) => void; documents?: Document[]; onCreateCollection?: (name: string, description: string, rules: CollectionRule[]) => void }) {
   const [question, setQuestion] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<AISuggestion[]>(mockAISuggestions);
@@ -1656,6 +1910,11 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
   const inputRef = useRef<HTMLInputElement>(null);
   const [tableMenuOpen, setTableMenuOpen] = useState<string | null>(null);
   const tableMenuRef = useRef<HTMLDivElement>(null);
+  
+  // Стан для AI-генерованої колекції
+  const [aiGeneratedRules, setAiGeneratedRules] = useState<CollectionRule[] | null>(null);
+  const [aiGeneratedDocuments, setAiGeneratedDocuments] = useState<Document[]>([]);
+  const [showAICollectionPreview, setShowAICollectionPreview] = useState(false);
 
   // Закриваємо меню при кліку поза ним
   useEffect(() => {
@@ -1710,11 +1969,92 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
     }
   }, [question]);
 
+  // Функція для розпізнавання запитів на створення колекції
+  const parseCollectionRequest = (query: string): { isCollectionRequest: boolean; documentType?: string } => {
+    const lowerQuery = query.toLowerCase();
+    // Перевіряємо чи це запит на створення колекції
+    const collectionKeywords = ['згенеруй', 'створи', 'зроби', 'збери', 'generate', 'create', 'make', 'collect'];
+    const isCollectionRequest = collectionKeywords.some(keyword => lowerQuery.includes(keyword));
+    
+    if (!isCollectionRequest) {
+      return { isCollectionRequest: false };
+    }
+    
+    // Шукаємо тип документа
+    const documentTypes = ['invoice', 'інвойс', 'contract', 'контракт', 'permit', 'дозвіл', 'waiver', 'звільнення'];
+    for (const type of documentTypes) {
+      if (lowerQuery.includes(type)) {
+        return { isCollectionRequest: true, documentType: type === 'інвойс' ? 'invoice' : type === 'контракт' ? 'contract' : type === 'дозвіл' ? 'permit' : type === 'звільнення' ? 'waiver' : type };
+      }
+    }
+    
+    // Якщо не знайдено конкретний тип, але є слово "всі" або "all"
+    if (lowerQuery.includes('всі') || lowerQuery.includes('all')) {
+      // Спробуємо витягнути тип з контексту
+      if (lowerQuery.includes('invoice') || lowerQuery.includes('інвойс')) {
+        return { isCollectionRequest: true, documentType: 'invoice' };
+      }
+    }
+    
+    return { isCollectionRequest: true };
+  };
+  
+  // Функція для генерації правил на основі запиту
+  const generateRulesFromQuery = (documentType: string): CollectionRule[] => {
+    const rule: CollectionRule = {
+      id: `rule-${Date.now()}`,
+      type: 'document_type',
+      label: 'Document Type',
+      value: documentType,
+      operator: 'contains',
+      enabled: true
+    };
+    return [rule];
+  };
+  
   const handleSubmit = () => {
     if (question.trim()) {
-      setIsModalOpen(true);
-      setShowSuggestions(false);
+      // Перевіряємо чи це запит на створення колекції
+      const parsed = parseCollectionRequest(question);
+      
+      if (parsed.isCollectionRequest && parsed.documentType) {
+        // Генеруємо правила
+        const rules = generateRulesFromQuery(parsed.documentType);
+        setAiGeneratedRules(rules);
+        
+        // Фільтруємо документи за правилами
+        const allDocuments = documents || mockDocuments;
+        const filteredDocs = allDocuments.filter(doc => matchDocumentToRules(doc, rules));
+        setAiGeneratedDocuments(filteredDocs);
+        setShowAICollectionPreview(true);
+        setShowSuggestions(false);
+      } else {
+        // Звичайний AI-запит - відкриваємо модальне вікно
+        setIsModalOpen(true);
+        setShowSuggestions(false);
+      }
     }
+  };
+  
+  // Функція для створення колекції з AI-генерованих правил
+  const handleCreateCollectionFromAIRules = () => {
+    if (!aiGeneratedRules || !onCreateCollection) return;
+    
+    // Генеруємо назву колекції на основі правил
+    const documentType = aiGeneratedRules[0]?.value || 'documents';
+    const collectionName = `All ${documentType.charAt(0).toUpperCase() + documentType.slice(1)}s`;
+    const description = `Collection of all ${documentType} documents`;
+    
+    // Створюємо колекцію
+    onCreateCollection(collectionName, description, aiGeneratedRules);
+    
+    // Очищаємо стан
+    setAiGeneratedRules(null);
+    setAiGeneratedDocuments([]);
+    setShowAICollectionPreview(false);
+    setQuestion('');
+    
+    toast.success(`Collection "${collectionName}" created successfully!`);
   };
 
   const handleSelectSuggestion = (suggestion: ContextSuggestion) => {
@@ -1867,6 +2207,58 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
             setPreviewSuggestion(null);
           }}
         />
+      )}
+      
+      {/* AI Collection Preview Section */}
+      {showAICollectionPreview && aiGeneratedRules && (
+        <div className="bg-white border-b border-[#e8e8ec] px-[24px] py-[24px]">
+          <div className="max-w-[1200px] mx-auto">
+            {/* Rules Display */}
+            <div className="mb-[24px]">
+              <h3 className="text-[14px] font-semibold text-[#1c2024] mb-[12px]">Collection Rules</h3>
+              <div className="bg-[#f9fafb] border border-[#e0e1e6] rounded-[8px] p-[16px]">
+                {aiGeneratedRules.map((rule) => (
+                  <div key={rule.id} className="flex items-center gap-[8px] text-[13px] text-[#1c2024]">
+                    <span className="font-medium">{rule.label}:</span>
+                    <span className="text-[#60646c]">{rule.value}</span>
+                    <span className="text-[#60646c]">({rule.operator})</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Documents Preview */}
+            <div className="mb-[24px]">
+              <h3 className="text-[14px] font-semibold text-[#1c2024] mb-[12px]">
+                Matching Documents ({aiGeneratedDocuments.length})
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[12px] max-h-[400px] overflow-y-auto">
+                {aiGeneratedDocuments.slice(0, 8).map((doc) => (
+                  <div key={doc.id} className="bg-[#f9fafb] border border-[#e0e1e6] rounded-[6px] p-[12px]">
+                    <div className="flex items-center gap-[8px] mb-[4px]">
+                      <span className="text-[16px]">{doc.icon || '📄'}</span>
+                      <span className="text-[13px] font-medium text-[#1c2024] truncate">{doc.name}</span>
+                    </div>
+                    {doc.description && (
+                      <p className="text-[12px] text-[#60646c] line-clamp-2">{doc.description}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Create Collection Button */}
+            <div className="flex justify-center">
+              <button
+                onClick={handleCreateCollectionFromAIRules}
+                className="h-[28px] px-[12px] bg-[#005be2] text-white rounded-[6px] text-[12px] font-semibold hover:bg-[#0048b8] transition-colors flex items-center gap-[6px]"
+              >
+                <Plus className="size-[14px]" />
+                <span>Create Collection</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       
       {/* Collections section */}
@@ -2128,7 +2520,8 @@ function MainContent({
   onCreateCollectionFromAI,
   onCustomizeFiltersClick,
   onDeleteCollection,
-  onSettingsClick
+  onSettingsClick,
+  onCreateCollectionWithRules
 }: { 
   viewMode: ViewMode; 
   aiFilter?: string | null;
@@ -2154,6 +2547,7 @@ function MainContent({
   onCustomizeFiltersClick?: () => void;
   onDeleteCollection?: (collectionId: string) => void;
   onSettingsClick?: () => void;
+  onCreateCollectionWithRules?: (name: string, description: string, rules: CollectionRule[]) => void;
 }) {
   // Якщо viewMode === 'collection-detail' але selectedCollection === null, це означає що ми повертаємося назад
   // В цьому випадку не відображаємо CollectionDetailView, а дозволяємо коду йти далі до CollectionsView
@@ -2257,7 +2651,17 @@ function MainContent({
   // Передаємо колекції (завжди мають містити мінімум mock дані)
   // Переконаємося, що collections завжди є масивом
   const safeCollections = Array.isArray(collections) ? collections : [];
-  return <CollectionsView onUploadClick={onUploadClick} onNewCollectionClick={onNewCollectionClick} onCollectionClick={onCollectionClick} selectedOrganization={selectedOrganization} collections={safeCollections} onCreateCollectionFromAI={onCreateCollectionFromAI} onDeleteCollection={onDeleteCollection} />;
+  return <CollectionsView 
+    onUploadClick={onUploadClick} 
+    onNewCollectionClick={onNewCollectionClick} 
+    onCollectionClick={onCollectionClick} 
+    selectedOrganization={selectedOrganization} 
+    collections={safeCollections} 
+    onCreateCollectionFromAI={onCreateCollectionFromAI} 
+    onDeleteCollection={onDeleteCollection}
+    documents={documents}
+    onCreateCollection={onCreateCollectionWithRules}
+  />;
 }
 
 // ========================================
@@ -2734,7 +3138,27 @@ function matchDocumentToRules(document: Document, rules: CollectionRule[]): bool
         const docCategoryForType = (document.category || '').toLowerCase();
         const docAttachedToForType = (document.attachedTo || []).map(a => a.toLowerCase());
         
-        // Перевіряємо в різних полях документа
+        // Спеціальна логіка для Invoice: перевіряємо назву, опис, теги, категорію
+        // Для Invoice шукаємо слово "invoice" в назві або category = "Invoice"
+        if (ruleValueForType === 'invoice') {
+          const hasInvoiceInName = docNameForType.includes('invoice');
+          const hasInvoiceInDesc = docDescForType.includes('invoice');
+          const hasInvoiceInTags = docTagsForType.some(tag => tag.includes('invoice'));
+          const hasInvoiceCategory = docCategoryForType === 'invoice';
+          
+          if (rule.operator === 'is' || rule.operator === 'equals') {
+            return hasInvoiceInName || hasInvoiceInDesc || hasInvoiceInTags || hasInvoiceCategory;
+          }
+          if (rule.operator === 'contains') {
+            return hasInvoiceInName || hasInvoiceInDesc || hasInvoiceInTags || hasInvoiceCategory;
+          }
+          if (rule.operator === 'not') {
+            return !hasInvoiceInName && !hasInvoiceInDesc && !hasInvoiceInTags && !hasInvoiceCategory;
+          }
+          return false;
+        }
+        
+        // Загальна логіка для інших типів документів
         const matchesInName = docNameForType.includes(ruleValueForType);
         const matchesInDesc = docDescForType.includes(ruleValueForType);
         const matchesInTags = docTagsForType.some(tag => tag.includes(ruleValueForType));
@@ -2805,11 +3229,19 @@ function matchDocumentToRules(document: Document, rules: CollectionRule[]): bool
         
       case 'vendor':
         const vendorName = rule.value.toLowerCase();
-        const vendorMatch = document.name.toLowerCase().includes(vendorName) ||
+        const docVendor = (document.vendor || '').toLowerCase();
+        const vendorMatch = docVendor.includes(vendorName) ||
+                           document.name.toLowerCase().includes(vendorName) ||
                            document.description?.toLowerCase().includes(vendorName) ||
                            document.uploadedBy?.toLowerCase().includes(vendorName);
-        if (rule.operator === 'is' || rule.operator === 'equals' || rule.operator === 'contains') {
+        if (rule.operator === 'is' || rule.operator === 'equals') {
+          return docVendor === vendorName || vendorMatch;
+        }
+        if (rule.operator === 'contains') {
           return vendorMatch;
+        }
+        if (rule.operator === 'not') {
+          return !vendorMatch && docVendor !== vendorName;
         }
         return false;
         
@@ -3664,6 +4096,7 @@ export default function App() {
             onOrganizationChange={setSelectedOrganization}
             pinnedDocumentIds={pinnedDocumentIds}
             onPinToggle={handlePinToggle}
+            onCreateCollectionWithRules={handleCreateCollection}
             collections={collections}
             onRemoveFromCollection={handleRemoveFromCollection}
             onDelete={handleDeleteDocuments}
@@ -3708,6 +4141,7 @@ export default function App() {
                 onCreateCollectionFromAI={handleCreateCollectionFromAI}
                 onDeleteCollection={handleDeleteCollection}
                 onSettingsClick={handleOpenCollectionSettings}
+                onCreateCollectionWithRules={handleCreateCollection}
               />
             )}
           </div>
