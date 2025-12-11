@@ -215,7 +215,7 @@ export function CollectionSettingsModal({
             </div>
 
             {/* Delete Section */}
-            <div className="border-t border-[#e8e8ec] pt-[24px]">
+            <div className="pt-[24px]">
               <h3 className="text-[14px] font-semibold text-[#1c2024] mb-[12px]">
                 Delete collection?
               </h3>
