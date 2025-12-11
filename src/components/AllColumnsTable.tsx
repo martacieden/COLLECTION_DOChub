@@ -435,8 +435,8 @@ export function AllColumnsTable({ documents = [] }: AllColumnsTableProps) {
                       return (
                         <>
                           <div 
-                            className="w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] text-white font-medium"
-                            style={{ backgroundColor: orgAvatar.color }}
+                            className="w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] font-medium"
+                            style={{ backgroundColor: orgAvatar.color, color: orgAvatar.textColor }}
                           >
                             {orgAvatar.initial}
                           </div>

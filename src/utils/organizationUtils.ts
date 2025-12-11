@@ -1,86 +1,97 @@
-// Утиліта для роботи з організаціями та їх кольоровими аватарками
+// Утиліта для отримання кольорів та ініціалів для організацій
 
 interface OrganizationAvatar {
   initial: string;
   color: string;
+  textColor: string;
 }
 
-// Мапа кольорів для відомих організацій
-const organizationColors: Record<string, string> = {
-  'Smith Family Office': '#FF6B6B', // Червоний
-  'Johnson Family Trust': '#4ECDC4', // Бірюзовий
-  "Herwitz's Family": '#45B7D1', // Синій
-  'Wayne Estate Management': '#FFA07A', // Помаранчевий
-  'The Robertson Foundation': '#98D8C8', // Зелений
-  'Summation Partners': '#9B59B6', // Фіолетовий
+// Мапа кольорів для організацій (на основі зображення)
+const organizationColors: Record<string, OrganizationAvatar> = {
+  'Smith Family Office': {
+    initial: 'S',
+    color: '#CE2C31', // Червоний
+    textColor: '#FFFFFF'
+  },
+  'Johnson Family Trust': {
+    initial: 'J',
+    color: '#218358', // Зелений/бірюзовий
+    textColor: '#FFFFFF'
+  },
+  "Herwitz's Family": {
+    initial: 'H',
+    color: '#1150B9', // Світло-блакитний
+    textColor: '#FFFFFF'
+  },
+  'Wayne Estate Management': {
+    initial: 'W',
+    color: '#D97706', // Помаранчевий
+    textColor: '#FFFFFF'
+  },
+  'The Robertson Foundation': {
+    initial: 'T',
+    color: '#10B981', // Світло-зелений
+    textColor: '#FFFFFF'
+  },
+  'Summation Partners': {
+    initial: 'S',
+    color: '#7C3AED', // Фіолетовий
+    textColor: '#FFFFFF'
+  }
 };
 
-// Палітра кольорів для генерації кольорів для невідомих організацій
-const colorPalette = [
-  '#FF6B6B', // Червоний
-  '#4ECDC4', // Бірюзовий
-  '#45B7D1', // Синій
-  '#FFA07A', // Помаранчевий
-  '#98D8C8', // Зелений
-  '#9B59B6', // Фіолетовий
-  '#F39C12', // Помаранчевий
-  '#E74C3C', // Червоний
-  '#3498DB', // Синій
-  '#2ECC71', // Зелений
-  '#E67E22', // Помаранчевий
-  '#1ABC9C', // Бірюзовий
-];
-
 /**
- * Отримує ініціали організації (перша буква кожного слова)
+ * Отримує аватар для організації (ініціали та колір)
  */
-export function getOrganizationInitials(organizationName: string): string {
-  if (!organizationName) return '';
-  
-  // Якщо назва починається з "The", пропускаємо його
-  const name = organizationName.replace(/^The\s+/i, '');
-  
-  // Беремо перші букви кожного слова
-  const words = name.split(/\s+/).filter(word => word.length > 0);
-  if (words.length === 0) return '';
-  
-  if (words.length === 1) {
-    return words[0][0].toUpperCase();
+export function getOrganizationAvatar(organizationName: string | undefined): OrganizationAvatar {
+  if (!organizationName) {
+    return {
+      initial: '?',
+      color: '#E0E1E6',
+      textColor: '#60646C'
+    };
   }
-  
-  // Беремо першу букву першого та останнього слова
-  return (words[0][0] + words[words.length - 1][0]).toUpperCase();
-}
 
-/**
- * Отримує колір для організації
- * Якщо організація відома - повертаємо її колір, інакше генеруємо на основі назви
- */
-export function getOrganizationColor(organizationName: string): string {
-  if (!organizationName) return '#e0e1e6'; // Сірий за замовчуванням
-  
-  // Перевіряємо, чи є колір для цієї організації
+  // Перевіряємо точну відповідність
   if (organizationColors[organizationName]) {
     return organizationColors[organizationName];
   }
-  
-  // Генеруємо колір на основі хешу назви
-  let hash = 0;
-  for (let i = 0; i < organizationName.length; i++) {
-    hash = organizationName.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  
-  const index = Math.abs(hash) % colorPalette.length;
-  return colorPalette[index];
-}
 
-/**
- * Отримує дані для аватарки організації
- */
-export function getOrganizationAvatar(organizationName: string): OrganizationAvatar {
+  // Якщо немає точного збігу, генеруємо на основі назви
+  const words = organizationName.trim().split(/\s+/);
+  let initial = '';
+  
+  // Беремо першу літеру першого слова
+  if (words.length > 0 && words[0].length > 0) {
+    initial = words[0][0].toUpperCase();
+  }
+
+  // Генеруємо колір на основі хешу назви
+  const hash = organizationName.split('').reduce((acc, char) => {
+    return char.charCodeAt(0) + ((acc << 5) - acc);
+  }, 0);
+
+  // Використовуємо палітру кольорів
+  const colors = [
+    { color: '#CE2C31', textColor: '#FFFFFF' }, // Червоний
+    { color: '#218358', textColor: '#FFFFFF' }, // Зелений
+    { color: '#1150B9', textColor: '#FFFFFF' }, // Блакитний
+    { color: '#D97706', textColor: '#FFFFFF' }, // Помаранчевий
+    { color: '#10B981', textColor: '#FFFFFF' }, // Світло-зелений
+    { color: '#7C3AED', textColor: '#FFFFFF' }, // Фіолетовий
+    { color: '#DC2626', textColor: '#FFFFFF' }, // Темно-червоний
+    { color: '#059669', textColor: '#FFFFFF' }, // Темно-зелений
+    { color: '#0284C7', textColor: '#FFFFFF' }, // Темно-блакитний
+    { color: '#EA580C', textColor: '#FFFFFF' }, // Темно-помаранчевий
+  ];
+
+  const colorIndex = Math.abs(hash) % colors.length;
+  const selectedColor = colors[colorIndex];
+
   return {
-    initial: getOrganizationInitials(organizationName),
-    color: getOrganizationColor(organizationName),
+    initial,
+    color: selectedColor.color,
+    textColor: selectedColor.textColor
   };
 }
 

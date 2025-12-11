@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Sparkles } from 'lucide-react';
+import { X, Plus, Trash2, Sparkles, ChevronDown, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface CollectionRule {
@@ -14,8 +14,9 @@ interface CollectionRule {
 interface RulesEditorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (rules: CollectionRule[]) => void;
+  onSave: (rules: CollectionRule[], description?: string) => void;
   initialRules: CollectionRule[];
+  initialDescription?: string;
   matchedDocumentsCount?: number;
 }
 
@@ -40,15 +41,25 @@ export function RulesEditorModal({
   onClose,
   onSave,
   initialRules,
+  initialDescription = '',
   matchedDocumentsCount = 0
 }: RulesEditorModalProps) {
   const [rules, setRules] = useState<CollectionRule[]>([]);
+  const [description, setDescription] = useState<string>('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showRulesBlock, setShowRulesBlock] = useState(false);
+  const [isRulesExpanded, setIsRulesExpanded] = useState(false);
+  const [matchedDocCount, setMatchedDocCount] = useState(0);
 
   useEffect(() => {
     if (isOpen) {
       setRules(initialRules.length > 0 ? [...initialRules] : []);
+      setDescription(initialDescription || '');
+      setShowRulesBlock(initialRules.length > 0);
+      setIsRulesExpanded(initialRules.length > 0);
+      setMatchedDocCount(matchedDocumentsCount);
     }
-  }, [isOpen, initialRules]);
+  }, [isOpen, initialRules, initialDescription, matchedDocumentsCount]);
 
   if (!isOpen) return null;
 
@@ -106,6 +117,132 @@ export function RulesEditorModal({
       enabled: true,
     };
     setRules(prev => [...prev, newRule]);
+    if (!showRulesBlock) {
+      setShowRulesBlock(true);
+      setIsRulesExpanded(true);
+    }
+  };
+
+  // Генеруємо AI правила на основі опису (спрощена версія з NewCollectionModal)
+  const handleGenerateRules = async () => {
+    if (!description.trim()) {
+      toast.error('Please enter a description first');
+      return;
+    }
+
+    setIsGenerating(true);
+
+    // Simulate AI processing
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Generate smart rules based on description
+    const generatedRules: CollectionRule[] = [];
+    const descLower = description.toLowerCase();
+
+    // Document type detection
+    if (descLower.includes('invoice') || descLower.includes('payment') || descLower.includes('billing')) {
+      generatedRules.push({
+        id: `rule-type-${Date.now()}-1`,
+        type: 'document_type',
+        label: 'Document type',
+        value: 'Invoice',
+        operator: 'is',
+        enabled: true,
+      });
+    }
+    if (descLower.includes('contract') || descLower.includes('agreement')) {
+      generatedRules.push({
+        id: `rule-type-${Date.now()}-2`,
+        type: 'document_type',
+        label: 'Document type',
+        value: 'Contract',
+        operator: 'is',
+        enabled: true,
+      });
+    }
+    if (descLower.includes('tax') || descLower.includes('filing')) {
+      generatedRules.push({
+        id: `rule-type-${Date.now()}-3`,
+        type: 'document_type',
+        label: 'Document type',
+        value: 'Tax Document',
+        operator: 'is',
+        enabled: true,
+      });
+    }
+
+    // Tags detection
+    if (descLower.includes('household') || descLower.includes('payment')) {
+      generatedRules.push({
+        id: `rule-tags-${Date.now()}-1`,
+        type: 'tags',
+        label: 'Tags',
+        value: 'Household, Payments',
+        operator: 'contains',
+        enabled: true,
+      });
+    }
+    if (descLower.includes('property') || descLower.includes('real estate')) {
+      generatedRules.push({
+        id: `rule-tags-${Date.now()}-2`,
+        type: 'tags',
+        label: 'Tags',
+        value: 'Property, Real Estate',
+        operator: 'contains',
+        enabled: true,
+      });
+    }
+
+    // Client detection
+    const clientMatch = description.match(/(?:client|for)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i);
+    if (clientMatch) {
+      generatedRules.push({
+        id: `rule-client-${Date.now()}`,
+        type: 'client',
+        label: 'Client',
+        value: clientMatch[1],
+        operator: 'is',
+        enabled: true,
+      });
+    }
+
+    // Date range detection
+    const yearMatch = description.match(/\b(20\d{2})\b/);
+    if (yearMatch) {
+      generatedRules.push({
+        id: `rule-date-${Date.now()}`,
+        type: 'date_range',
+        label: 'Date range',
+        value: yearMatch[1],
+        operator: 'is',
+        enabled: true,
+      });
+    }
+
+    // Keywords detection
+    if (descLower.includes('tax') || descLower.includes('filing')) {
+      generatedRules.push({
+        id: `rule-keywords-${Date.now()}`,
+        type: 'keywords',
+        label: 'Keywords',
+        value: '"tax", "filing"',
+        operator: 'contains',
+        enabled: true,
+      });
+    }
+
+    setRules(generatedRules);
+    setIsGenerating(false);
+
+    // Simulate matched document count
+    const enabledCount = generatedRules.filter(r => r.enabled).length;
+    setMatchedDocCount(Math.floor(Math.random() * 50) + enabledCount * 10);
+    
+    // Show the mini-block with collapsed rules
+    setShowRulesBlock(true);
+    setIsRulesExpanded(true);
+
+    toast.success('AI rules generated successfully');
   };
 
   const handleSave = () => {
@@ -123,13 +260,13 @@ export function RulesEditorModal({
       return;
     }
 
-    onSave(rules);
+    onSave(rules, description);
     toast.success(`Rules saved successfully`);
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-[24px]">
-      <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl w-full max-w-[700px] max-h-[80vh]">
+      <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl w-full max-w-[600px] max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-[24px] py-[20px] border-b border-[#e8e8ec]">
           <div className="flex items-center gap-[12px]">
@@ -160,90 +297,139 @@ export function RulesEditorModal({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-[24px] py-[24px]">
-          <div className="space-y-[16px]">
-            {/* Conditional Rules Header */}
-            <div className="flex items-center justify-between">
-              <h3 className="text-[11px] text-[#8b8d98] uppercase tracking-wider font-medium">
-                CONDITIONAL RULES
-              </h3>
+          <div className="space-y-[24px]">
+            {/* Description Section */}
+            <div className="space-y-[12px]">
+              <div>
+                <label className="block text-[13px] text-[#1c2024] mb-[8px]">
+                  Description & AI Rules
+                </label>
+                <p className="text-[11px] text-[#60646c] mb-[8px]">
+                  Describe your collection and let AI suggest filtering rules.
+                </p>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="e.g. All documents related to our Malibu property&#10;Invoices from all household vendors for 2023–2024&#10;Documents related to tax filings for Client A"
+                  className="w-full min-h-[100px] p-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] resize-none focus:outline-none focus:ring-2 focus:ring-[#005be2]"
+                />
+              </div>
+
+              {/* Generate Rules Button */}
               <button
-                onClick={addNewRule}
-                className="text-[13px] text-[#005be2] hover:underline flex items-center gap-[4px]"
+                onClick={handleGenerateRules}
+                disabled={isGenerating || !description.trim()}
+                className="flex items-center gap-[8px] h-[36px] px-[16px] bg-gradient-to-r from-[#005be2] to-[#0047b3] text-white rounded-[8px] text-[13px] hover:from-[#004fc4] hover:to-[#003d99] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
-                <Plus className="size-[14px]" />
-                <span>Add rule</span>
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="size-[16px] animate-spin" />
+                    <span>Analyzing your description...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="size-[16px]" />
+                    <span>Generate rules</span>
+                  </>
+                )}
               </button>
-            </div>
 
-            {/* Rules List */}
-            <div className="space-y-[8px]">
-              {rules.length === 0 ? (
-                <div className="text-center py-[24px] text-[#60646c] text-[13px]">
-                  No rules defined. Click "Add rule" to create one.
-                </div>
-              ) : (
-                rules.map((rule) => (
-                  <div
-                    key={rule.id}
-                    className="bg-[#f9fafb] border border-[#e8e8ec] rounded-[8px] p-[12px] flex items-center gap-[8px]"
+              {/* Generated Rules Mini-Block */}
+              {showRulesBlock && rules.length > 0 && (
+                <div className="border border-[#e0e1e6] rounded-[8px] overflow-hidden bg-white">
+                  {/* Summary Header - Always Visible */}
+                  <button
+                    onClick={() => setIsRulesExpanded(!isRulesExpanded)}
+                    className="w-full flex items-center justify-between p-[16px] hover:bg-[#f9fafb] transition-colors"
                   >
-                    {/* Type Dropdown */}
-                    <select
-                      value={rule.type}
-                      onChange={(e) => updateRuleType(rule.id, e.target.value as CollectionRule['type'])}
-                      className="h-[32px] px-[8px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-shrink-0"
-                      style={{ minWidth: '140px' }}
-                    >
-                      {ruleTypeOptions.map(opt => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex items-center gap-[12px]">
+                      <div className="text-left">
+                        <div className="flex items-center gap-[8px]">
+                          <p className="text-[13px] text-[#1c2024]">AI-Generated Rules</p>
+                          <span className="px-[8px] py-[2px] rounded-[6px] bg-[#f0f7ff] border border-[#005be2] text-[11px] text-[#005be2]">
+                            {enabledRulesCount} active
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#60646c] mt-[2px]">
+                          {matchedDocCount} documents matched
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronDown className={`size-[20px] text-[#60646c] transition-transform ${isRulesExpanded ? 'rotate-180' : ''}`} />
+                  </button>
 
-                    {/* Operator Dropdown */}
-                    <select
-                      value={rule.operator}
-                      onChange={(e) => updateRuleOperator(rule.id, e.target.value as CollectionRule['operator'])}
-                      className="h-[32px] px-[8px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-shrink-0"
-                      style={{ minWidth: '100px' }}
-                    >
-                      {operatorOptions.map(opt => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
+                  {/* Expandable Rules List */}
+                  {isRulesExpanded && (
+                    <div className="border-t border-[#e8e8ec] p-[16px] bg-[#f9fafb] space-y-[12px]">
+                      <div className="flex items-center justify-between mb-[8px]">
+                        <p className="text-[11px] text-[#60646c] uppercase tracking-wider">Conditional Rules</p>
+                        <button 
+                          onClick={addNewRule}
+                          className="flex items-center gap-[4px] text-[11px] text-[#005be2] hover:underline"
+                        >
+                          <Plus className="size-[12px]" />
+                          <span>Add rule</span>
+                        </button>
+                      </div>
 
-                    {/* Value Input */}
-                    <input
-                      type="text"
-                      value={rule.value}
-                      onChange={(e) => updateRuleValue(rule.id, e.target.value)}
-                      placeholder="Enter value..."
-                      className="flex-1 h-[32px] px-[8px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2]"
-                    />
+                      <div className="space-y-[8px]">
+                        {rules.map((rule) => (
+                          <div
+                            key={rule.id}
+                            className={`flex items-center gap-[12px] transition-all ${
+                              rule.enabled
+                                ? 'opacity-100'
+                                : 'opacity-60'
+                            }`}
+                          >
+                            {/* Type Dropdown */}
+                            <select
+                              value={rule.type}
+                              onChange={(e) => updateRuleType(rule.id, e.target.value as CollectionRule['type'])}
+                              className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1 min-w-[140px]"
+                            >
+                              {ruleTypeOptions.map(opt => (
+                                <option key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
 
-                    {/* Enabled Toggle */}
-                    <label className="flex items-center gap-[6px] cursor-pointer flex-shrink-0">
-                      <input
-                        type="checkbox"
-                        checked={rule.enabled}
-                        onChange={() => toggleRuleEnabled(rule.id)}
-                        className="size-[16px] rounded border-[#e0e1e6] text-[#005be2] focus:ring-[#005be2] cursor-pointer"
-                      />
-                      <span className="text-[12px] text-[#60646c]">Enabled</span>
-                    </label>
+                            {/* Operator Dropdown */}
+                            <select
+                              value={rule.operator}
+                              onChange={(e) => updateRuleOperator(rule.id, e.target.value as CollectionRule['operator'])}
+                              className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1 min-w-[120px]"
+                            >
+                              {operatorOptions.map(opt => (
+                                <option key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
 
-                    {/* Delete Button */}
-                    <button
-                      onClick={() => deleteRule(rule.id)}
-                      className="size-[32px] flex items-center justify-center rounded-[6px] hover:bg-[#fee7e9] transition-colors flex-shrink-0"
-                    >
-                      <Trash2 className="size-[16px] text-[#d4183d]" />
-                    </button>
-                  </div>
-                ))
+                            {/* Value Input */}
+                            <input
+                              type="text"
+                              value={rule.value}
+                              onChange={(e) => updateRuleValue(rule.id, e.target.value)}
+                              placeholder="Value"
+                              className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
+                            />
+
+                            {/* Delete Button */}
+                            <button
+                              onClick={() => deleteRule(rule.id)}
+                              className="size-[40px] flex items-center justify-center rounded-[8px] border border-[#e0e1e6] hover:bg-[#fee7e9] transition-colors flex-shrink-0"
+                            >
+                              <Trash2 className="size-[16px] text-[#60646c]" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>

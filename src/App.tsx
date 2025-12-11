@@ -1359,9 +1359,7 @@ function CollectionCard({ title, organization, onClick, collectionId, sharedWith
   // Remove emoji from title if it exists
   const displayTitle = emoji && title.includes(emoji) ? title.replace(emoji, '').trim() : title;
   
-  // Get organization initials
-  const org = organizations.find(o => o.name === organization);
-  const orgInitials = org?.initials || organization?.[0] || 'S';
+  // Organization avatar will be generated using getOrganizationAvatar
   
   // Get users from sharedWith or fallback to random users
   const getUsersFromSharedWith = (shared: string[]) => {
@@ -1535,8 +1533,8 @@ function CollectionCard({ title, organization, onClick, collectionId, sharedWith
         return (
           <div className="flex items-center gap-[8px]">
             <div 
-              className="size-[20px] rounded-full flex items-center justify-center text-[10px] text-white font-medium"
-              style={{ backgroundColor: orgAvatar.color }}
+              className="size-[20px] rounded-full flex items-center justify-center text-[10px] font-medium"
+              style={{ backgroundColor: orgAvatar.color, color: orgAvatar.textColor }}
             >
               {orgAvatar.initial}
             </div>
@@ -1984,7 +1982,8 @@ function MainContent({
   onDelete,
   onAddToCollection,
   onCreateCollection,
-  onCreateCollectionFromAI
+  onCreateCollectionFromAI,
+  onCustomizeFiltersClick
 }: { 
   viewMode: ViewMode; 
   aiFilter?: string | null;
@@ -2007,6 +2006,7 @@ function MainContent({
   onAddToCollection?: (documentIds: string[]) => void;
   onCreateCollection?: (documentIds: string[]) => void;
   onCreateCollectionFromAI?: (suggestion: AISuggestion) => void;
+  onCustomizeFiltersClick?: () => void;
 }) {
   // Якщо viewMode === 'collection-detail' але selectedCollection === null, це означає що ми повертаємося назад
   // В цьому випадку не відображаємо CollectionDetailView, а дозволяємо коду йти далі до CollectionsView
@@ -2018,6 +2018,7 @@ function MainContent({
         onAddDocument={onUploadClick}
         onRemoveFromCollection={onRemoveFromCollection}
         onDelete={onDelete}
+        onCustomizeFiltersClick={onCustomizeFiltersClick}
         documents={documents}
       />
     );
@@ -2327,7 +2328,6 @@ function FojoAssistantPanel({ collection, documents, onCustomizeClick }: { colle
         {/* Summary Section */}
         <SummaryBox 
           summary={summary}
-          onEdit={collection?.rules && collection.rules.length > 0 ? onCustomizeClick : undefined}
         />
 
         {/* Assistant Message - Scrollable Area */}
@@ -2490,8 +2490,8 @@ function LeftTabsPanel({
                       const orgAvatar = getOrganizationAvatar(org.name);
                       return (
                         <div 
-                          className="size-[20px] rounded-full flex items-center justify-center text-[10px] text-white font-medium"
-                          style={{ backgroundColor: orgAvatar.color }}
+                          className="size-[20px] rounded-full flex items-center justify-center text-[10px] font-medium"
+                          style={{ backgroundColor: orgAvatar.color, color: orgAvatar.textColor }}
                         >
                           {orgAvatar.initial}
                         </div>
@@ -3119,7 +3119,7 @@ export default function App() {
   };
 
   // Функція для збереження правил
-  const handleSaveRules = (rules: CollectionRule[]) => {
+  const handleSaveRules = (rules: CollectionRule[], description?: string) => {
     // Якщо є тимчасові дані колекції (створення нової колекції)
     if (pendingCollectionData) {
       // Створюємо колекцію з правилами
@@ -3133,11 +3133,15 @@ export default function App() {
     // Якщо редагуємо існуючу колекцію
     if (!selectedCollection) return;
     
-    // Оновлюємо колекцію з новими правилами
+    // Оновлюємо колекцію з новими правилами та описом
     setCollections(prev => {
       const updated = prev.map(col => 
         col.id === selectedCollection.id 
-          ? { ...col, rules: rules }
+          ? { 
+              ...col, 
+              rules: rules,
+              description: description || col.description
+            }
           : col
       );
       saveCollectionsToStorage(updated);
@@ -3147,7 +3151,8 @@ export default function App() {
     // Оновлюємо selectedCollection, щоб UI відразу відобразив зміни
     setSelectedCollection((prev: any) => ({
       ...prev,
-      rules: rules
+      rules: rules,
+      description: description || prev.description
     }));
 
     setIsRulesEditorModalOpen(false);
@@ -3354,13 +3359,13 @@ export default function App() {
             onAddToCollection={handleOpenAddToCollection}
             onCreateCollection={handleCreateCollectionFromSelection}
             onCreateCollectionFromAI={handleCreateCollectionFromAI}
+            onCustomizeFiltersClick={handleOpenRulesEditor}
           />
                   </div>
                   <div className="flex-shrink-0 flex-grow-0 border-l border-[#e8e8ec] overflow-hidden" style={{ width: '400px', minWidth: '400px', maxWidth: '400px' }}>
                     <FojoAssistantPanel 
                       collection={selectedCollection} 
-                      documents={documents} 
-                      onCustomizeClick={handleOpenRulesEditor}
+                      documents={documents}
                     />
                   </div>
                 </div>
@@ -3455,6 +3460,7 @@ export default function App() {
         }}
         onSave={handleSaveRules}
         initialRules={pendingCollectionData?.rules || selectedCollection?.rules || []}
+        initialDescription={pendingCollectionData?.description || selectedCollection?.description || ''}
         matchedDocumentsCount={selectedCollection?.count || 0}
       />
       

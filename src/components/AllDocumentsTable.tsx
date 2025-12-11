@@ -3,10 +3,10 @@ import { Checkbox } from './ui/checkbox';
 import { MoreVertical, FileText } from 'lucide-react';
 import svgPaths from "../imports/svg-ylbe71kelt";
 import { DocumentCard } from './DocumentCard';
-import { getOrganizationAvatar } from '../utils/organizationUtils';
 import { FilterBar } from './FilterBar';
 import { BulkActionsBar } from './BulkActionsBar';
 import { QuickFilters } from './QuickFilters';
+import { getOrganizationAvatar } from '../utils/organizationUtils';
 
 interface Document {
   id: string;
@@ -602,21 +602,23 @@ export function AllDocumentsTable({
                       <span className="text-[13px] text-[#1c2024]">{doc.uploadedOn || new Date(doc.lastUpdate || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                     </td>
                     <td className="p-2 align-middle whitespace-nowrap">
-                      {(() => {
-                        const orgName = doc.organization || 'Summation Partners';
-                        const orgAvatar = getOrganizationAvatar(orgName);
-                        return (
-                          <div className="flex items-center gap-[8px]">
-                            <div 
-                              className="w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] text-white font-medium"
-                              style={{ backgroundColor: orgAvatar.color }}
-                            >
-                              {orgAvatar.initial}
-                            </div>
-                            <span className="text-[13px] text-[#1c2024]">{orgName}</span>
-                          </div>
-                        );
-                      })()}
+                      <div className="flex items-center gap-[8px]">
+                        {(() => {
+                          const orgName = doc.organization || 'Summation Partners';
+                          const orgAvatar = getOrganizationAvatar(orgName);
+                          return (
+                            <>
+                              <div 
+                                className="w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] font-medium"
+                                style={{ backgroundColor: orgAvatar.color, color: orgAvatar.textColor }}
+                              >
+                                {orgAvatar.initial}
+                              </div>
+                              <span className="text-[13px] text-[#1c2024]">{orgName}</span>
+                            </>
+                          );
+                        })()}
+                      </div>
                     </td>
                     <td className="p-2 align-middle whitespace-nowrap">
                       <StatusBadge status={doc.signatureStatus} />

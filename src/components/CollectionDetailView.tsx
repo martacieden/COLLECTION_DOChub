@@ -7,6 +7,7 @@ import { BulkActionsBar } from './BulkActionsBar';
 import { FilterBar } from './FilterBar';
 import svgPaths from "../imports/svg-ylbe71kelt";
 import { Checkbox } from './ui/checkbox';
+import { getOrganizationAvatar } from '../utils/organizationUtils';
 
 interface CollectionRule {
   id: string;
@@ -40,6 +41,7 @@ interface CollectionDetailViewProps {
   onSettingsClick?: () => void;
   onShareClick?: () => void;
   onFiltersClick?: () => void;
+  onCustomizeFiltersClick?: () => void;
   documents?: any[];
 }
 
@@ -454,8 +456,8 @@ export function CollectionDetailHeader({ collection, onBack, onAddDocument, onSe
                   return (
                     <div className="flex items-center gap-[8px]">
                       <div 
-                        className="size-[20px] rounded-full flex items-center justify-center text-[10px] text-white font-medium"
-                        style={{ backgroundColor: orgAvatar.color }}
+                        className="size-[20px] rounded-full flex items-center justify-center text-[10px] font-medium"
+                        style={{ backgroundColor: orgAvatar.color, color: orgAvatar.textColor }}
                       >
                         {orgAvatar.initial}
                       </div>
@@ -506,7 +508,7 @@ export function CollectionDetailHeader({ collection, onBack, onAddDocument, onSe
   );
 }
 
-export function CollectionDetailView({ collection, onBack, onAddDocument, onRemoveFromCollection, onDelete, onSettingsClick, onShareClick, onFiltersClick, documents }: CollectionDetailViewProps) {
+export function CollectionDetailView({ collection, onBack, onAddDocument, onRemoveFromCollection, onDelete, onSettingsClick, onShareClick, onFiltersClick, onCustomizeFiltersClick, documents }: CollectionDetailViewProps) {
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
@@ -619,7 +621,10 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
                       </div>
                     )}
                   </div>
-                  <button className="text-[13px] text-[#005be2] hover:underline flex items-center gap-[4px]">
+                  <button 
+                    onClick={onCustomizeFiltersClick}
+                    className="text-[13px] text-[#005be2] hover:underline flex items-center gap-[4px] transition-colors"
+                  >
                     <span>Customize</span>
                   </button>
                 </div>
@@ -827,21 +832,23 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
                       <span className="text-[13px] text-[#1c2024]">{doc.uploadedOn || new Date(doc.lastUpdate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                     </td>
                     <td className="p-2 align-middle whitespace-nowrap">
-                      {(() => {
-                        const orgName = doc.organization || 'Summation Partners';
-                        const orgAvatar = getOrganizationAvatar(orgName);
-                        return (
-                          <div className="flex items-center gap-[8px]">
-                            <div 
-                              className="w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] text-white font-medium"
-                              style={{ backgroundColor: orgAvatar.color }}
-                            >
-                              {orgAvatar.initial}
-                            </div>
-                            <span className="text-[13px] text-[#1c2024]">{orgName}</span>
-                          </div>
-                        );
-                      })()}
+                      <div className="flex items-center gap-[8px]">
+                        {(() => {
+                          const orgName = doc.organization || 'Summation Partners';
+                          const orgAvatar = getOrganizationAvatar(orgName);
+                          return (
+                            <>
+                              <div 
+                                className="w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] font-medium"
+                                style={{ backgroundColor: orgAvatar.color, color: orgAvatar.textColor }}
+                              >
+                                {orgAvatar.initial}
+                              </div>
+                              <span className="text-[13px] text-[#1c2024]">{orgName}</span>
+                            </>
+                          );
+                        })()}
+                      </div>
                     </td>
                     <td className="p-2 align-middle whitespace-nowrap">
                       <StatusBadge status={doc.signatureStatus} />
