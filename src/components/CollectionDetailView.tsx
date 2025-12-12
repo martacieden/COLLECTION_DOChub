@@ -424,7 +424,7 @@ export function CollectionDetailHeader({ collection, onBack, onAddDocument, onSe
     <div className="border-b border-[#e8e8ec] px-[24px] pt-[12px] pb-[12px] bg-white flex-shrink-0">
       <div>
         {/* Title Row */}
-        <div className="flex items-start justify-between mb-[8px]">
+        <div className="flex items-start justify-between mb-[8px] mt-[8px]">
           <div className="flex items-start gap-[12px]">
             {/* Back Button */}
             {onBack && (

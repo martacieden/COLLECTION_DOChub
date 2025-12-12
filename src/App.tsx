@@ -2807,7 +2807,29 @@ function MainContent({
 // FOJO AI ASSISTANT PANEL
 // ========================================
 
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 function FojoAssistantPanel({ collection, documents, onCustomizeClick }: { collection?: any; documents?: Document[]; onCustomizeClick?: () => void }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Reset messages when collection changes
+  useEffect(() => {
+    setMessages([]);
+    setInputValue('');
+  }, [collection?.id]);
+
   // Generate AI summary based on collection state
   // Fojo analyzes in priority order: Documents > Rules > Description > Title
   const generateSummary = (): string => {
@@ -2990,8 +3012,108 @@ function FojoAssistantPanel({ collection, documents, onCustomizeClick }: { colle
     }
   };
 
+  // Generate AI response based on user question
+  const generateAIResponse = (question: string): string => {
+    if (!collection) {
+      return "Please select a collection first to ask questions about it.";
+    }
+
+    const collectionDocumentIds = collection.documentIds || [];
+    const collectionDocuments = documents && documents.length > 0
+      ? documents.filter(doc => doc && doc.id && collectionDocumentIds.includes(doc.id))
+      : [];
+
+    const questionLower = question.toLowerCase();
+
+    // Прості відповіді на основі ключових слів
+    if (questionLower.includes('summarize') || questionLower.includes('summary') || questionLower.includes('key clauses')) {
+      if (collectionDocuments.length === 0) {
+        return "This collection doesn't have any documents yet. Upload documents to get summaries.";
+      }
+      return `Based on the ${collectionDocuments.length} documents in this collection, I can see patterns related to ${collection.title}. The documents primarily include ${[...new Set(collectionDocuments.map(d => d.type).filter(Boolean))].slice(0, 3).join(', ')} files. Would you like me to analyze specific documents in more detail?`;
+    }
+
+    if (questionLower.includes('linked') || questionLower.includes('related') || questionLower.includes('objects')) {
+      if (collectionDocuments.length === 0) {
+        return "No documents found to show relationships. Add documents to see connections.";
+      }
+      const organizations = [...new Set(collectionDocuments.map(d => d.organization).filter(Boolean))];
+      if (organizations.length > 0) {
+        return `I found ${organizations.length} related entities in this collection: ${organizations.slice(0, 3).join(', ')}${organizations.length > 3 ? ' and more' : ''}. These documents are connected through shared organizations and tags.`;
+      }
+      return "I can help you find relationships between documents. Try asking about specific entities or document types.";
+    }
+
+    if (questionLower.includes('executor') || questionLower.includes('who') || questionLower.includes('responsible')) {
+      if (collectionDocuments.length === 0) {
+        return "No documents available to identify executors. Upload documents to analyze responsible parties.";
+      }
+      const uploadedBy = [...new Set(collectionDocuments.map(d => d.uploadedBy).filter(Boolean))];
+      if (uploadedBy.length > 0) {
+        return `Based on the documents, I can see these people involved: ${uploadedBy.slice(0, 3).join(', ')}${uploadedBy.length > 3 ? ' and more' : ''}. For more specific executor information, please review individual documents.`;
+      }
+      return "I couldn't find specific executor information in the document metadata. You may need to review the documents directly.";
+    }
+
+    // Загальна відповідь
+    return `I understand you're asking about "${question}". Based on this collection "${collection.title}" with ${collectionDocuments.length} documents, I can help you analyze patterns, find relationships, and answer specific questions. Could you be more specific about what you'd like to know?`;
+  };
+
+  // Handle sending a message
+  const handleSendMessage = () => {
+    if (!inputValue.trim() || isLoading) return;
+
+    const userMessage: ChatMessage = {
+      role: 'user',
+      content: inputValue.trim()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputValue('');
+    setIsLoading(true);
+
+    // Simulate AI response delay
+    setTimeout(() => {
+      const aiResponse: ChatMessage = {
+        role: 'assistant',
+        content: generateAIResponse(userMessage.content)
+      };
+      setMessages(prev => [...prev, aiResponse]);
+      setIsLoading(false);
+    }, 800);
+  };
+
+  // Handle quick action buttons
+  const handleQuickAction = (action: string) => {
+    const question = action;
+    const userMessage: ChatMessage = {
+      role: 'user',
+      content: question
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setIsLoading(true);
+
+    setTimeout(() => {
+      const aiResponse: ChatMessage = {
+        role: 'assistant',
+        content: generateAIResponse(question)
+      };
+      setMessages(prev => [...prev, aiResponse]);
+      setIsLoading(false);
+    }, 800);
+  };
+
+  // Handle Enter key
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
   const summary = generateSummary();
-  const assistantMessage = generateAssistantMessage();
+  const initialAssistantMessage = generateAssistantMessage();
 
   // Перевіряємо, чи колекція пуста (немає документів, правил, опису)
   // Використовуємо ту саму логіку, що й в generateSummary
@@ -3007,6 +3129,9 @@ function FojoAssistantPanel({ collection, documents, onCustomizeClick }: { colle
     const hasDescription = collection.description && collection.description.trim().length > 0;
     return !hasDescription && !hasRules && !hasDocuments;
   })();
+
+  // Show initial message only if no chat history
+  const showInitialMessage = messages.length === 0;
 
   return (
     <div className="flex flex-col h-full bg-white overflow-hidden" style={{ width: '400px', minWidth: '400px', maxWidth: '400px' }}>
@@ -3024,32 +3149,90 @@ function FojoAssistantPanel({ collection, documents, onCustomizeClick }: { colle
           summary={summary}
         />
 
-        {/* Assistant Message - Scrollable Area */}
-        <div className="flex-1 overflow-y-auto px-[24px] py-[24px] min-w-0">
+        {/* Chat Messages - Scrollable Area */}
+        <div ref={chatContainerRef} className="flex-1 overflow-y-auto px-[24px] py-[24px] min-w-0">
           <div className="space-y-[16px] min-w-0">
-            <div className="flex items-start gap-[12px] min-w-0">
-              <div className="flex-1 min-w-0 overflow-hidden">
-                <p className="text-[13px] font-semibold text-[#60646c] mb-[4px]">AI Assistant</p>
-                <p className="text-[14px] text-[#1c2024] leading-[1.6] break-words">
-                  {assistantMessage}
-                </p>
-              </div>
-            </div>
+            {/* Initial Assistant Message */}
+            {showInitialMessage && (
+              <>
+                <div className="flex items-start gap-[12px] min-w-0">
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    <p className="text-[13px] font-semibold text-[#60646c] mb-[4px]">AI Assistant</p>
+                    <p className="text-[14px] text-[#1c2024] leading-[1.6] break-words">
+                      {initialAssistantMessage}
+                    </p>
+                  </div>
+                </div>
 
-            {/* Action Buttons - показуємо тільки якщо колекція не пуста */}
-            {!isEmptyCollection && (
-              <div className="flex flex-col gap-[8px]">
-                <button className="w-full px-[12px] py-[8px] bg-[#f9fafb] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f0f0f3] text-left transition-colors">
-                  Summarize key clauses
-                </button>
-                <button className="w-full px-[12px] py-[8px] bg-[#f9fafb] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f0f0f3] text-left transition-colors">
-                  Show linked objects
-                </button>
-                <button className="w-full px-[12px] py-[8px] bg-[#f9fafb] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f0f0f3] text-left transition-colors">
-                  Who is the executor?
-                </button>
+                {/* Action Buttons - показуємо тільки якщо колекція не пуста */}
+                {!isEmptyCollection && (
+                  <div className="flex flex-col gap-[8px]">
+                    <button 
+                      onClick={() => handleQuickAction('Summarize key clauses')}
+                      className="w-full px-[12px] py-[8px] bg-[#f9fafb] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f0f0f3] text-left transition-colors"
+                    >
+                      Summarize key clauses
+                    </button>
+                    <button 
+                      onClick={() => handleQuickAction('Show linked objects')}
+                      className="w-full px-[12px] py-[8px] bg-[#f9fafb] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f0f0f3] text-left transition-colors"
+                    >
+                      Show linked objects
+                    </button>
+                    <button 
+                      onClick={() => handleQuickAction('Who is the executor?')}
+                      className="w-full px-[12px] py-[8px] bg-[#f9fafb] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f0f0f3] text-left transition-colors"
+                    >
+                      Who is the executor?
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Chat Messages */}
+            {messages.map((message, index) => (
+              <div key={index} className="flex items-start gap-[12px] min-w-0">
+                {message.role === 'user' ? (
+                  <div className="flex-1 min-w-0 overflow-hidden flex justify-end">
+                    <div className="max-w-[80%]">
+                      <p className="text-[14px] text-[#1c2024] leading-[1.6] break-words bg-[#f0f0f3] px-[12px] py-[8px] rounded-[8px]">
+                        {message.content}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    <div className="flex items-center gap-[8px] mb-[4px]">
+                      <Sparkles className="size-[16px] text-[#8B5CF6]" />
+                      <p className="text-[13px] font-semibold text-[#60646c]">AI Assistant</p>
+                    </div>
+                    <p className="text-[14px] text-[#1c2024] leading-[1.6] break-words">
+                      {message.content}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* Loading indicator */}
+            {isLoading && (
+              <div className="flex items-start gap-[12px] min-w-0">
+                <div className="flex-1 min-w-0 overflow-hidden">
+                  <div className="flex items-center gap-[8px] mb-[4px]">
+                    <Sparkles className="size-[16px] text-[#8B5CF6]" />
+                    <p className="text-[13px] font-semibold text-[#60646c]">AI Assistant</p>
+                  </div>
+                  <div className="flex items-center gap-[4px]">
+                    <div className="w-[6px] h-[6px] bg-[#60646c] rounded-full animate-pulse" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-[6px] h-[6px] bg-[#60646c] rounded-full animate-pulse" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-[6px] h-[6px] bg-[#60646c] rounded-full animate-pulse" style={{ animationDelay: '300ms' }}></div>
+                  </div>
+                </div>
               </div>
             )}
+
+            <div ref={messagesEndRef} />
           </div>
         </div>
 
@@ -3066,20 +3249,38 @@ function FojoAssistantPanel({ collection, documents, onCustomizeClick }: { colle
                 <input
                   type="text"
                   placeholder="Ask me anything..."
-                  className="w-full text-[13px] text-[#1c2024] placeholder:text-[#8b8d98] focus:outline-none bg-transparent"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  disabled={isLoading}
+                  className="w-full text-[13px] text-[#1c2024] placeholder:text-[#8b8d98] focus:outline-none bg-transparent disabled:opacity-50"
                 />
               </div>
               <div className="flex items-center justify-between px-[8px] pb-[8px]">
                 <div className="flex items-center gap-[8px]">
-                  <button className="p-[4px] hover:bg-[#f9fafb] rounded-[4px] transition-colors">
+                  <button 
+                  className="p-[4px] hover:bg-[#f9fafb] rounded-[4px] transition-colors"
+                  title="Attach file"
+                  >
                     <Paperclip className="size-[16px] text-[#60646c]" />
                   </button>
-                  <button className="p-[4px] hover:bg-[#f9fafb] rounded-[4px] transition-colors">
+                  <button 
+                  className="p-[4px] hover:bg-[#f9fafb] rounded-[4px] transition-colors"
+                  title="Voice input"
+                  >
                     <Mic className="size-[16px] text-[#60646c]" />
                   </button>
                 </div>
-                <button className="bg-[#f0f0f3] p-[8px] rounded-[6px] hover:bg-[#e0e1e6] transition-colors">
-                  <Send className="size-[16px] text-[#b9bbc6]" />
+                <button 
+                  onClick={handleSendMessage}
+                  disabled={!inputValue.trim() || isLoading}
+                  className={`p-[8px] rounded-[6px] transition-colors ${
+                    inputValue.trim() && !isLoading
+                      ? 'bg-[#005be2] hover:bg-[#0047b3]'
+                      : 'bg-[#f0f0f3]'
+                  }`}
+                >
+                  <Send className={`size-[16px] ${inputValue.trim() && !isLoading ? 'text-white' : 'text-[#b9bbc6]'}`} />
                 </button>
               </div>
             </div>
