@@ -4582,6 +4582,8 @@ export default function App() {
         initialDescription={pendingCollectionData?.description || selectedCollection?.description || ''}
         matchedDocumentsCount={selectedCollection?.count || 0}
         onFindMatchingDocuments={findMatchingDocumentsCount}
+        organizations={organizations}
+        documents={documents}
       />
 
       <CollectionSettingsModal

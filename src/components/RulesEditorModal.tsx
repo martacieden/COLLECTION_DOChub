@@ -11,6 +11,17 @@ interface CollectionRule {
   enabled: boolean;
 }
 
+interface Organization {
+  id: string;
+  name: string;
+  initials: string;
+}
+
+interface Document {
+  id: string;
+  organization?: string;
+}
+
 interface RulesEditorModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -19,6 +30,8 @@ interface RulesEditorModalProps {
   initialDescription?: string;
   matchedDocumentsCount?: number;
   onFindMatchingDocuments?: (rules: CollectionRule[]) => number; // Функція для пошуку відповідних документів
+  organizations?: Organization[]; // Список організацій для випадаючих списків
+  documents?: Document[]; // Документи для отримання унікальних значень
 }
 
 const ruleTypeOptions = [
@@ -44,7 +57,9 @@ export function RulesEditorModal({
   initialRules,
   initialDescription = '',
   matchedDocumentsCount = 0,
-  onFindMatchingDocuments
+  onFindMatchingDocuments,
+  organizations = [],
+  documents = []
 }: RulesEditorModalProps) {
   const [rules, setRules] = useState<CollectionRule[]>([]);
   const [description, setDescription] = useState<string>('');
@@ -74,6 +89,14 @@ export function RulesEditorModal({
   if (!isOpen) return null;
 
   const enabledRulesCount = rules.filter(r => r.enabled).length;
+
+  // Отримуємо список організацій для випадаючих списків
+  const organizationOptions = React.useMemo(() => {
+    const orgsFromList = organizations.map(org => org.name);
+    const orgsFromDocs = [...new Set(documents.map(d => d.organization).filter(Boolean))];
+    const allOrgs = [...new Set([...orgsFromList, ...orgsFromDocs])].sort();
+    return allOrgs;
+  }, [organizations, documents]);
 
   const updateRuleType = (ruleId: string, newType: CollectionRule['type']) => {
     setRules(prev => {
@@ -475,14 +498,27 @@ export function RulesEditorModal({
                               ))}
                             </select>
 
-                            {/* Value Input */}
-                            <input
-                              type="text"
-                              value={rule.value}
-                              onChange={(e) => updateRuleValue(rule.id, e.target.value)}
-                              placeholder="Value"
-                              className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
-                            />
+                            {/* Value Input/Select */}
+                            {rule.type === 'vendor' || rule.type === 'client' ? (
+                              <select
+                                value={rule.value}
+                                onChange={(e) => updateRuleValue(rule.id, e.target.value)}
+                                className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
+                              >
+                                <option value="">Select {rule.type === 'vendor' ? 'organization' : 'client'}...</option>
+                                {organizationOptions.map(org => (
+                                  <option key={org} value={org}>{org}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              <input
+                                type="text"
+                                value={rule.value}
+                                onChange={(e) => updateRuleValue(rule.id, e.target.value)}
+                                placeholder="Value"
+                                className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
+                              />
+                            )}
 
                             {/* Delete Button */}
                             <button
