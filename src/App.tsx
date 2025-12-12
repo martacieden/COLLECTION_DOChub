@@ -104,7 +104,8 @@ const organizations: Organization[] = [
   { id: 'johnson', name: 'Johnson Family Trust', initials: 'J' },
   { id: 'herwitz', name: "Herwitz's Family", initials: 'H' },
   { id: 'wayne', name: 'Wayne Estate Management', initials: 'W' },
-  { id: 'robertson', name: 'The Robertson Foundation', initials: 'T' }
+  { id: 'robertson', name: 'The Robertson Foundation', initials: 'T' },
+  { id: 'summation', name: 'Summation Partners', initials: 'SP' }
 ];
 
 // ========================================
@@ -299,7 +300,7 @@ const mockDocuments: Document[] = [
     status: 'Waiting for Signature',
     uploadedBy: 'Joan Zhao',
     uploadedOn: 'Dec 2, 2024',
-    organization: 'Summation Partners'
+    organization: 'Smith Family Office'
   },
   {
     id: 'doc-4',
@@ -312,7 +313,7 @@ const mockDocuments: Document[] = [
     status: 'Waiting for Signature',
     uploadedBy: 'Michael Chen',
     uploadedOn: 'Dec 3, 2024',
-    organization: 'Summation Partners'
+    organization: 'Johnson Family Trust'
   },
   {
     id: 'doc-5',
@@ -338,7 +339,7 @@ const mockDocuments: Document[] = [
     status: 'Approved',
     uploadedBy: 'Joan Zhao',
     uploadedOn: 'Nov 15, 2024',
-    organization: 'Summation Partners'
+    organization: "Herwitz's Family"
   },
   {
     id: 'doc-7',
@@ -351,7 +352,7 @@ const mockDocuments: Document[] = [
     status: 'Pending Payment',
     uploadedBy: 'David Park',
     uploadedOn: 'Nov 18, 2024',
-    organization: 'Summation Partners',
+    organization: "Herwitz's Family",
     category: 'Invoice',
     tags: ['Invoice', 'Foundation', 'Payment'],
     vendor: 'Premier Concrete LLC'
@@ -367,7 +368,7 @@ const mockDocuments: Document[] = [
     status: 'Waiting for Signature',
     uploadedBy: 'Michael Chen',
     uploadedOn: 'Dec 2, 2024',
-    organization: 'Summation Partners'
+    organization: 'Wayne Estate Management'
   },
   {
     id: 'doc-9',
@@ -380,7 +381,7 @@ const mockDocuments: Document[] = [
     status: 'Signed',
     uploadedBy: 'Sarah Miller',
     uploadedOn: 'Nov 10, 2024',
-    organization: 'Summation Partners'
+    organization: 'The Robertson Foundation'
   },
   {
     id: 'doc-10',
@@ -393,7 +394,7 @@ const mockDocuments: Document[] = [
     status: 'Approved',
     uploadedBy: 'Joan Zhao',
     uploadedOn: 'Nov 5, 2024',
-    organization: 'Summation Partners'
+    organization: 'Wayne Estate Management'
   },
   {
     id: 'doc-11',
@@ -406,7 +407,7 @@ const mockDocuments: Document[] = [
     status: 'Waiting for Signature',
     uploadedBy: 'David Park',
     uploadedOn: 'Dec 1, 2024',
-    organization: 'Summation Partners'
+    organization: "Herwitz's Family"
   },
   {
     id: 'doc-12',
@@ -419,7 +420,7 @@ const mockDocuments: Document[] = [
     status: 'Paid',
     uploadedBy: 'Michael Chen',
     uploadedOn: 'Oct 30, 2024',
-    organization: 'Summation Partners',
+    organization: 'The Robertson Foundation',
     category: 'Invoice',
     tags: ['Invoice', 'Roofing', 'Materials'],
     vendor: 'Summit Roofing Co'
@@ -435,7 +436,7 @@ const mockDocuments: Document[] = [
     status: 'Signed',
     uploadedBy: 'Sarah Miller',
     uploadedOn: 'Nov 2, 2024',
-    organization: 'Summation Partners'
+    organization: 'Wayne Estate Management'
   },
   {
     id: 'doc-14',
@@ -448,7 +449,7 @@ const mockDocuments: Document[] = [
     status: 'Active',
     uploadedBy: 'Joan Zhao',
     uploadedOn: 'Oct 15, 2024',
-    organization: 'Summation Partners'
+    organization: 'The Robertson Foundation'
   },
   {
     id: 'doc-15',
@@ -461,7 +462,7 @@ const mockDocuments: Document[] = [
     status: 'In Review',
     uploadedBy: 'David Park',
     uploadedOn: 'Nov 29, 2024',
-    organization: 'Summation Partners',
+    organization: 'Johnson Family Trust',
     category: 'Invoice',
     tags: ['Invoice', 'Payment', 'Oak Street'],
     vendor: 'Studio XYZ'
@@ -478,7 +479,7 @@ const mockDocuments: Document[] = [
     status: 'Paid',
     uploadedBy: 'David Park',
     uploadedOn: 'Dec 1, 2024',
-    organization: 'Summation Partners',
+    organization: 'Smith Family Office',
     category: 'Invoice',
     tags: ['Invoice', 'Plumbing', 'Maintenance'],
     vendor: 'ABC Plumbing Inc'
@@ -494,7 +495,7 @@ const mockDocuments: Document[] = [
     status: 'Pending Payment',
     uploadedBy: 'Michael Chen',
     uploadedOn: 'Nov 28, 2024',
-    organization: 'Summation Partners',
+    organization: "Herwitz's Family",
     category: 'Invoice',
     tags: ['Invoice', 'HVAC', 'Installation'],
     vendor: 'Climate Control Systems'
@@ -510,7 +511,7 @@ const mockDocuments: Document[] = [
     status: 'Paid',
     uploadedBy: 'Sarah Miller',
     uploadedOn: 'Nov 25, 2024',
-    organization: 'Summation Partners',
+    organization: 'Wayne Estate Management',
     category: 'Invoice',
     tags: ['Invoice', 'Landscaping', 'Maintenance'],
     vendor: 'Green Thumb Landscaping'
@@ -526,7 +527,7 @@ const mockDocuments: Document[] = [
     status: 'In Review',
     uploadedBy: 'David Park',
     uploadedOn: 'Nov 22, 2024',
-    organization: 'Summation Partners',
+    organization: 'The Robertson Foundation',
     category: 'Invoice',
     tags: ['Invoice', 'Windows', 'Renovation'],
     vendor: 'Premium Windows & Doors'
@@ -542,7 +543,7 @@ const mockDocuments: Document[] = [
     status: 'Paid',
     uploadedBy: 'Joan Zhao',
     uploadedOn: 'Nov 18, 2024',
-    organization: 'Summation Partners',
+    organization: 'Smith Family Office',
     category: 'Invoice',
     tags: ['Invoice', 'Flooring', 'Installation'],
     vendor: 'Elite Flooring Solutions'
@@ -558,7 +559,7 @@ const mockDocuments: Document[] = [
     status: 'Pending Payment',
     uploadedBy: 'Michael Chen',
     uploadedOn: 'Nov 15, 2024',
-    organization: 'Summation Partners',
+    organization: 'Johnson Family Trust',
     category: 'Invoice',
     tags: ['Invoice', 'Painting', 'Services'],
     vendor: 'Perfect Paint Co'
@@ -574,7 +575,7 @@ const mockDocuments: Document[] = [
     status: 'Paid',
     uploadedBy: 'Sarah Miller',
     uploadedOn: 'Nov 12, 2024',
-    organization: 'Summation Partners',
+    organization: "Herwitz's Family",
     category: 'Invoice',
     tags: ['Invoice', 'Electrical', 'Upgrade'],
     vendor: 'ABC Electrical Services'
@@ -590,7 +591,7 @@ const mockDocuments: Document[] = [
     status: 'Paid',
     uploadedBy: 'David Park',
     uploadedOn: 'Nov 8, 2024',
-    organization: 'Summation Partners',
+    organization: 'Wayne Estate Management',
     category: 'Invoice',
     tags: ['Invoice', 'Roof', 'Repair'],
     vendor: 'Summit Roofing Co'
@@ -606,7 +607,7 @@ const mockDocuments: Document[] = [
     status: 'In Review',
     uploadedBy: 'Joan Zhao',
     uploadedOn: 'Nov 5, 2024',
-    organization: 'Summation Partners',
+    organization: 'The Robertson Foundation',
     category: 'Invoice',
     tags: ['Invoice', 'Security', 'Installation'],
     vendor: 'SecureGuard Systems'
@@ -622,7 +623,7 @@ const mockDocuments: Document[] = [
     status: 'Paid',
     uploadedBy: 'Michael Chen',
     uploadedOn: 'Nov 1, 2024',
-    organization: 'Summation Partners',
+    organization: 'Smith Family Office',
     category: 'Invoice',
     tags: ['Invoice', 'Appliances', 'Installation'],
     vendor: 'Home Appliance Pro'
@@ -638,7 +639,7 @@ const mockDocuments: Document[] = [
     status: 'Pending Payment',
     uploadedBy: 'Sarah Miller',
     uploadedOn: 'Oct 28, 2024',
-    organization: 'Summation Partners',
+    organization: 'Johnson Family Trust',
     category: 'Invoice',
     tags: ['Invoice', 'Fence', 'Installation'],
     vendor: 'Fence Masters Inc'
@@ -654,7 +655,7 @@ const mockDocuments: Document[] = [
     status: 'Paid',
     uploadedBy: 'David Park',
     uploadedOn: 'Oct 25, 2024',
-    organization: 'Summation Partners',
+    organization: "Herwitz's Family",
     category: 'Invoice',
     tags: ['Invoice', 'Deck', 'Construction'],
     vendor: 'Deck Builders Plus'
@@ -670,7 +671,7 @@ const mockDocuments: Document[] = [
     status: 'In Review',
     uploadedBy: 'Joan Zhao',
     uploadedOn: 'Oct 22, 2024',
-    organization: 'Summation Partners',
+    organization: 'Wayne Estate Management',
     category: 'Invoice',
     tags: ['Invoice', 'Garage', 'Replacement'],
     vendor: 'Garage Door Experts'
@@ -686,7 +687,7 @@ const mockDocuments: Document[] = [
     status: 'Paid',
     uploadedBy: 'Michael Chen',
     uploadedOn: 'Oct 18, 2024',
-    organization: 'Summation Partners',
+    organization: 'The Robertson Foundation',
     category: 'Invoice',
     tags: ['Invoice', 'Bathroom', 'Renovation'],
     vendor: 'Luxury Bath Solutions'
@@ -702,7 +703,7 @@ const mockDocuments: Document[] = [
     status: 'Pending Payment',
     uploadedBy: 'Sarah Miller',
     uploadedOn: 'Oct 15, 2024',
-    organization: 'Summation Partners',
+    organization: 'Smith Family Office',
     category: 'Invoice',
     tags: ['Invoice', 'Driveway', 'Paving'],
     vendor: 'Premier Concrete LLC'
@@ -3144,14 +3145,16 @@ function FojoAssistantPanel({ collection, documents, onCustomizeClick }: { colle
 
       {/* Content Area */}
       <div className="flex-1 overflow-hidden flex flex-col">
-        {/* Summary Section */}
-        <SummaryBox 
-          summary={summary}
-        />
+        {/* Scrollable Area - Summary + Chat Messages */}
+        <div ref={chatContainerRef} className="flex-1 overflow-y-auto min-w-0">
+          {/* Summary Section */}
+          <SummaryBox 
+            summary={summary}
+          />
 
-        {/* Chat Messages - Scrollable Area */}
-        <div ref={chatContainerRef} className="flex-1 overflow-y-auto px-[24px] py-[24px] min-w-0">
-          <div className="space-y-[16px] min-w-0">
+          {/* Chat Messages */}
+          <div className="px-[24px] py-[24px]">
+            <div className="space-y-[16px] min-w-0">
             {/* Initial Assistant Message */}
             {showInitialMessage && (
               <>
@@ -3232,7 +3235,8 @@ function FojoAssistantPanel({ collection, documents, onCustomizeClick }: { colle
               </div>
             )}
 
-            <div ref={messagesEndRef} />
+              <div ref={messagesEndRef} />
+            </div>
           </div>
         </div>
 
@@ -3568,20 +3572,24 @@ function matchDocumentToRules(document: Document, rules: CollectionRule[]): bool
         return false;
         
       case 'vendor':
+        // Vendor = Organization: шукаємо в document.organization
         const vendorName = rule.value.toLowerCase();
+        const docOrganization = (document.organization || '').toLowerCase();
+        // Також перевіряємо vendor для сумісності, якщо поле існує
         const docVendor = (document.vendor || '').toLowerCase();
-        const vendorMatch = docVendor.includes(vendorName) ||
+        const orgToCheck = docOrganization || docVendor;
+        const vendorMatch = orgToCheck.includes(vendorName) ||
                            document.name.toLowerCase().includes(vendorName) ||
                            document.description?.toLowerCase().includes(vendorName) ||
                            document.uploadedBy?.toLowerCase().includes(vendorName);
         if (rule.operator === 'is' || rule.operator === 'equals') {
-          return docVendor === vendorName || vendorMatch;
+          return orgToCheck === vendorName || vendorMatch;
         }
         if (rule.operator === 'contains') {
           return vendorMatch;
         }
         if (rule.operator === 'not') {
-          return !vendorMatch && docVendor !== vendorName;
+          return !vendorMatch && orgToCheck !== vendorName;
         }
         return false;
         

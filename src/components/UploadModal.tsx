@@ -134,7 +134,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collectionOrganizatio
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-[24px]">
-      <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl transition-all w-full max-w-[700px] h-[85vh] max-h-[900px]">
+      <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl transition-all w-[540px] max-w-[calc(100vw-48px)] h-[650px]">
         {/* Header */}
         <div className="flex items-center justify-between px-[24px] py-[20px] border-b border-[#e8e8ec]">
           <h2 className="text-[#1c2024]">Upload documents</h2>
@@ -203,7 +203,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collectionOrganizatio
                 <div
                   onDrop={handleDrop}
                   onDragOver={(e) => e.preventDefault()}
-                  className="border-2 border-dashed border-[#e0e1e6] rounded-[12px] p-[80px_32px] flex flex-col items-center justify-center cursor-pointer hover:border-[#005be2] hover:bg-[#fafafa] transition-all min-h-[300px]"
+                  className="border-2 border-dashed border-[#e0e1e6] rounded-[12px] p-[100px_32px] flex flex-col items-center justify-center cursor-pointer hover:border-[#005be2] hover:bg-[#fafafa] transition-all min-h-[400px]"
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <div className="text-center">
@@ -212,7 +212,9 @@ export function UploadModal({ isOpen, onClose, onComplete, collectionOrganizatio
                       <span className="text-[#005be2] underline cursor-pointer">Browse</span>
                     </p>
                     <p className="text-[14px] text-[#9ca3af]">
-                      Supports documents, images, audio, video and more
+                      Supports documents, images, audio, video
+                      <br />
+                      and more
                     </p>
                   </div>
                   <input
@@ -233,9 +235,9 @@ export function UploadModal({ isOpen, onClose, onComplete, collectionOrganizatio
 
             {/* Step 2: Uploading Files */}
             {currentStep === 'uploading' && (
-              <div className="p-[24px]">
+              <div className="p-[32px]">
                 {/* Organization Info */}
-                <div className="mb-[20px]">
+                <div className="mb-[24px]">
                   <label className="block text-[14px] text-[#1c2024] mb-[8px]">
                     Choose organization
                   </label>
