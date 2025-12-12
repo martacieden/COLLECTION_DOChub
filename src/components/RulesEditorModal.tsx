@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, Plus, Trash2, Sparkles, ChevronDown, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -86,17 +86,18 @@ export function RulesEditorModal({
     }
   }, [isOpen, initialRules, initialDescription, matchedDocumentsCount, onFindMatchingDocuments]);
 
-  if (!isOpen) return null;
-
-  const enabledRulesCount = rules.filter(r => r.enabled).length;
-
   // Отримуємо список організацій для випадаючих списків
-  const organizationOptions = React.useMemo(() => {
-    const orgsFromList = organizations.map(org => org.name);
-    const orgsFromDocs = [...new Set(documents.map(d => d.organization).filter(Boolean))];
+  // ВАЖЛИВО: useMemo має бути перед будь-якими умовними виходами (Rules of Hooks)
+  const organizationOptions = useMemo(() => {
+    const orgsFromList = (organizations || []).map(org => org.name);
+    const orgsFromDocs = [...new Set((documents || []).map(d => d.organization).filter(Boolean))];
     const allOrgs = [...new Set([...orgsFromList, ...orgsFromDocs])].sort();
     return allOrgs;
   }, [organizations, documents]);
+
+  if (!isOpen) return null;
+
+  const enabledRulesCount = rules.filter(r => r.enabled).length;
 
   const updateRuleType = (ruleId: string, newType: CollectionRule['type']) => {
     setRules(prev => {

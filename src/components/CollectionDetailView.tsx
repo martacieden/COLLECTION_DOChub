@@ -592,7 +592,14 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
               <div className="flex items-center justify-between mb-[8px]">
                 <div className="text-[11px] text-[#8b8d98] uppercase tracking-wider">Filters</div>
                 <button 
-                  onClick={onCustomizeFiltersClick}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (onCustomizeFiltersClick) {
+                      onCustomizeFiltersClick();
+                    }
+                  }}
                   className="text-[13px] text-[#005be2] hover:underline flex items-center gap-[4px] transition-colors"
                 >
                   <span>Customize</span>

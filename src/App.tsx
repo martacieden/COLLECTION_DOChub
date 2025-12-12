@@ -4156,7 +4156,8 @@ export default function App() {
 
   // Функція для відкриття модального вікна з правилами
   const handleOpenRulesEditor = () => {
-    if (!selectedCollection) return;
+    // Модальне вікно може відкриватися як для існуючої колекції, так і для нової
+    // selectedCollection може бути null при створенні нової колекції
     setIsRulesEditorModalOpen(true);
   };
 
