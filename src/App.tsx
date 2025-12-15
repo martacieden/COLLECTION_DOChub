@@ -1374,29 +1374,35 @@ function AISearchResultsBlock({
       {/* AI Summary instead of document grid */}
       <div className="mt-[16px] pt-[16px] pb-[12px] border-t border-[#e8e8ec]">
         <h4 className="text-[12px] font-semibold text-[#60646c] mb-[8px]">AI summary</h4>
-        <ul className="space-y-[6px] text-[13px] text-[#1c2024]">
-          <li>Documents found: {documents.length}</li>
-          {metadata?.topOrgs && metadata.topOrgs.length > 0 && (
-            <li>Organizations/Vendors: {metadata.topOrgs.join(', ')}</li>
-          )}
-          {metadata?.totalAmount && (
-            <li>Total amount: {formatAmount(metadata.totalAmount, metadata.currency)}</li>
-          )}
-          {metadata?.statusCounts && (
-            (() => {
-              const c = metadata.statusCounts;
-              const hasAny = (c.completed || c.pending || c.other);
-              return hasAny ? (
-                <li>
-                  Statuses:
-                  {c.completed ? ` ${c.completed} completed;` : ''} 
-                  {c.pending ? ` ${c.pending} pending;` : ''} 
-                  {c.other ? ` ${c.other} other` : ''}
-                </li>
-              ) : null;
-            })()
-          )}
-        </ul>
+        <div className="space-y-[8px] text-[13px] text-[#1c2024] leading-[1.6]">
+          <p>
+            We found {documents.length} {intent.isInvoice ? 'invoice' : intent.documentType || 'document'}{documents.length !== 1 ? 's' : ''}
+            {metadata?.dateRange && ` from ${formatDateRange()}`}.
+            {metadata?.topOrgs && metadata.topOrgs.length > 0 && (
+              <>
+                {' '}Most {intent.isInvoice ? 'invoices' : 'documents'} are from {metadata.topOrgs.length === 1 
+                  ? metadata.topOrgs[0]
+                  : `${metadata.topOrgs.length} ${intent.isInvoice ? 'vendors' : 'organizations'}`}
+                {metadata.topOrgs.length <= 3 && metadata.topOrgs.length > 1 && ` (${metadata.topOrgs.join(', ')})`}.
+              </>
+            )}
+            {metadata?.totalAmount && (
+              <> Total amount is {formatAmount(metadata.totalAmount, metadata.currency)}.</>
+            )}
+          </p>
+          {metadata?.statusCounts && (() => {
+            const c = metadata.statusCounts;
+            const parts: string[] = [];
+            if (c.completed) parts.push(`${c.completed} completed`);
+            if (c.pending) parts.push(`${c.pending} pending`);
+            if (c.other) parts.push(`${c.other} other`);
+            return parts.length > 0 ? (
+              <p>
+                Status breakdown: {parts.join(', ')}.
+              </p>
+            ) : null;
+          })()}
+        </div>
       </div>
 
       {/* Actions below summary */}
@@ -2366,7 +2372,7 @@ function CollectionCard({ title, organization, onClick, collectionId, sharedWith
         setIsHovered(false);
         // Don't close menu on mouse leave if it's open
       }}
-      className="bg-white border border-[#e8e8ec] rounded-[8px] p-[16px] flex flex-col gap-[12px] hover:border-[#005be2] transition-colors cursor-pointer relative"
+      className="bg-white border border-[#e8e8ec] rounded-[8px] p-[16px] flex flex-col gap-[12px] hover:border-[#005be2] transition-colors cursor-pointer relative h-full min-h-[120px]"
     >
       {/* More button - shows on hover */}
       {isHovered && (
@@ -3121,10 +3127,10 @@ const [aiModalInitialSearchResults, setAiModalInitialSearchResults] = useState<{
           </>
         ) : (
           // Grid/Card View
-          <div className="grid gap-[16px] w-full px-[24px] pb-[80px]" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))' }}>
+          <div className="grid gap-[16px] w-full px-[24px] pb-[80px] items-stretch" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))' }}>
             {filteredCollections.length > 0 ? (
               filteredCollections.map((collection) => (
-                <div key={collection.id}>
+                <div key={collection.id} className="h-full">
                   <CollectionCard
                     title={collection.title}
                     icon={collection.icon}

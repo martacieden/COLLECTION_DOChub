@@ -356,8 +356,8 @@ export function RulesEditorModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-[24px]">
-      <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl w-full max-w-[600px] max-h-[90vh]">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-[24px]" style={{ isolation: 'isolate' }}>
+      <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl w-full max-w-[600px] max-h-[90vh] relative z-[100]" style={{ isolation: 'isolate' }}>
         {/* Header */}
         <div className="flex items-center justify-between px-[24px] py-[20px] border-b border-[#e8e8ec]">
           <div className="flex items-center gap-[12px]">
