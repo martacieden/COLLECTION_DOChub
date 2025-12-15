@@ -4918,8 +4918,21 @@ export default function App() {
     const collectionCount = collectionIds.length;
     
     if (collectionCount === 1) {
+      const collectionId = collectionIds[0];
+      const collection = collections.find(col => col.id === collectionId);
+      
       toast.success(
-        `${docCount} ${docCount === 1 ? 'document' : 'documents'} added to "${collectionNames[0]}"`
+        `${docCount} ${docCount === 1 ? 'document' : 'documents'} added to "${collectionNames[0]}"`,
+        {
+          action: {
+            label: 'View collection',
+            onClick: () => {
+              if (collection) {
+                handleCollectionClick(collection);
+              }
+            }
+          }
+        }
       );
     } else {
       toast.success(
