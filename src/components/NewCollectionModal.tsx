@@ -449,7 +449,7 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
       <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl w-full max-w-[600px] max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-[24px] py-[20px] border-b border-[#e8e8ec]">
-          <h2 className="text-[#1c2024]">New Collection</h2>
+          <h2 className="text-[16px] font-semibold text-[#1c2024]">New Collection</h2>
           <button
             onClick={handleClose}
             className="size-[32px] flex items-center justify-center rounded-[6px] hover:bg-[#f9fafb] transition-colors"

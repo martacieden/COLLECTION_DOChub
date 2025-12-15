@@ -137,7 +137,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collectionOrganizatio
       <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl transition-all w-[740px] max-w-[calc(100vw-48px)] h-[650px]">
         {/* Header */}
         <div className="flex items-center justify-between px-[24px] py-[20px] border-b border-[#e8e8ec]">
-          <h2 className="text-[#1c2024]">Upload documents</h2>
+          <h2 className="text-[16px] font-semibold text-[#1c2024]">Upload documents</h2>
           <button
             onClick={onClose}
             className="size-[32px] flex items-center justify-center rounded-[6px] hover:bg-[#f9fafb] transition-colors"

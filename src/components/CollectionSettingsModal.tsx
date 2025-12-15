@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Trash2, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
+import { Switch } from './ui/switch';
 
 interface CollectionSettingsModalProps {
   isOpen: boolean;
@@ -55,6 +56,8 @@ export function CollectionSettingsModal({
   const [collectionName, setCollectionName] = useState(collection.title);
   const [collectionIcon, setCollectionIcon] = useState(collection.icon || '📁');
   const [nameError, setNameError] = useState('');
+  // Локальний прапорець для Auto-sync (поки без бекенду)
+  const [isAutoSyncEnabled, setIsAutoSyncEnabled] = useState(true);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
 
@@ -72,6 +75,8 @@ export function CollectionSettingsModal({
       setCollectionIcon(getEmojiFromIcon(collection.icon));
       setNameError('');
       setIsEmojiPickerOpen(false);
+      // При відкритті можна ініціалізувати значення з колекції, якщо з'явиться поле autoSync
+      // setIsAutoSyncEnabled(Boolean((collection as any).autoSyncEnabled ?? true));
     }
   }, [isOpen, collection.title, collection.icon]);
 
@@ -210,6 +215,40 @@ export function CollectionSettingsModal({
               {nameError && (
                 <p className="text-[11px] text-[#d4183d] mt-[4px]">{nameError}</p>
               )}
+            </div>
+
+            {/* Auto-sync Settings */}
+            <div className="pt-[8px] border-t border-[#e8e8ec]">
+              <h3 className="text-[14px] font-semibold text-[#1c2024] mb-[12px]">
+                Auto-sync Settings
+              </h3>
+
+              {/* Toggle row */}
+              <div className="flex items-start justify-between gap-[16px] mb-[12px]">
+                <div>
+                  <p className="text-[13px] text-[#1c2024] mb-[4px]">Enable Auto-sync</p>
+                  <p className="text-[11px] text-[#60646c]">
+                    Automatically update this collection when items match the rules.
+                  </p>
+                </div>
+                <Switch
+                  checked={isAutoSyncEnabled}
+                  onCheckedChange={setIsAutoSyncEnabled}
+                  aria-label="Enable auto-sync for this collection"
+                />
+              </div>
+
+              {/* Info banner */}
+              <div className="mt-[8px] rounded-[8px] border text-[12px] px-[12px] py-[10px] flex flex-col gap-[4px] bg-[#f0f7ff] border-[#bfdbfe] text-[#1d4ed8]">
+                <p className="font-medium">
+                  {isAutoSyncEnabled ? 'Auto-sync Active' : 'Auto-sync is turned off'}
+                </p>
+                <p className="text-[11px] text-[#1e3a8a]">
+                  {isAutoSyncEnabled
+                    ? 'This collection will automatically include new items that match the filter rules below.'
+                    : 'New items that match the rules will not be added automatically. You can still manage items manually.'}
+                </p>
+              </div>
             </div>
 
             {/* Delete Section */}
