@@ -108,7 +108,7 @@ export function PinnedView({ documents = [], pinnedDocumentIds, onPinToggle, col
         )}
 
         {/* Documents Content */}
-        <div className="pb-[16px] pt-[16px] min-w-0 flex flex-col">
+        <div className="pb-[16px] pt-[16px] min-w-0 flex flex-col flex-1">
           {filteredDocuments.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center">
               <div className="bg-[#f0f0f3] text-[#60646c] rounded-[8px] size-[28px] grid place-items-center mb-[16px]">
@@ -128,15 +128,16 @@ export function PinnedView({ documents = [], pinnedDocumentIds, onPinToggle, col
                 );
                 
                 return (
-                  <DocumentCard
-                    key={doc.id}
-                    document={doc}
-                    isSelected={selectedDocuments.includes(doc.id)}
-                    onSelect={handleSelectDocument}
-                    isPinned={true}
-                    collections={docCollections}
-                    onCollectionClick={onCollectionClick}
-                  />
+                  <div key={doc.id}>
+                    <DocumentCard
+                      document={doc}
+                      isSelected={selectedDocuments.includes(doc.id)}
+                      onSelect={handleSelectDocument}
+                      isPinned={true}
+                      collections={docCollections}
+                      onCollectionClick={onCollectionClick}
+                    />
+                  </div>
                 );
               })}
             </div>

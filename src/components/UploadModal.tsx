@@ -134,7 +134,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collectionOrganizatio
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-[24px]">
-      <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl transition-all w-[540px] max-w-[calc(100vw-48px)] h-[650px]">
+      <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl transition-all w-[740px] max-w-[calc(100vw-48px)] h-[650px]">
         {/* Header */}
         <div className="flex items-center justify-between px-[24px] py-[20px] border-b border-[#e8e8ec]">
           <h2 className="text-[#1c2024]">Upload documents</h2>

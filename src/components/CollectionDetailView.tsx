@@ -576,35 +576,36 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
       <div className="border-b border-[#e8e8ec] px-[24px] py-[16px] flex-shrink-0">
         <div className="w-full flex items-center justify-between">
           <h2 className="text-[13px] font-medium text-[#1c2024]">Details</h2>
-          <button
-            type="button"
-            onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
-            className="h-[32px] w-[32px] flex items-center justify-center border border-[#e0e1e6] rounded-[6px] bg-[#f0f0f3] hover:bg-[#e0e1e6] transition-colors cursor-pointer"
-          >
-            <ChevronDown className={`size-[16px] text-[#60646c] transition-transform ${isDetailsExpanded ? 'rotate-180' : ''}`} />
-          </button>
+          <div className="flex items-center gap-[8px]">
+            <button 
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (onCustomizeFiltersClick) {
+                  onCustomizeFiltersClick();
+                }
+              }}
+              className="text-[13px] text-[#005be2] hover:underline flex items-center gap-[4px] transition-colors"
+            >
+              <span>Customize</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
+              className="h-[32px] w-[32px] flex items-center justify-center border border-[#e0e1e6] rounded-[6px] bg-[#f0f0f3] hover:bg-[#e0e1e6] transition-colors cursor-pointer"
+              aria-label="Expand details"
+              title="Expand details"
+            >
+              <ChevronDown className={`size-[16px] text-[#60646c] transition-transform ${isDetailsExpanded ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
         </div>
         
         {isDetailsExpanded && (
           <div className="mt-[24px] space-y-[24px]">
             {/* Filters Section */}
             <div>
-              <div className="flex items-center justify-between mb-[8px]">
-                <div className="text-[11px] text-[#8b8d98] uppercase tracking-wider">Filters</div>
-                <button 
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (onCustomizeFiltersClick) {
-                      onCustomizeFiltersClick();
-                    }
-                  }}
-                  className="text-[13px] text-[#005be2] hover:underline flex items-center gap-[4px] transition-colors"
-                >
-                  <span>Customize</span>
-                </button>
-              </div>
               
               {collection.rules && collection.rules.length > 0 ? (
                 <div>

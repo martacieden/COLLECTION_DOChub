@@ -210,3 +210,5 @@ const handleSaveRules = (rules: CollectionRule[]) => {
 - Використати стилі з Tailwind CSS
 - Використати `toast` з `sonner` для повідомлень
 
+
+

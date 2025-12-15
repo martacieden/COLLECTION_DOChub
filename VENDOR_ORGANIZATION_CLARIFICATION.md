@@ -83,3 +83,5 @@ if (descLower.includes('vendor')) {
 
 *Оновлено: 2025-01-XX*
 
+
+

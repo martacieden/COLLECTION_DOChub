@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, X, Search, SlidersHorizontal, Upload, MoreVertical, Info, Sparkles, List, FileText, SearchIcon, TrendingUp, Archive, Send, PanelLeft, Paperclip, Mic, Pencil, Eye, Share2, Trash2, Plus } from 'lucide-react';
+import { ChevronDown, X, Search, SlidersHorizontal, Upload, MoreVertical, Info, Sparkles, List, FileText, SearchIcon, TrendingUp, Archive, Send, PanelLeft, Paperclip, Mic, Pencil, Eye, Share2, Trash2, Plus, Calendar, DollarSign, Building2, CheckCircle2, Clock, Filter, Download } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './components/ui/alert-dialog';
 import { Checkbox } from './components/ui/checkbox';
 import svgPaths from "./imports/svg-ylbe71kelt";
@@ -22,6 +22,7 @@ import { SummaryBox } from './components/SummaryBox';
 import { PinnedView } from './components/PinnedView';
 import { RulesEditorModal } from './components/RulesEditorModal';
 import { CollectionSettingsModal } from './components/CollectionSettingsModal';
+import { AISearchResults } from './components/AISearchResults';
 import { getOrganizationAvatar } from './utils/organizationUtils';
 
 // ========================================
@@ -88,7 +89,7 @@ interface ChatMessage {
 }
 
 interface ResultBlock {
-  type: 'document-cards' | 'metadata' | 'search-results' | 'summary';
+  type: 'document-cards' | 'metadata' | 'search-results' | 'summary' | 'ai-search-results';
   data: any;
 }
 
@@ -980,7 +981,7 @@ function ContextSuggestionsDropdown({
 // RESULT BLOCKS
 // ========================================
 
-function DocumentCardBlock({ documents, onCreateCollection }: { documents: Document[]; onCreateCollection?: () => void }) {
+function DocumentCardBlock({ documents, onCreateCollection }: { documents: Document[]; onCreateCollection?: (name: string, description: string, rules: CollectionRule[]) => void }) {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
 
   return (
@@ -1077,7 +1078,24 @@ function DocumentCardBlock({ documents, onCreateCollection }: { documents: Docum
       {onCreateCollection && (
         <div className="mt-[16px] pt-[16px] border-t border-[#e8e8ec]">
           <button
-            onClick={onCreateCollection}
+            onClick={() => {
+              if (documents.length > 0) {
+                const documentType = documents[0]?.type || 'document';
+                const collectionName = `All ${documentType.charAt(0).toUpperCase() + documentType.slice(1)}s`;
+                const description = `Collection of ${documents.length} ${documentType} documents`;
+                
+                const rules: CollectionRule[] = [{
+                  id: `rule-${Date.now()}`,
+                  type: 'document_type',
+                  label: 'Document Type',
+                  value: documentType,
+                  operator: 'contains',
+                  enabled: true
+                }];
+                
+                onCreateCollection(collectionName, description, rules);
+              }
+            }}
             className="h-[28px] px-[12px] bg-[#005be2] rounded-[6px] text-[12px] text-white hover:bg-[#004fc4] transition-colors flex items-center justify-center gap-[6px]"
           >
             <Plus className="size-[14px]" />
@@ -1152,6 +1170,282 @@ function SummaryBlock({ insights }: { insights: string[] }) {
   );
 }
 
+// Функція для розпізнавання наміру користувача (для AI пошуку)
+function detectSearchIntent(query: string): {
+  intent: 'search' | 'create' | 'manage' | 'analyze';
+  documentType?: string;
+  isInvoice?: boolean;
+} {
+  const lowerQuery = query.toLowerCase();
+  
+  const createKeywords = ['create', 'створи', 'make', 'зроби', 'new', 'новий', 'add', 'додай'];
+  const isCreate = createKeywords.some(keyword => lowerQuery.includes(keyword));
+  
+  const analyzeKeywords = ['analyze', 'аналіз', 'summary', 'підсумок', 'report', 'звіт', 'insights', 'аналітика'];
+  const isAnalyze = analyzeKeywords.some(keyword => lowerQuery.includes(keyword));
+  
+  const manageKeywords = ['organize', 'організуй', 'manage', 'керуй', 'group', 'групуй'];
+  const isManage = manageKeywords.some(keyword => lowerQuery.includes(keyword));
+  
+  const invoiceKeywords = ['invoice', 'інвойс', 'invoices', 'інвойси', 'bill', 'рахунок'];
+  const isInvoice = invoiceKeywords.some(keyword => lowerQuery.includes(keyword));
+  
+  const documentTypes = ['invoice', 'contract', 'permit', 'waiver', 'lien', 'change order'];
+  let documentType: string | undefined;
+  for (const type of documentTypes) {
+    if (lowerQuery.includes(type)) {
+      documentType = type;
+      break;
+    }
+  }
+  
+  if (isCreate) {
+    return { intent: 'create', documentType, isInvoice: isInvoice || documentType === 'invoice' };
+  }
+  if (isAnalyze) {
+    return { intent: 'analyze', documentType, isInvoice: isInvoice || documentType === 'invoice' };
+  }
+  if (isManage) {
+    return { intent: 'manage', documentType, isInvoice: isInvoice || documentType === 'invoice' };
+  }
+  
+  return { intent: 'search', documentType, isInvoice: isInvoice || documentType === 'invoice' };
+}
+
+// Функція для обчислення метаданих документів
+function calculateDocumentMetadata(documents: Document[]) {
+  if (documents.length === 0) {
+    return null;
+  }
+  
+  const dates = documents
+    .map(doc => {
+      const dateStr = doc.uploadedOn || (doc as any).createdOn;
+      if (!dateStr) return null;
+      const date = new Date(dateStr);
+      return isNaN(date.getTime()) ? null : date;
+    })
+    .filter(Boolean) as Date[];
+  
+  const dateRange = dates.length > 0 ? {
+    min: new Date(Math.min(...dates.map(d => d.getTime()))),
+    max: new Date(Math.max(...dates.map(d => d.getTime())))
+  } : null;
+  
+  const organizations = documents
+    .map(doc => doc.organization || (doc as any).vendor || (doc as any).client)
+    .filter(Boolean) as string[];
+  const uniqueOrgs = [...new Set(organizations)];
+  const topOrgs = uniqueOrgs.slice(0, 3);
+  
+  const amounts = documents
+    .map(doc => (doc as any).amount)
+    .filter((amount): amount is number => typeof amount === 'number' && amount > 0);
+  const totalAmount = amounts.length > 0 ? amounts.reduce((sum, amt) => sum + amt, 0) : null;
+  const currency = ((documents.find(doc => (doc as any).currency) as any)?.currency) || 'USD';
+  
+  const statuses = documents
+    .map(doc => doc.signatureStatus)
+    .filter(Boolean) as string[];
+  const statusCounts = statuses.reduce((acc, status) => {
+    const normalized = status.toLowerCase();
+    if (normalized.includes('paid') || normalized.includes('signed')) {
+      acc.completed = (acc.completed || 0) + 1;
+    } else if (normalized.includes('pending')) {
+      acc.pending = (acc.pending || 0) + 1;
+    } else {
+      acc.other = (acc.other || 0) + 1;
+    }
+    return acc;
+  }, {} as { completed?: number; pending?: number; other?: number });
+  
+  return {
+    count: documents.length,
+    dateRange,
+    topOrgs,
+    totalAmount,
+    currency,
+    statusCounts
+  };
+}
+
+function AISearchResultsBlock({ 
+  query, 
+  documents, 
+  onCreateCollection 
+}: { 
+  query: string; 
+  documents: Document[]; 
+  onCreateCollection?: (name: string, description: string, rules: CollectionRule[]) => void;
+}) {
+  const intent = detectSearchIntent(query);
+  const metadata = calculateDocumentMetadata(documents);
+  
+  if (documents.length === 0) {
+    return (
+      <div className="bg-white rounded-[8px] border border-[#e8e8ec] p-[16px] text-center">
+        <div className="bg-[#f0f0f3] text-[#60646c] rounded-[8px] size-[48px] flex items-center justify-center mx-auto mb-[16px]">
+          <FileText className="size-[20px]" />
+        </div>
+        <h3 className="text-[14px] font-medium text-[#1c2024] mb-[4px]">No documents found</h3>
+        <p className="text-[12px] text-[#60646c]">Try a different search query</p>
+      </div>
+    );
+  }
+  
+  const formatDateRange = () => {
+    if (!metadata?.dateRange) return null;
+    const { min, max } = metadata.dateRange;
+    const formatMonth = (date: Date) => date.toLocaleDateString('en-US', { month: 'short' });
+    const formatYear = (date: Date) => date.getFullYear();
+    
+    if (formatYear(min) === formatYear(max)) {
+      return `${formatMonth(min)}–${formatMonth(max)} ${formatYear(min)}`;
+    }
+    return `${formatMonth(min)} ${formatYear(min)}–${formatMonth(max)} ${formatYear(max)}`;
+  };
+  
+  const formatAmount = (amount: number, currency: string) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency
+    }).format(amount);
+  };
+  
+  return (
+    <div className="bg-white rounded-[8px] border border-[#e8e8ec] p-[20px]">
+      {/* Summary Header */}
+      <div className="flex items-start gap-[12px] mb-[16px]">
+        <div className="bg-gradient-to-br from-[#f5f3ff] to-[#ede9fe] size-[36px] rounded-[8px] flex items-center justify-center flex-shrink-0">
+          <Sparkles className="size-[18px] text-[#7c3aed]" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-[15px] font-semibold text-[#1c2024] mb-[8px]">
+            We found {metadata?.count || documents.length} {intent.isInvoice ? 'invoice' : intent.documentType || 'document'}{documents.length !== 1 ? 's' : ''}
+          </h3>
+          
+          {/* Metadata Insights */}
+          <div className="flex flex-wrap items-center gap-[12px] text-[12px] text-[#60646c]">
+            {metadata?.dateRange && (
+              <div className="flex items-center gap-[6px]">
+                <Calendar className="size-[12px]" />
+                <span>{formatDateRange()}</span>
+              </div>
+            )}
+            
+            {metadata?.topOrgs && metadata.topOrgs.length > 0 && (
+              <div className="flex items-center gap-[6px]">
+                <Building2 className="size-[12px]" />
+                <span>
+                  {metadata.topOrgs.length === 1 
+                    ? `From ${metadata.topOrgs[0]}`
+                    : `From ${metadata.topOrgs.length} ${intent.isInvoice ? 'vendors' : 'organizations'}`}
+                </span>
+              </div>
+            )}
+            
+            {metadata?.totalAmount && (
+              <div className="flex items-center gap-[6px]">
+                <DollarSign className="size-[12px]" />
+                <span>Total: {formatAmount(metadata.totalAmount, metadata.currency)}</span>
+              </div>
+            )}
+            
+            {metadata?.statusCounts && (
+              <div className="flex items-center gap-[10px]">
+                {metadata.statusCounts.completed && (
+                  <div className="flex items-center gap-[4px]">
+                    <CheckCircle2 className="size-[12px] text-[#059669]" />
+                    <span>{metadata.statusCounts.completed} completed</span>
+                  </div>
+                )}
+                {metadata.statusCounts.pending && (
+                  <div className="flex items-center gap-[4px]">
+                    <Clock className="size-[12px] text-[#B45309]" />
+                    <span>{metadata.statusCounts.pending} pending</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* AI Summary instead of document grid */}
+      <div className="mt-[16px] pt-[16px] pb-[12px] border-t border-[#e8e8ec]">
+        <h4 className="text-[12px] font-semibold text-[#60646c] mb-[8px]">AI summary</h4>
+        <ul className="space-y-[6px] text-[13px] text-[#1c2024]">
+          <li>Documents found: {documents.length}</li>
+          {metadata?.topOrgs && metadata.topOrgs.length > 0 && (
+            <li>Organizations/Vendors: {metadata.topOrgs.join(', ')}</li>
+          )}
+          {metadata?.totalAmount && (
+            <li>Total amount: {formatAmount(metadata.totalAmount, metadata.currency)}</li>
+          )}
+          {metadata?.statusCounts && (
+            (() => {
+              const c = metadata.statusCounts;
+              const hasAny = (c.completed || c.pending || c.other);
+              return hasAny ? (
+                <li>
+                  Statuses:
+                  {c.completed ? ` ${c.completed} completed;` : ''} 
+                  {c.pending ? ` ${c.pending} pending;` : ''} 
+                  {c.other ? ` ${c.other} other` : ''}
+                </li>
+              ) : null;
+            })()
+          )}
+        </ul>
+      </div>
+
+      {/* Actions below summary */}
+      <div className="mt-[12px] border-t border-[#e8e8ec]">
+        <div className="pt-[12px] flex flex-wrap gap-[8px]">
+          {onCreateCollection && (
+            <button
+              onClick={() => {
+                if (documents.length > 0) {
+                  const documentType = intent.documentType || documents[0]?.type || 'document';
+                  const collectionName = `All ${documentType.charAt(0).toUpperCase() + documentType.slice(1)}s`;
+                  const description = `Collection of ${documents.length} ${documentType} documents`;
+                  
+                  const rules: CollectionRule[] = [{
+                    id: `rule-${Date.now()}`,
+                    type: 'document_type',
+                    label: 'Document Type',
+                    value: documentType,
+                    operator: 'contains',
+                    enabled: true
+                  }];
+                  
+                  onCreateCollection(collectionName, description, rules);
+                }
+              }}
+              className="h-[36px] px-[16px] bg-[#005be2] rounded-[6px] text-[13px] text-white hover:bg-[#0047b3] flex items-center gap-[6px] transition-colors"
+            >
+              <FileText className="size-[16px]" />
+              <span>Add collection</span>
+            </button>
+          )}
+          <button
+            className="h-[36px] px-[16px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px] transition-colors"
+          >
+            <FileText className="size-[16px]" />
+            <span>View documents</span>
+          </button>
+          <button
+            className="h-[36px] px-[16px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px] transition-colors"
+          >
+            <TrendingUp className="size-[14px]" />
+            <span>See summary analytics</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ========================================
 // AI CHAT MODAL (Large Modal)
 // ========================================
@@ -1160,38 +1454,101 @@ function AIChatModal({
   initialQuestion, 
   onClose,
   contextType,
-  onCreateCollection
+  onCreateCollection,
+  initialSearchResults
 }: { 
   initialQuestion: string; 
   onClose: () => void;
   contextType: string;
-  onCreateCollection?: () => void;
+  onCreateCollection?: (name: string, description: string, rules: CollectionRule[]) => void;
+  initialSearchResults?: { query: string; documents: Document[] };
 }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: 'user',
-      content: initialQuestion
-    },
-    {
-      role: 'assistant',
-      content: 'Based on your documents in the Oak Street Renovation project, I found several relevant items. Here\'s what I discovered:',
-      resultBlocks: [
+  const formatDateRange = (min?: Date | null, max?: Date | null) => {
+    if (!min || !max) return null;
+    const fmt = (date: Date) => date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    return fmt(min) === fmt(max) ? fmt(min) : `${fmt(min)}–${fmt(max)}`;
+  };
+
+  const formatAmount = (amount: number, currency: string) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency
+    }).format(amount);
+  };
+
+  const summarizeDocuments = (docs: Document[]) => {
+    const metadata = calculateDocumentMetadata(docs);
+    const summary: string[] = [];
+    summary.push(`We found ${docs.length} invoice documents`);
+    if (metadata?.dateRange) {
+      summary.push(`Date range: ${formatDateRange(metadata.dateRange.min, metadata.dateRange.max)}`);
+    }
+    if (metadata?.topOrgs && metadata.topOrgs.length > 0) {
+      summary.push(`Top vendors/clients: ${metadata.topOrgs.join(', ')}`);
+    }
+    if (metadata?.totalAmount) {
+      summary.push(`Total amount: ${formatAmount(metadata.totalAmount, metadata.currency)}`);
+    }
+    if (metadata?.statusCounts) {
+      const parts: string[] = [];
+      if (metadata.statusCounts.completed) parts.push(`${metadata.statusCounts.completed} paid`);
+      if (metadata.statusCounts.pending) parts.push(`${metadata.statusCounts.pending} unpaid`);
+      if (metadata.statusCounts.other) parts.push(`${metadata.statusCounts.other} draft/other`);
+      if (parts.length > 0) summary.push(`Statuses: ${parts.join(', ')}`);
+    }
+    return summary;
+  };
+
+  // Фільтруємо лише інвойс-документи для стартового інсайту
+  const invoiceDocsForInitial = (initialSearchResults?.documents && initialSearchResults.documents.length > 0)
+    ? initialSearchResults.documents
+    : (mockDocuments || []).filter((doc) => {
+        const type = (doc.type || '').toLowerCase();
+        const category = (doc.category || '').toLowerCase();
+        return type.includes('invoice') || category.includes('invoice');
+      });
+  // Якщо є початкові результати пошуку, використовуємо їх
+  const initialMessages: ChatMessage[] = initialSearchResults && initialSearchResults.documents.length > 0
+    ? [
         {
-          type: 'summary',
-          data: [
-            'Found 5 lien waiver documents across active capital projects',
-            'All lien waivers are properly executed and filed',
-            'Documents show payments totaling $847,500 across three projects',
-            'Final waivers pending for Oak Street electrical work'
-          ]
+          role: 'user',
+          content: initialQuestion
         },
         {
-          type: 'document-cards',
-          data: mockDocuments.slice(5, 7)
+          role: 'assistant',
+          content: `I found ${initialSearchResults.documents.length} ${initialSearchResults.documents.length === 1 ? 'document' : 'documents'} matching your query. Here's what I discovered:`,
+          resultBlocks: [
+            {
+              type: 'ai-search-results',
+              data: {
+                query: initialSearchResults.query,
+                documents: initialSearchResults.documents
+              }
+            }
+          ]
         }
       ]
-    }
-  ]);
+    : [
+        {
+          role: 'user',
+          content: initialQuestion
+        },
+        {
+          role: 'assistant',
+          content: `Based on your documents in the Oak Street Renovation project, I found ${invoiceDocsForInitial.length} matching items. Here\'s what I discovered:`,
+          resultBlocks: [
+            {
+              type: 'ai-search-results',
+              data: {
+                query: initialQuestion,
+                documents: invoiceDocsForInitial
+              }
+            }
+          ]
+        }
+      ];
+  
+  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [followUpQuestion, setFollowUpQuestion] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -1291,6 +1648,13 @@ function AIChatModal({
                           {block.type === 'metadata' && <MetadataBlock metadata={block.data} />}
                           {block.type === 'search-results' && <SearchResultBlock results={block.data} />}
                           {block.type === 'summary' && <SummaryBlock insights={block.data} />}
+                          {block.type === 'ai-search-results' && (
+                            <AISearchResultsBlock 
+                              query={block.data.query} 
+                              documents={block.data.documents} 
+                              onCreateCollection={onCreateCollection}
+                            />
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1497,6 +1861,51 @@ function AISuggestionPreviewModal({
               </button>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Спрощений модальний компонент для деталей банерної пропозиції AI
+function AIBannerSuggestionDetailsModal({ 
+  suggestion, 
+  onClose,
+  onAddToCollection,
+  onCreateCollection
+}: { 
+  suggestion: any; 
+  onClose: () => void; 
+  onAddToCollection?: (collectionName: any, docs: any) => void;
+  onCreateCollection?: (collectionName: any, docs: any) => void;
+}) {
+  if (!suggestion) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white rounded-[12px] shadow-xl max-w-[520px] w-full mx-[24px] p-[24px]">
+        <div className="flex items-start justify-between gap-[12px] mb-[12px]">
+          <div>
+            <h3 className="text-[16px] font-semibold text-[#1c2024]">AI suggestion</h3>
+            <p className="text-[13px] text-[#60646c]">{suggestion?.title || 'Details'}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="size-[32px] rounded-[6px] flex items-center justify-center hover:bg-[#f9fafb] transition-colors"
+          >
+            <X className="size-[16px] text-[#60646c]" />
+          </button>
+        </div>
+        <div className="text-[13px] text-[#1c2024] whitespace-pre-wrap">
+          {suggestion?.description || 'No additional details available.'}
+        </div>
+        <div className="mt-[16px] flex justify-end">
+          <button
+            onClick={onClose}
+            className="h-[32px] px-[12px] bg-[#005be2] rounded-[6px] text-[12px] text-white hover:bg-[#004fc4] transition-colors"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>
@@ -1787,7 +2196,7 @@ const getContextSuggestions = (inputValue: string): ContextSuggestion[] => {
     },
     {
       id: '4',
-      text: 'Search invoices from last month',
+      text: 'all invoice documents',
       icon: 'search',
       context: 'Financial Documents'
     },
@@ -2092,6 +2501,10 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
   const [aiGeneratedRules, setAiGeneratedRules] = useState<CollectionRule[] | null>(null);
   const [aiGeneratedDocuments, setAiGeneratedDocuments] = useState<Document[]>([]);
   const [showAICollectionPreview, setShowAICollectionPreview] = useState(false);
+  
+  // Стан для AI пошуку з summary (результати передаються в модальне вікно)
+  const [aiSearchResults, setAiSearchResults] = useState<Document[]>([]);
+const [aiModalInitialSearchResults, setAiModalInitialSearchResults] = useState<{ query: string; documents: Document[] } | null>(null);
 
   // Закриваємо меню при кліку поза ним
   useEffect(() => {
@@ -2189,8 +2602,74 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
     return [rule];
   };
   
+  // Функція для пошуку документів за запитом (для AI пошуку)
+  const searchDocumentsByQuery = (query: string): Document[] => {
+    const lowerQuery = query.toLowerCase();
+    const allDocuments = documents || mockDocuments;
+    
+    // Перевірка на інвойси
+    const invoiceKeywords = ['invoice', 'інвойс', 'invoices', 'інвойси', 'bill', 'рахунок'];
+    const isInvoiceQuery = invoiceKeywords.some(keyword => lowerQuery.includes(keyword));
+    
+    // Перевірка на інші типи документів
+    const documentTypeKeywords = [
+      { keywords: ['contract', 'контракт'], type: 'contract' },
+      { keywords: ['permit', 'дозвіл'], type: 'permit' },
+      { keywords: ['waiver', 'звільнення', 'lien'], type: 'waiver' },
+      { keywords: ['change order'], type: 'change order' }
+    ];
+    
+    let filteredDocs: Document[] = [];
+    
+    if (isInvoiceQuery) {
+      // Шукаємо інвойси за типом або категорією
+      filteredDocs = allDocuments.filter(doc => {
+        const type = (doc.type || '').toLowerCase();
+        const category = (doc.category || '').toLowerCase();
+        const name = (doc.name || '').toLowerCase();
+        return type.includes('invoice') || 
+               type.includes('xlsx') || 
+               category.toLowerCase().includes('invoice') ||
+               category.toLowerCase().includes('financial') ||
+               name.includes('invoice');
+      });
+    } else {
+      // Шукаємо за типом документа
+      for (const { keywords, type } of documentTypeKeywords) {
+        if (keywords.some(keyword => lowerQuery.includes(keyword))) {
+          filteredDocs = allDocuments.filter(doc => {
+            const docType = (doc.type || '').toLowerCase();
+            const category = (doc.category || '').toLowerCase();
+            const name = (doc.name || '').toLowerCase();
+            return docType.includes(type) || 
+                   category.toLowerCase().includes(type) ||
+                   name.includes(type);
+          });
+          break;
+        }
+      }
+      
+      // Якщо не знайдено за типом, шукаємо за ключовими словами
+      if (filteredDocs.length === 0) {
+        filteredDocs = allDocuments.filter(doc => {
+          const searchableText = [
+            doc.name || '',
+            doc.category || '',
+            doc.type || '',
+            doc.description || ''
+          ].join(' ').toLowerCase();
+          return searchableText.includes(lowerQuery);
+        });
+      }
+    }
+    
+    return filteredDocs;
+  };
+  
   const handleSubmit = () => {
     if (question.trim()) {
+      const lowerQuery = question.toLowerCase();
+      
       // Перевіряємо чи це запит на створення колекції
       const parsed = parseCollectionRequest(question);
       
@@ -2204,6 +2683,24 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
         const filteredDocs = allDocuments.filter(doc => matchDocumentToRules(doc, rules));
         setAiGeneratedDocuments(filteredDocs);
         setShowAICollectionPreview(true);
+        setShowSuggestions(false);
+      } else if (
+        // Перевіряємо чи це запит про пошук документів (інвойси, контракти тощо)
+        lowerQuery.includes('find') || 
+        lowerQuery.includes('show') || 
+        lowerQuery.includes('знайди') ||
+        lowerQuery.includes('покажи') ||
+        lowerQuery.includes('invoice') ||
+        lowerQuery.includes('інвойс') ||
+        lowerQuery.includes('document') ||
+        lowerQuery.includes('документ')
+      ) {
+        // Шукаємо документи та відкриваємо AI модальне вікно з результатами
+        const foundDocs = searchDocumentsByQuery(question);
+        // Зберігаємо результати для передачі в модальне вікно (уникаємо втрати через async setState)
+        setAiSearchResults(foundDocs);
+        setAiModalInitialSearchResults({ query: question, documents: foundDocs });
+        setIsModalOpen(true);
         setShowSuggestions(false);
       } else {
         // Звичайний AI-запит - відкриваємо модальне вікно
@@ -2350,13 +2847,14 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
             <div className="max-w-[720px] w-full">
               <div className="grid grid-cols-2 gap-[12px]">
                 {suggestions.slice(0, 2).map((suggestion) => (
-                  <AISuggestionCard
-                    key={suggestion.id}
-                    suggestion={suggestion}
-                    onView={() => handleViewSuggestion(suggestion)}
-                    onAccept={() => handleAcceptSuggestion(suggestion.id)}
-                    onDismiss={() => handleDismissSuggestion(suggestion.id)}
-                  />
+                  <div key={suggestion.id}>
+                    <AISuggestionCard
+                      suggestion={suggestion}
+                      onView={() => handleViewSuggestion(suggestion)}
+                      onAccept={() => handleAcceptSuggestion(suggestion.id)}
+                      onDismiss={() => handleDismissSuggestion(suggestion.id)}
+                    />
+                  </div>
                 ))}
               </div>
             </div>
@@ -2368,9 +2866,22 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
       {isModalOpen && (
         <AIChatModal 
           initialQuestion={question} 
-          onClose={() => setIsModalOpen(false)}
+          onClose={() => {
+            setIsModalOpen(false);
+            setAiSearchResults([]);
+            setAiModalInitialSearchResults(null);
+            setQuestion('');
+          }}
           contextType="Oak Street Renovation"
-          onCreateCollection={onNewCollectionClick}
+          onCreateCollection={onCreateCollection ? (name, description, rules) => {
+            onCreateCollection(name, description, rules);
+            setIsModalOpen(false);
+            setAiSearchResults([]);
+            setAiModalInitialSearchResults(null);
+            setQuestion('');
+            toast.success(`Collection "${name}" created successfully!`);
+          } : undefined}
+          initialSearchResults={aiModalInitialSearchResults || (aiSearchResults.length > 0 ? { query: question, documents: aiSearchResults } : undefined)}
         />
       )}
       
@@ -2613,16 +3124,17 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
           <div className="grid gap-[16px] w-full px-[24px] pb-[80px]" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))' }}>
             {filteredCollections.length > 0 ? (
               filteredCollections.map((collection) => (
-                <CollectionCard
-                  key={collection.id}
-                  title={collection.title}
-                  icon={collection.icon}
-                  organization={collection.organization}
-                  onClick={() => onCollectionClick?.(collection)}
-                  collectionId={collection.id}
-                  sharedWith={collection.sharedWith}
-                  onDelete={onDeleteCollection}
-                />
+                <div key={collection.id}>
+                  <CollectionCard
+                    title={collection.title}
+                    icon={collection.icon}
+                    organization={collection.organization}
+                    onClick={() => onCollectionClick?.(collection)}
+                    collectionId={collection.id}
+                    sharedWith={collection.sharedWith}
+                    onDelete={onDeleteCollection}
+                  />
+                </div>
               ))
             ) : (
               <div className="text-center py-[48px]" style={{ gridColumn: '1 / -1' }}>
@@ -4390,6 +4902,24 @@ export default function App() {
       }
       return doc;
     }));
+
+    // Показуємо toast з успішним повідомленням
+    const collectionNames = collections
+      .filter(col => collectionIds.includes(col.id))
+      .map(col => col.title);
+    
+    const docCount = documentIds.length;
+    const collectionCount = collectionIds.length;
+    
+    if (collectionCount === 1) {
+      toast.success(
+        `${docCount} ${docCount === 1 ? 'document' : 'documents'} added to "${collectionNames[0]}"`
+      );
+    } else {
+      toast.success(
+        `${docCount} ${docCount === 1 ? 'document' : 'documents'} added to ${collectionCount} collections`
+      );
+    }
   };
 
   // Handler для відкриття Add to Collection modal

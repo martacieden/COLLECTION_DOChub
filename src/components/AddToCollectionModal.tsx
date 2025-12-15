@@ -64,6 +64,8 @@ export function AddToCollectionModal({
     const collectionIdsArray = Array.from(selectedCollectionIds) as string[];
     onAddToCollection(collectionIdsArray, selectedDocumentIds);
     
+    // Toast буде показано в handleAddToCollection в App.tsx
+    // Закриваємо модалку та очищаємо стан
     onClose();
     setSearchQuery('');
     setSelectedCollectionIds(new Set());
@@ -71,7 +73,7 @@ export function AddToCollectionModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-[24px]">
-      <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl w-[640px] max-h-[80vh]">
+      <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl w-[840px] max-h-[80vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-[24px] py-[20px] border-b border-[#e8e8ec]">
           <h2 className="text-[16px] font-semibold text-[#1c2024]">Add to Collection</h2>
