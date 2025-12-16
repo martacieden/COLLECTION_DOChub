@@ -35,7 +35,7 @@ type ViewMode = 'collections' | 'all-documents' | 'recent' | 'pinned' | 'collect
 
 interface CollectionRule {
   id: string;
-  type: 'document_type' | 'tags' | 'client' | 'keywords' | 'date_range' | 'vendor';
+  type: 'document_type' | 'tags' | 'client' | 'keywords' | 'date_range' | 'vendor' | 'file_type' | 'organization';
   label: string;
   value: string;
   operator: 'is' | 'contains' | 'equals' | 'not';
@@ -62,7 +62,7 @@ interface Document {
   id: string;
   name: string;
   description: string;
-  type: string;
+  type: string; // File format: PDF, DOCX, XLSX
   attachedTo: string[];
   shared: string[];
   icon: string;
@@ -70,11 +70,14 @@ interface Document {
   uploadedBy?: string;
   uploadedOn?: string;
   organization?: string;
+  organizationId?: string; // ID організації для точного матчингу
   collectionIds?: string[]; // IDs колекцій, до яких належить документ
   tags?: string[];
   signatureStatus?: string;
   category?: string;
   vendor?: string; // Назва постачальника/вендора
+  invoiceDate?: string; // Дата інвойсу (опціонально)
+  amount?: number; // Сума інвойсу (опціонально)
 }
 
 interface ContextSuggestion {
@@ -2244,7 +2247,7 @@ const userSets = [
   [{ initials: 'DD', color: 'bg-[#7e22ce]' }, { initials: 'EE', color: 'bg-[#e11d48]' }, { initials: 'FF', color: 'bg-[#0284c7]' }],
 ];
 
-function CollectionCard({ title, organization, onClick, collectionId, sharedWith, icon, onDelete }: { title: string; organization?: string; onClick?: () => void; collectionId?: string; sharedWith?: string[]; icon?: string; onDelete?: (collectionId: string) => void }) {
+function CollectionCard({ title, organization, onClick, collectionId, sharedWith, icon, onDelete, autoSync }: { title: string; organization?: string; onClick?: () => void; collectionId?: string; sharedWith?: string[]; icon?: string; onDelete?: (collectionId: string) => void; autoSync?: boolean }) {
   // Use icon prop if provided, take only first emoji character
   // Match emoji including complex emojis (with modifiers, skin tones, etc.)
   const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E0}-\u{1F1FF}]/u;
@@ -2423,7 +2426,14 @@ function CollectionCard({ title, organization, onClick, collectionId, sharedWith
               </svg>
             )}
           </div>
-          <p className="text-[14px] font-semibold text-[#1c2024] tracking-[-0.0056px]">{displayTitle}</p>
+          <div className="flex items-center gap-[6px]">
+            <p className="text-[14px] font-semibold text-[#1c2024] tracking-[-0.0056px]">{displayTitle}</p>
+            {autoSync && (
+              <span className="px-[6px] py-[2px] bg-[#f5f3ff] text-[#7c3aed] rounded-[4px] text-[10px] font-medium">
+                Smart
+              </span>
+            )}
+          </div>
         </div>
       </div>
       
@@ -3112,6 +3122,7 @@ const [aiModalInitialSearchResults, setAiModalInitialSearchResults] = useState<{
                     collectionId={collection.id}
                     sharedWith={collection.sharedWith}
                     onDelete={onDeleteCollection}
+                    autoSync={collection.autoSync}
                   />
                 </div>
               ))
@@ -4044,14 +4055,14 @@ function matchDocumentToRules(document: Document, rules: CollectionRule[]): bool
         
       case 'client':
         const clientName = rule.value.toLowerCase();
-        const orgMatch = document.organization?.toLowerCase().includes(clientName);
+        const orgMatchClient = document.organization?.toLowerCase().includes(clientName);
         const nameMatch = document.name.toLowerCase().includes(clientName);
         const descMatch = document.description?.toLowerCase().includes(clientName);
         if (rule.operator === 'is' || rule.operator === 'equals') {
-          return orgMatch || nameMatch || descMatch;
+          return orgMatchClient || nameMatch || descMatch;
         }
         if (rule.operator === 'contains') {
-          return orgMatch || nameMatch || descMatch;
+          return orgMatchClient || nameMatch || descMatch;
         }
         return false;
         
@@ -4082,6 +4093,39 @@ function matchDocumentToRules(document: Document, rules: CollectionRule[]): bool
         }
         if (rule.operator === 'not') {
           return !vendorMatch && orgToCheck !== vendorName;
+        }
+        return false;
+        
+      case 'file_type':
+        // Перевірка формату файлу (PDF, DOCX, XLSX тощо)
+        const fileType = rule.value.toUpperCase();
+        const docFileType = document.type.toUpperCase();
+        if (rule.operator === 'is' || rule.operator === 'equals') {
+          return docFileType === fileType;
+        }
+        if (rule.operator === 'contains') {
+          return docFileType.includes(fileType) || fileType.includes(docFileType);
+        }
+        if (rule.operator === 'not') {
+          return docFileType !== fileType;
+        }
+        return false;
+        
+      case 'organization':
+        // Перевірка організації (точний матч по organization або organizationId)
+        const orgValueForRule = rule.value.toLowerCase();
+        const docOrgForRule = (document.organization || '').toLowerCase();
+        const docOrgIdForRule = (document.organizationId || '').toLowerCase();
+        const orgMatchForRule = docOrgForRule.includes(orgValueForRule) || docOrgIdForRule === orgValueForRule;
+        
+        if (rule.operator === 'is' || rule.operator === 'equals') {
+          return docOrgForRule === orgValueForRule || docOrgIdForRule === orgValueForRule;
+        }
+        if (rule.operator === 'contains') {
+          return orgMatchForRule;
+        }
+        if (rule.operator === 'not') {
+          return !orgMatchForRule;
         }
         return false;
         
@@ -4248,6 +4292,21 @@ export default function App() {
     }
   };
 
+  // Автоматичне оновлення rule-based колекцій при зміні документів
+  // Використовуємо useRef для відстеження попередньої кількості документів
+  const prevDocumentsLengthRef = useRef(documents.length);
+  useEffect(() => {
+    // Оновлюємо тільки якщо кількість документів змінилася
+    if (documents.length !== prevDocumentsLengthRef.current && documents.length > 0 && collections.length > 0) {
+      prevDocumentsLengthRef.current = documents.length;
+      // Оновлюємо всі колекції з autoSync
+      const collectionsWithAutoSync = collections.filter(col => col.autoSync && col.rules && col.rules.length > 0);
+      if (collectionsWithAutoSync.length > 0) {
+        updateAllRuleBasedCollections(documents);
+      }
+    }
+  }, [documents.length, collections.length]);
+
   const handleShowAIFilter = () => {
     setIsFojoChatOpen(true);
   };
@@ -4413,7 +4472,14 @@ export default function App() {
     });
     
     console.log('[handleUploadComplete] Adding documents with organization:', organization);
-    setDocuments(prev => [...documentsToAdd, ...prev]);
+    setDocuments(prev => {
+      const updated = [...documentsToAdd, ...prev];
+      // Автоматично оновлюємо всі rule-based колекції після додавання нових документів
+      setTimeout(() => {
+        updateAllRuleBasedCollections(updated);
+      }, 0);
+      return updated;
+    });
     
     // Store uploaded documents for AI banner
     const uploadedDocsForBanner: UploadedDocument[] = files.map((fileInfo, index) => ({
@@ -4445,6 +4511,72 @@ export default function App() {
     setIsNewCollectionModalOpen(true);
   };
 
+  // Функція для автоматичного оновлення всіх rule-based колекцій
+  const updateAllRuleBasedCollections = (allDocuments: Document[]) => {
+    setCollections(prev => {
+      const updated = prev.map(collection => {
+        if (!collection.autoSync || !collection.rules || collection.rules.length === 0) {
+          return collection;
+        }
+        
+        // Фільтруємо тільки увімкнені правила
+        const validRules = collection.rules.filter(rule => rule.enabled && rule.value && rule.value.trim() !== '');
+        if (validRules.length === 0) {
+          return { ...collection, documentIds: [], count: 0 };
+        }
+        
+        // Знаходимо всі документи, які відповідають правилам
+        const matchingDocuments = allDocuments.filter(doc => 
+          matchDocumentToRules(doc, validRules)
+        );
+        
+        const matchingDocIds = matchingDocuments.map(doc => doc.id || '').filter(id => id !== '');
+        
+        return {
+          ...collection,
+          documentIds: matchingDocIds,
+          count: matchingDocIds.length
+        };
+      });
+      
+      // Зберігаємо оновлені колекції
+      saveCollectionsToStorage(updated);
+      
+      // Оновлюємо collectionIds в документах для всіх rule-based колекцій
+      setDocuments(prevDocs => {
+        return prevDocs.map(doc => {
+          const newCollectionIds: string[] = [];
+          
+          // Перевіряємо, до яких rule-based колекцій належить документ
+          updated.forEach(collection => {
+            if (collection.autoSync && collection.documentIds?.includes(doc.id || '')) {
+              newCollectionIds.push(collection.id);
+            }
+          });
+          
+          // Зберігаємо також колекції, до яких документ був доданий вручну (не rule-based)
+          const manualCollections = prevDocs.find(d => d.id === doc.id)?.collectionIds || [];
+          manualCollections.forEach(colId => {
+            const collection = updated.find(c => c.id === colId);
+            if (collection && (!collection.autoSync || !collection.documentIds?.includes(doc.id || ''))) {
+              // Якщо колекція не rule-based або документ не в списку rule-based, зберігаємо
+              if (!newCollectionIds.includes(colId)) {
+                newCollectionIds.push(colId);
+              }
+            }
+          });
+          
+          return {
+            ...doc,
+            collectionIds: newCollectionIds
+          };
+        });
+      });
+      
+      return updated;
+    });
+  };
+
   const handleCreateCollection = (name: string, description: string, rules: CollectionRule[]) => {
     // Створюємо нову колекцію
     const newCollection: Collection = {
@@ -4460,7 +4592,7 @@ export default function App() {
         ? organizations.find(o => o.id === selectedOrganization)?.name 
         : undefined,
       rules: rules,
-      autoSync: true,
+      autoSync: true, // За замовчуванням увімкнено autoSync для rule-based колекцій
       documentIds: []
     };
     
@@ -4475,7 +4607,7 @@ export default function App() {
       const validRules = rules.filter(rule => rule.enabled && rule.value && rule.value.trim() !== '');
       
       if (validRules.length > 0) {
-        // Знаходимо документи, які відповідають правилам
+        // Знаходимо всі існуючі документи, які відповідають правилам
         matchingDocuments = documents.filter(doc => 
           matchDocumentToRules(doc, validRules)
         );
@@ -4721,17 +4853,35 @@ export default function App() {
     
     // Оновлюємо колекцію з новими правилами, описом та документами
     setCollections(prev => {
-      const updated = prev.map(col => 
-        col.id === selectedCollection.id 
-          ? { 
-              ...col, 
-              rules: rules,
-              description: description || col.description,
-              documentIds: matchingDocumentIds,
-              count: matchingDocumentIds.length
+      const updated = prev.map(col => {
+        if (col.id === selectedCollection.id) {
+          // Якщо колекція має autoSync, автоматично знаходимо всі відповідні документи
+          if (col.autoSync && rules && rules.length > 0) {
+            const validRules = rules.filter(rule => rule.enabled && rule.value && rule.value.trim() !== '');
+            if (validRules.length > 0) {
+              const allMatchingDocs = documents.filter(doc => 
+                matchDocumentToRules(doc, validRules)
+              );
+              const allMatchingIds = allMatchingDocs.map(doc => doc.id || '').filter(id => id !== '');
+              return {
+                ...col,
+                rules: rules,
+                description: description || col.description,
+                documentIds: allMatchingIds,
+                count: allMatchingIds.length
+              };
             }
-          : col
-      );
+          }
+          return {
+            ...col,
+            rules: rules,
+            description: description || col.description,
+            documentIds: matchingDocumentIds,
+            count: matchingDocumentIds.length
+          };
+        }
+        return col;
+      });
       saveCollectionsToStorage(updated);
       return updated;
     });
@@ -4796,22 +4946,45 @@ export default function App() {
 
   // Видалення документів з колекції (залишаємо їх в All Documents)
   const handleRemoveFromCollection = (collectionId: string, documentIds: string[]) => {
+    // Перевіряємо, чи це rule-based колекція
+    const collection = collections.find(col => col.id === collectionId);
+    if (collection && collection.autoSync && collection.rules && collection.rules.length > 0) {
+      // Для rule-based колекцій попереджаємо користувача
+      toast.warning(
+        `This is a smart collection. Documents will be automatically re-added if they match the rules.`,
+        { duration: 4000 }
+      );
+    }
+    
     // Оновлюємо документи - видаляємо collectionId з collectionIds
-    setDocuments(prev => prev.map(doc => {
-      if (documentIds.includes(doc.id || '')) {
-        const updatedCollectionIds = (doc.collectionIds || []).filter(id => id !== collectionId);
-        return {
-          ...doc,
-          collectionIds: updatedCollectionIds
-        };
+    setDocuments(prev => {
+      const updated = prev.map(doc => {
+        if (documentIds.includes(doc.id || '')) {
+          const updatedCollectionIds = (doc.collectionIds || []).filter(id => id !== collectionId);
+          return {
+            ...doc,
+            collectionIds: updatedCollectionIds
+          };
+        }
+        return doc;
+      });
+      
+      // Якщо це rule-based колекція, автоматично оновлюємо всі колекції
+      if (collection && collection.autoSync) {
+        setTimeout(() => {
+          updateAllRuleBasedCollections(updated);
+        }, 100);
       }
-      return doc;
-    }));
+      
+      return updated;
+    });
 
     // Оновлюємо колекції - видаляємо documentIds та зберігаємо
+    // Для rule-based колекцій це тимчасово, оскільки вони будуть оновлені автоматично
     setCollections(prev => {
       const updated = prev.map(col => {
-        if (col.id === collectionId) {
+        if (col.id === collectionId && (!col.autoSync || !col.rules)) {
+          // Оновлюємо тільки не rule-based колекції
           const updatedDocumentIds = (col.documentIds || []).filter(id => !documentIds.includes(id));
           return {
             ...col,
@@ -4873,6 +5046,21 @@ export default function App() {
 
   // Додавання документів до колекції
   const handleAddToCollection = (collectionIds: string[], documentIds: string[]) => {
+    // Перевіряємо, чи є rule-based колекції серед вибраних
+    const ruleBasedCollections = collections.filter(col => 
+      collectionIds.includes(col.id) && col.autoSync && col.rules && col.rules.length > 0
+    );
+    
+    if (ruleBasedCollections.length > 0) {
+      // Попереджаємо користувача про rule-based колекції
+      const collectionNames = ruleBasedCollections.map(col => col.title).join(', ');
+      toast.warning(
+        `${collectionNames} ${ruleBasedCollections.length === 1 ? 'is' : 'are'} smart collection${ruleBasedCollections.length > 1 ? 's' : ''}. Documents are automatically added based on rules. Manual addition is not recommended.`,
+        { duration: 5000 }
+      );
+      // Продовжуємо, але документи будуть автоматично оновлені на основі правил
+    }
+    
     // Оновлюємо колекції - додаємо documentIds до кожної вибраної колекції
     setCollections(prev => {
       const updated = prev.map(col => {
@@ -4902,16 +5090,27 @@ export default function App() {
     });
 
     // Оновлюємо документи - додаємо всі collectionIds
-    setDocuments(prev => prev.map(doc => {
-      if (documentIds.includes(doc.id || '')) {
-        const updatedCollectionIds = [...new Set([...(doc.collectionIds || []), ...collectionIds])];
-        return {
-          ...doc,
-          collectionIds: updatedCollectionIds
-        };
+    setDocuments(prev => {
+      const updated = prev.map(doc => {
+        if (documentIds.includes(doc.id || '')) {
+          const updatedCollectionIds = [...new Set([...(doc.collectionIds || []), ...collectionIds])];
+          return {
+            ...doc,
+            collectionIds: updatedCollectionIds
+          };
+        }
+        return doc;
+      });
+      
+      // Якщо є rule-based колекції, автоматично оновлюємо всі колекції
+      if (ruleBasedCollections.length > 0) {
+        setTimeout(() => {
+          updateAllRuleBasedCollections(updated);
+        }, 100);
       }
-      return doc;
-    }));
+      
+      return updated;
+    });
 
     // Показуємо toast з успішним повідомленням
     const collectionNames = collections
