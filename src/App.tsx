@@ -5100,6 +5100,7 @@ export default function App() {
         }}
         onCreateCollection={handleCreateCollection}
         selectedDocuments={selectedDocumentsForNewCollection}
+        allDocuments={documents}
         onOpenRulesEditor={handleOpenRulesEditorForNewCollection}
       />
       <AddToCollectionModal

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Sparkles, Check, Loader2, Tag, FileText, Calendar, User, Building, ChevronRight, Search, ChevronDown, Plus, Trash2 } from 'lucide-react';
+import { X, Sparkles, Loader2, ChevronDown, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { generateCollectionRules, type CollectionRule } from '../services/aiRulesGenerator';
 
 interface Document {
   id: string;
@@ -10,44 +11,138 @@ interface Document {
   tags?: string[];
   organization?: string;
   uploadedOn?: string;
+  description?: string;
+  attachedTo?: string[];
 }
 
 interface NewCollectionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreateCollection: (name: string, description: string, rules: CollectionRule[]) => void;
-  selectedDocuments?: Document[]; // Документи для створення колекції
-  onOpenRulesEditor?: (rules: CollectionRule[], collectionName: string, description: string) => void; // Callback для відкриття RulesEditorModal
+  selectedDocuments?: Document[]; // Documents for creating collection
+  allDocuments?: Document[]; // All documents in the system for matching
+  onOpenRulesEditor?: (rules: CollectionRule[], collectionName: string, description: string) => void;
 }
 
-interface CollectionRule {
-  id: string;
-  type: 'document_type' | 'tags' | 'client' | 'keywords' | 'date_range' | 'vendor';
-  label: string;
-  value: string;
-  operator: 'is' | 'contains' | 'equals' | 'not';
-  enabled: boolean;
+// Function to check if a document matches the rules
+// This mirrors the logic in App.tsx matchDocumentToRules
+function matchDocumentToRules(document: Document, rules: CollectionRule[]): boolean {
+  if (!rules || rules.length === 0) return false;
+  
+  const enabledRules = rules.filter(rule => rule.enabled && rule.value?.trim());
+  if (enabledRules.length === 0) return false;
+  
+  // All enabled rules must match (AND logic)
+  return enabledRules.every(rule => {
+    const ruleValue = rule.value.toLowerCase();
+    
+    switch (rule.type) {
+      case 'document_type': {
+        // Matches: name, description, tags, category, attachedTo
+        const docName = (document.name || '').toLowerCase();
+        const docDesc = (document.description || '').toLowerCase();
+        const docTags = (document.tags || []).map(t => t.toLowerCase());
+        const docCategory = (document.category || '').toLowerCase();
+        const docAttachedTo = (document.attachedTo || []).map(a => a.toLowerCase());
+        
+        const matchesInName = docName.includes(ruleValue);
+        const matchesInDesc = docDesc.includes(ruleValue);
+        const matchesInTags = docTags.some(tag => tag.includes(ruleValue));
+        const matchesInCategory = docCategory.includes(ruleValue);
+        const matchesInAttachedTo = docAttachedTo.some(att => att.includes(ruleValue));
+        
+        if (rule.operator === 'is' || rule.operator === 'equals' || rule.operator === 'contains') {
+          return matchesInName || matchesInDesc || matchesInTags || matchesInCategory || matchesInAttachedTo;
+        }
+        if (rule.operator === 'not') {
+          return !matchesInName && !matchesInDesc && !matchesInTags && !matchesInCategory && !matchesInAttachedTo;
+        }
+        return false;
+      }
+        
+      case 'tags': {
+        // Matches: tags array, also name and description
+        const docTags = (document.tags || []).map(t => t.toLowerCase());
+        const ruleTags = ruleValue.split(',').map(t => t.trim());
+        
+        if (rule.operator === 'contains') {
+          return ruleTags.some(tag => 
+            docTags.some(docTag => docTag.includes(tag)) ||
+            (document.name || '').toLowerCase().includes(tag) ||
+            (document.description || '').toLowerCase().includes(tag)
+          );
+        }
+        if (rule.operator === 'is' || rule.operator === 'equals') {
+          return ruleTags.some(tag => docTags.some(docTag => docTag === tag));
+        }
+        return false;
+      }
+        
+      case 'keywords': {
+        // Matches: name + description
+        const searchText = `${document.name || ''} ${document.description || ''}`.toLowerCase();
+        if (rule.operator === 'contains') {
+          return searchText.includes(ruleValue);
+        }
+        if (rule.operator === 'is' || rule.operator === 'equals') {
+          return searchText === ruleValue || (document.name || '').toLowerCase() === ruleValue;
+        }
+        if (rule.operator === 'not') {
+          return !searchText.includes(ruleValue);
+        }
+        return false;
+      }
+        
+      case 'client': {
+        // Matches: organization, name, description
+        const orgMatch = (document.organization || '').toLowerCase().includes(ruleValue);
+        const nameMatch = (document.name || '').toLowerCase().includes(ruleValue);
+        const descMatch = (document.description || '').toLowerCase().includes(ruleValue);
+        
+        if (rule.operator === 'is' || rule.operator === 'equals' || rule.operator === 'contains') {
+          return orgMatch || nameMatch || descMatch;
+        }
+        return false;
+      }
+        
+      case 'vendor': {
+        // Matches: organization, name, description, uploadedBy
+        const docOrg = (document.organization || '').toLowerCase();
+        const vendorMatch = docOrg.includes(ruleValue) ||
+                          (document.name || '').toLowerCase().includes(ruleValue) ||
+                          (document.description || '').toLowerCase().includes(ruleValue);
+        
+        if (rule.operator === 'is' || rule.operator === 'equals') {
+          return docOrg === ruleValue || vendorMatch;
+        }
+        if (rule.operator === 'contains') {
+          return vendorMatch;
+        }
+        if (rule.operator === 'not') {
+          return !vendorMatch && docOrg !== ruleValue;
+        }
+        return false;
+      }
+        
+      case 'date_range': {
+        // Matches: uploadedOn
+        const docDate = document.uploadedOn || '';
+        if (rule.operator === 'is' || rule.operator === 'equals' || rule.operator === 'contains') {
+          return docDate.toLowerCase().includes(ruleValue);
+        }
+        return false;
+      }
+        
+      default:
+        return false;
+    }
+  });
 }
 
-const ruleTypeIcons = {
-  document_type: FileText,
-  tags: Tag,
-  client: Building,
-  keywords: Search,
-  date_range: Calendar,
-  vendor: User,
-};
+// Re-export CollectionRule type for use in other components
+export type { CollectionRule };
 
-const ruleTypeColors = {
-  document_type: 'bg-[#EBF3FF] text-[#1150B9]',
-  tags: 'bg-[#FEF0E6] text-[#D24726]',
-  client: 'bg-[#E6F6EB] text-[#218358]',
-  keywords: 'bg-[#FEE7E9] text-[#CE2C31]',
-  date_range: 'bg-[#F3E8FF] text-[#7C3AED]',
-  vendor: 'bg-[#FEF8E6] text-[#D97706]',
-};
-
-export function NewCollectionModal({ isOpen, onClose, onCreateCollection, selectedDocuments = [], onOpenRulesEditor }: NewCollectionModalProps) {
+export function NewCollectionModal({ isOpen, onClose, onCreateCollection, selectedDocuments = [], allDocuments = [], onOpenRulesEditor }: NewCollectionModalProps) {
   const [collectionName, setCollectionName] = useState('');
   const [description, setDescription] = useState('');
   const [generatedRules, setGeneratedRules] = useState<CollectionRule[]>([]);
@@ -56,92 +151,27 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
   const [isRulesExpanded, setIsRulesExpanded] = useState(false);
   const [matchedDocCount, setMatchedDocCount] = useState(0);
   const [nameError, setNameError] = useState('');
+  const [aiReasoning, setAiReasoning] = useState<string | undefined>();
 
-  // Генеруємо AI suggestions на основі вибраних документів
-  const generateSuggestionsFromDocuments = (docs: Document[]): CollectionRule[] => {
-    if (docs.length === 0) return [];
-
-    const rules: CollectionRule[] = [];
+  // Extract context from selected documents to help AI
+  const getDocumentContext = () => {
+    if (selectedDocuments.length === 0) return {};
     
-    // Аналізуємо типи документів
-    const docTypes = [...new Set(docs.map(d => d.type).filter(Boolean))];
-    if (docTypes.length > 0 && docTypes.length <= 3) {
-      docTypes.forEach(type => {
-        rules.push({
-          id: `rule-type-${type}`,
-          type: 'document_type',
-          label: 'Document Type',
-          value: type || '',
-          operator: 'is',
-          enabled: true
-        });
-      });
-    }
-
-    // Аналізуємо категорії
-    const categories = [...new Set(docs.map(d => d.category).filter(Boolean))];
-    if (categories.length > 0 && categories.length <= 2) {
-      categories.forEach(cat => {
-        rules.push({
-          id: `rule-category-${cat}`,
-          type: 'keywords',
-          label: 'Category',
-          value: cat || '',
-          operator: 'contains',
-          enabled: true
-        });
-      });
-    }
-
-    // Аналізуємо теги
-    const allTags = docs.flatMap(d => d.tags || []);
-    const tagCounts: Record<string, number> = {};
-    allTags.forEach(tag => {
-      tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-    });
-    const commonTags = Object.entries(tagCounts)
-      .filter(([_, count]) => count >= Math.ceil(docs.length / 2))
-      .map(([tag]) => tag)
-      .slice(0, 3);
+    const docTypes = [...new Set(selectedDocuments.map(d => d.type).filter(Boolean))] as string[];
+    const tags = [...new Set(selectedDocuments.flatMap(d => d.tags || []))];
+    const organizations = [...new Set(selectedDocuments.map(d => d.organization).filter(Boolean))] as string[];
     
-    if (commonTags.length > 0) {
-      rules.push({
-        id: 'rule-tags',
-        type: 'tags',
-        label: 'Tags',
-        value: commonTags.join(', '),
-        operator: 'contains',
-        enabled: true
-      });
-    }
-
-    // Аналізуємо організації
-    const organizations = [...new Set(docs.map(d => d.organization).filter(Boolean))];
-    if (organizations.length === 1) {
-      rules.push({
-        id: 'rule-org',
-        type: 'client',
-        label: 'Organization',
-        value: organizations[0] || '',
-        operator: 'is',
-        enabled: true
-      });
-    }
-
-    return rules;
+    return {
+      existingDocumentTypes: docTypes.length > 0 ? docTypes : undefined,
+      existingTags: tags.length > 0 ? tags : undefined,
+      existingClients: organizations.length > 0 ? organizations : undefined,
+    };
   };
 
-  // При відкритті modal з вибраними документами, автоматично генеруємо suggestions
+  // Auto-generate name and description when documents are selected
   useEffect(() => {
-    if (isOpen && selectedDocuments.length > 0 && generatedRules.length === 0) {
-      const suggestions = generateSuggestionsFromDocuments(selectedDocuments);
-      if (suggestions.length > 0) {
-        setGeneratedRules(suggestions);
-        setShowRulesBlock(true);
-        setMatchedDocCount(selectedDocuments.length);
-      }
-      
-      // Генеруємо автоматичну назву та опис
+    if (isOpen && selectedDocuments.length > 0) {
+      // Generate automatic name and description based on selected documents
       if (!collectionName) {
         const docTypes = [...new Set(selectedDocuments.map(d => d.type).filter(Boolean))];
         const categories = [...new Set(selectedDocuments.map(d => d.category).filter(Boolean))];
@@ -162,6 +192,15 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, selectedDocuments.length]);
 
+  // Recalculate matched count whenever rules change
+  useEffect(() => {
+    if (generatedRules.length > 0 && allDocuments.length > 0) {
+      const count = allDocuments.filter(doc => matchDocumentToRules(doc, generatedRules)).length;
+      setMatchedDocCount(count);
+      console.log('[NewCollectionModal] Recalculated matched docs:', count);
+    }
+  }, [generatedRules, allDocuments]);
+
   if (!isOpen) return null;
 
   const handleGenerateRules = async () => {
@@ -171,206 +210,45 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
     }
 
     setIsGenerating(true);
+    setAiReasoning(undefined);
 
-    // Simulate AI processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    console.log('[NewCollectionModal] Starting AI rule generation');
+    console.log('[NewCollectionModal] Description:', description);
 
-    // Check if description contains "test" for testing flow
-    const descLower = description.toLowerCase();
-    
-    // Test mode: show real rules for testing
-    if (descLower.includes('test')) {
-      const testRules: CollectionRule[] = [
-        {
-          id: 'test-1',
-          type: 'document_type',
-          label: 'Document type',
-          value: 'Invoice',
-          operator: 'is',
-          enabled: true,
-        },
-        {
-          id: 'test-2',
-          type: 'tags',
-          label: 'Tags',
-          value: 'Property, Real Estate',
-          operator: 'contains',
-          enabled: true,
-        },
-        {
-          id: 'test-3',
-          type: 'client',
-          label: 'Client',
-          value: 'Smith Family Office',
-          operator: 'is',
-          enabled: true,
-        },
-        {
-          id: 'test-4',
-          type: 'date_range',
-          label: 'Date range',
-          value: '2024',
-          operator: 'is',
-          enabled: true,
-        },
-        {
-          id: 'test-5',
-          type: 'keywords',
-          label: 'Contains keywords',
-          value: '"renovation", "permit", "contract"',
-          operator: 'contains',
-          enabled: true,
-        },
-        {
-          id: 'test-6',
-          type: 'vendor',
-          label: 'Vendor',
-          value: 'ABC Construction',
-          operator: 'is',
-          enabled: false,
-        },
-      ];
+    try {
+      const context = getDocumentContext();
+      console.log('[NewCollectionModal] Document context:', context);
 
-      setGeneratedRules(testRules);
-      setIsGenerating(false);
-      setMatchedDocCount(42); // Realistic test count
+      const result = await generateCollectionRules({
+        description: description.trim(),
+        ...context,
+      });
+
+      console.log('[NewCollectionModal] AI generation successful');
+      console.log('[NewCollectionModal] Generated rules:', result.rules);
+
+      setGeneratedRules(result.rules);
+      
+      // Calculate REAL matched document count
+      const realMatchedCount = allDocuments.filter(doc => 
+        matchDocumentToRules(doc, result.rules)
+      ).length;
+      console.log('[NewCollectionModal] Real matched documents:', realMatchedCount, 'out of', allDocuments.length);
+      
+      setMatchedDocCount(realMatchedCount);
+      setAiReasoning(result.reasoning);
       setShowRulesBlock(true);
-      setIsRulesExpanded(true); // Auto-expand for testing
-      toast.success('Test rules loaded successfully');
-      return;
-    }
+      setIsRulesExpanded(true);
 
-    // Generate smart rules based on description
-    const rules: CollectionRule[] = [];
-
-    // Document type detection - покращена логіка для Invoice
-    if (descLower.includes('invoice') || descLower.includes('invoices')) {
-      rules.push({
-        id: '1',
-        type: 'document_type',
-        label: 'Document type',
-        value: 'Invoice',
-        operator: 'is',
-        enabled: true,
-      });
+      toast.success(`AI generated ${result.rules.length} rules`);
+    } catch (error) {
+      console.error('[NewCollectionModal] AI generation error:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(`Failed to generate rules: ${errorMessage}`);
+    } finally {
+      setIsGenerating(false);
     }
-    if (descLower.includes('contract') || descLower.includes('agreement')) {
-      rules.push({
-        id: '2',
-        type: 'document_type',
-        label: 'Document type',
-        value: 'Contract',
-        operator: 'is',
-        enabled: true,
-      });
-    }
-    if (descLower.includes('tax') || descLower.includes('filing')) {
-      rules.push({
-        id: '3',
-        type: 'document_type',
-        label: 'Document type',
-        value: 'Tax Document',
-        operator: 'is',
-        enabled: true,
-      });
-    }
-
-    // Tags detection
-    if (descLower.includes('household') || descLower.includes('vendor')) {
-      rules.push({
-        id: '4',
-        type: 'tags',
-        label: 'Tags',
-        value: 'Household, Payments',
-        operator: 'contains',
-        enabled: true,
-      });
-    }
-    if (descLower.includes('property') || descLower.includes('real estate')) {
-      rules.push({
-        id: '5',
-        type: 'tags',
-        label: 'Tags',
-        value: 'Property, Real Estate',
-        operator: 'contains',
-        enabled: true,
-      });
-    }
-
-    // Client detection
-    if (descLower.includes('client') || descLower.includes('family')) {
-      const clientMatch = description.match(/(?:client|family)\s+(\w+)/i);
-      if (clientMatch) {
-        rules.push({
-          id: '6',
-          type: 'client',
-          label: 'Client',
-          value: clientMatch[1],
-          operator: 'is',
-          enabled: true,
-        });
-      }
-    }
-
-    // Date range detection
-    const yearMatch = description.match(/20\d{2}/);
-    if (yearMatch) {
-      rules.push({
-        id: '7',
-        type: 'date_range',
-        label: 'Date range',
-        value: `${yearMatch[0]}`,
-        operator: 'is',
-        enabled: true,
-      });
-    }
-
-    // Keywords detection
-    const keywords: string[] = [];
-    if (descLower.includes('tax')) keywords.push('tax');
-    if (descLower.includes('filing')) keywords.push('filing');
-    if (descLower.includes('irs')) keywords.push('IRS');
-    if (descLower.includes('permit')) keywords.push('permit');
-    if (descLower.includes('renovation')) keywords.push('renovation');
-    
-    if (keywords.length > 0) {
-      rules.push({
-        id: '8',
-        type: 'keywords',
-        label: 'Contains keywords',
-        value: keywords.map(k => `"${k}"`).join(', '),
-        operator: 'contains',
-        enabled: true,
-      });
-    }
-
-    // Vendor detection
-    if (descLower.includes('vendor') && !descLower.includes('all')) {
-      const vendorMatch = description.match(/vendor[s]?\s+(\w+)/i);
-      if (vendorMatch) {
-        rules.push({
-          id: '9',
-          type: 'vendor',
-          label: 'Vendor',
-          value: vendorMatch[1],
-          operator: 'is',
-          enabled: true,
-        });
-      }
-    }
-
-    setGeneratedRules(rules);
-    setIsGenerating(false);
-
-    // Simulate matched document count
-    const enabledCount = rules.filter(r => r.enabled).length;
-    setMatchedDocCount(Math.floor(Math.random() * 50) + enabledCount * 10);
-    
-    // Show the mini-block with collapsed rules
-    setShowRulesBlock(true);
-    setIsRulesExpanded(false);
-
-    toast.success('AI rules generated successfully');
   };
 
   const toggleRule = (ruleId: string) => {
@@ -379,19 +257,10 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
         rule.id === ruleId ? { ...rule, enabled: !rule.enabled } : rule
       )
     );
-
-    // Recalculate matched docs
-    const enabledCount = generatedRules.filter(r => r.enabled && r.id !== ruleId).length + 
-                         (generatedRules.find(r => r.id === ruleId)?.enabled ? 0 : 1);
-    setMatchedDocCount(Math.floor(Math.random() * 50) + enabledCount * 10);
   };
 
   const removeRule = (ruleId: string) => {
     setGeneratedRules(prev => prev.filter(rule => rule.id !== ruleId));
-    
-    // Recalculate matched docs
-    const enabledCount = generatedRules.filter(r => r.enabled && r.id !== ruleId).length;
-    setMatchedDocCount(Math.floor(Math.random() * 50) + enabledCount * 10);
   };
 
   const updateRuleValue = (ruleId: string, newValue: string) => {
@@ -418,6 +287,18 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
     );
   };
 
+  const addNewRule = () => {
+    const newRule: CollectionRule = {
+      id: `rule-${Date.now()}`,
+      type: 'keywords',
+      label: 'Contains keywords',
+      value: '',
+      operator: 'contains',
+      enabled: true,
+    };
+    setGeneratedRules(prev => [...prev, newRule]);
+  };
+
   const handleCreate = () => {
     // Validate name
     if (!collectionName.trim()) {
@@ -426,7 +307,6 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
     }
 
     onCreateCollection(collectionName, description, generatedRules);
-    // Toast показується в handleCreateCollection в App.tsx
     handleClose();
   };
 
@@ -439,6 +319,7 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
     setIsRulesExpanded(false);
     setMatchedDocCount(0);
     setNameError('');
+    setAiReasoning(undefined);
     onClose();
   };
 
@@ -508,17 +389,17 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
               {isGenerating ? (
                 <>
                   <Loader2 className="size-[16px] animate-spin" />
-                  <span>Analyzing your description...</span>
+                  <span>AI is analyzing your description...</span>
                 </>
               ) : (
                 <>
                   <Sparkles className="size-[16px]" />
-                  <span>Generate rules</span>
+                  <span>Generate rules with AI</span>
                 </>
               )}
             </button>
 
-            {/* Generated Rules Mini-Block */}
+            {/* Generated Rules Block */}
             {showRulesBlock && generatedRules.length > 0 && (
               <div className="border border-[#e0e1e6] rounded-[8px] overflow-hidden bg-white">
                 {/* Summary Header - Always Visible */}
@@ -535,19 +416,31 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
                         </span>
                       </div>
                       <p className="text-[11px] text-[#60646c] mt-[2px]">
-                        {matchedDocCount} documents matched
+                        {matchedDocCount} {matchedDocCount === 1 ? 'document' : 'documents'} will be added
                       </p>
                     </div>
                   </div>
                   <ChevronDown className={`size-[20px] text-[#60646c] transition-transform ${isRulesExpanded ? 'rotate-180' : ''}`} />
                 </button>
 
+                {/* AI Reasoning (if available) */}
+                {isRulesExpanded && aiReasoning && (
+                  <div className="border-t border-[#e8e8ec] px-[16px] py-[12px] bg-[#f5f3ff]">
+                    <p className="text-[11px] text-[#7c3aed]">
+                      <span className="font-medium">AI reasoning:</span> {aiReasoning}
+                    </p>
+                  </div>
+                )}
+
                 {/* Expandable Rules List */}
                 {isRulesExpanded && (
                   <div className="border-t border-[#e8e8ec] p-[16px] bg-[#f9fafb] space-y-[12px]">
                     <div className="flex items-center justify-between mb-[8px]">
                       <p className="text-[11px] text-[#60646c] uppercase tracking-wider">Conditional Rules</p>
-                      <button className="flex items-center gap-[4px] text-[11px] text-[#005be2] hover:underline">
+                      <button 
+                        onClick={addNewRule}
+                        className="flex items-center gap-[4px] text-[11px] text-[#005be2] hover:underline"
+                      >
                         <Plus className="size-[12px]" />
                         <span>Add rule</span>
                       </button>
@@ -555,9 +448,6 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
 
                     <div className="space-y-[8px]">
                       {generatedRules.map((rule) => {
-                        const Icon = ruleTypeIcons[rule.type];
-                        const colorClass = ruleTypeColors[rule.type];
-
                         return (
                           <div
                             key={rule.id}
@@ -616,6 +506,13 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
                   </div>
                 )}
               </div>
+            )}
+
+            {/* No rules generated yet hint */}
+            {!showRulesBlock && (
+              <p className="text-[11px] text-[#60646c] italic">
+                Click "Generate rules with AI" to analyze your description and create smart filtering rules.
+              </p>
             )}
           </div>
         </div>
