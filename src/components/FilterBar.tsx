@@ -6,6 +6,7 @@ interface FilterBarProps {
   viewMode: 'grid' | 'table';
   onViewModeChange: (mode: 'grid' | 'table') => void;
   visibleColumnsCount?: number;
+  onAIFilterClick?: () => void;
 }
 
 export function FilterBar({
@@ -13,7 +14,8 @@ export function FilterBar({
   onFilterChange,
   viewMode,
   onViewModeChange,
-  visibleColumnsCount
+  visibleColumnsCount,
+  onAIFilterClick
 }: FilterBarProps) {
   return (
     <div className="sticky top-0 z-20 border-b border-[#e8e8ec] px-[24px] py-[12px] bg-white flex-shrink-0 min-w-0 w-full max-w-full">
@@ -31,16 +33,21 @@ export function FilterBar({
               type="text"
               value={filterQuery}
               onChange={(e) => onFilterChange(e.target.value)}
-              placeholder='Filter documents (e.g., "signed last month")...'
+              placeholder='Search...'
               className="w-full h-[32px] px-[12px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] placeholder:text-[#8b8d98] focus:outline-none focus:ring-2 focus:ring-[#005be2] focus:border-transparent"
             />
           </div>
 
-          {/* Apply Button */}
-          <button className="h-[32px] px-[12px] flex items-center gap-[4px] bg-[#f0f0f3] rounded-[6px] text-[13px] text-[#b9bbc6] hover:bg-[#e0e1e6]">
-            <Sparkles className="size-[16px]" />
-            <span className="text-[13px] font-semibold">Apply</span>
-          </button>
+          {/* AI Filter Button */}
+          {onAIFilterClick && (
+            <button 
+              onClick={onAIFilterClick}
+              className="h-[32px] px-[8px] flex items-center gap-[6px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] bg-white"
+            >
+              <Sparkles className="size-[16px] text-[#60646c]" />
+              <span className="text-[12px] font-semibold">AI Filter</span>
+            </button>
+          )}
 
           {/* Column Count */}
           {viewMode === 'table' && visibleColumnsCount && (

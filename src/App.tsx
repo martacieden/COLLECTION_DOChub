@@ -23,6 +23,8 @@ import { PinnedView } from './components/PinnedView';
 import { RulesEditorModal } from './components/RulesEditorModal';
 import { CollectionSettingsModal } from './components/CollectionSettingsModal';
 import { AISearchResults } from './components/AISearchResults';
+import { FojoFAB } from './components/FojoFAB';
+import { FojoChatPanel } from './components/FojoChatPanel';
 import { getOrganizationAvatar } from './utils/organizationUtils';
 
 // ========================================
@@ -1372,7 +1374,7 @@ function AISearchResultsBlock({
       </div>
       
       {/* AI Summary instead of document grid */}
-      <div className="mt-[16px] pt-[16px] pb-[12px] border-t border-[#e8e8ec]">
+      <div className="mt-[16px] pt-[16px] pb-[12px] mb-[12px] border-t border-[#e8e8ec]">
         <h4 className="text-[12px] font-semibold text-[#60646c] mb-[8px]">AI summary</h4>
         <div className="space-y-[8px] text-[13px] text-[#1c2024] leading-[1.6]">
           <p>
@@ -2734,7 +2736,7 @@ const [aiModalInitialSearchResults, setAiModalInitialSearchResults] = useState<{
     setShowAICollectionPreview(false);
     setQuestion('');
     
-    toast.success(`Collection "${collectionName}" created successfully!`);
+    // Toast з кнопкою показується в handleCreateCollection
   };
 
   const handleSelectSuggestion = (suggestion: ContextSuggestion) => {
@@ -2885,7 +2887,7 @@ const [aiModalInitialSearchResults, setAiModalInitialSearchResults] = useState<{
             setAiSearchResults([]);
             setAiModalInitialSearchResults(null);
             setQuestion('');
-            toast.success(`Collection "${name}" created successfully!`);
+            // Toast з кнопкою показується в handleCreateCollection
           } : undefined}
           initialSearchResults={aiModalInitialSearchResults || (aiSearchResults.length > 0 ? { query: question, documents: aiSearchResults } : undefined)}
         />
@@ -4125,6 +4127,7 @@ export default function App() {
   const [isAddToCollectionModalOpen, setIsAddToCollectionModalOpen] = useState(false);
   const [isRulesEditorModalOpen, setIsRulesEditorModalOpen] = useState(false);
   const [isCollectionSettingsModalOpen, setIsCollectionSettingsModalOpen] = useState(false);
+  const [isFojoChatOpen, setIsFojoChatOpen] = useState(false);
   const [pendingCollectionData, setPendingCollectionData] = useState<{ name: string; description: string; rules: CollectionRule[] } | null>(null);
   const [selectedDocumentsForCollection, setSelectedDocumentsForCollection] = useState<string[]>([]);
   const [selectedDocumentsForNewCollection, setSelectedDocumentsForNewCollection] = useState<Document[]>([]);
@@ -4272,7 +4275,7 @@ export default function App() {
   };
 
   const handleShowAIFilter = () => {
-    setAiFilter('needs-signature');
+    setIsFojoChatOpen(true);
   };
 
   const handleClearAIFilter = () => {
@@ -5146,6 +5149,15 @@ export default function App() {
       />
       
       <Toaster position="top-right" />
+      
+      {/* Fojo Chat Panel */}
+      <FojoChatPanel 
+        isOpen={isFojoChatOpen} 
+        onClose={() => setIsFojoChatOpen(false)} 
+      />
+      
+      {/* FAB - Ask Fojo AI button */}
+      <FojoFAB onClick={handleShowAIFilter} isChatOpen={isFojoChatOpen} />
     </div>
   );
 }
