@@ -450,7 +450,7 @@ export function CollectionDetailHeader({ collection, onBack, onAddDocument, onSe
             
             <div>
               <div className="flex items-center gap-[12px] mb-[4px]">
-                <h1 className="text-[#1c2024] tracking-[-0.08px]">{collection.title}</h1>
+                <h2 className="text-[16px] font-semibold text-[#1c2024] tracking-[-0.08px]">{collection.title}</h2>
                 {collection.organization && (() => {
                   const orgAvatar = getOrganizationAvatar(collection.organization);
                   return (
@@ -603,7 +603,7 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
         </div>
         
         {isDetailsExpanded && (
-          <div className="mt-[24px] space-y-[24px]">
+          <div className="mt-[12px] space-y-[12px]">
             {/* Filters Section */}
             <div>
               
@@ -681,7 +681,7 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
               <div className="bg-[#f0f0f3] text-[#60646c] rounded-[8px] size-[48px] flex items-center justify-center mb-[16px]">
                 <FileText className="size-[20px]" />
               </div>
-              <div className="text-[#60646c] mb-[24px]">
+              <div className="text-[#60646c] mb-[12px]">
                 <h2 className="text-[16px] font-medium mb-[4px]">No documents to show</h2>
                 <p className="text-[13px] leading-[20px]">Upload a document to get started</p>
               </div>
