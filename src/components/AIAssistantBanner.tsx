@@ -17,8 +17,14 @@ interface AIBannerSuggestion {
   documents?: Document[];
 }
 
+interface Collection {
+  id: string;
+  title: string;
+}
+
 interface AIAssistantBannerProps {
   uploadedDocuments: Document[];
+  collections?: Collection[];
   onAddToCollection?: (collectionName: string, documents: Document[]) => void;
   onCreateCollection?: (collectionName: string, documents: Document[]) => void;
   onViewDetails?: (suggestion: AIBannerSuggestion) => void;
@@ -26,7 +32,7 @@ interface AIAssistantBannerProps {
 }
 
 // Функція для аналізу документів та визначення типу пропозиції
-function analyzeDocuments(documents: Document[]): AIBannerSuggestion | null {
+function analyzeDocuments(documents: Document[], collections: Collection[] = []): AIBannerSuggestion | null {
   if (documents.length === 0) return null;
 
   // Групування документів за типами
@@ -38,6 +44,40 @@ function analyzeDocuments(documents: Document[]): AIBannerSuggestion | null {
     }
     typeGroups[type].push(doc);
   });
+
+  // Перевірка на Invoice документи (пріоритет)
+  const invoiceKeywords = ['invoice', 'інвойс', 'bill', 'рахунок', 'billing', 'invoice #'];
+  const invoiceDocs = documents.filter(doc => 
+    invoiceKeywords.some(keyword => doc.name.toLowerCase().includes(keyword))
+  );
+  
+  if (invoiceDocs.length >= 1) {
+    // Перевіряємо, чи є вже існуюча Invoice collection
+    const invoiceCollectionKeywords = ['invoice', 'інвойс', 'financial - invoices', 'invoices'];
+    const existingInvoiceCollection = collections.find(col => 
+      invoiceCollectionKeywords.some(keyword => col.title.toLowerCase().includes(keyword))
+    );
+    
+    if (existingInvoiceCollection) {
+      return {
+        type: 'add-to-collection',
+        title: 'Add invoices to collection',
+        description: `I found ${invoiceDocs.length} invoice ${invoiceDocs.length === 1 ? 'document' : 'documents'}. Would you like to add ${invoiceDocs.length === 1 ? 'it' : 'them'} to your "${existingInvoiceCollection.title}" collection?`,
+        collectionName: existingInvoiceCollection.title,
+        documentCount: invoiceDocs.length,
+        documents: invoiceDocs
+      };
+    } else {
+      return {
+        type: 'create-collection',
+        title: 'Create invoice collection',
+        description: `I found ${invoiceDocs.length} invoice ${invoiceDocs.length === 1 ? 'document' : 'documents'}. Would you like to create an Invoice collection to organize ${invoiceDocs.length === 1 ? 'it' : 'them'}?`,
+        collectionName: 'Financial - Invoices',
+        documentCount: invoiceDocs.length,
+        documents: invoiceDocs
+      };
+    }
+  }
 
   // Перевірка на страхові документи
   const insuranceKeywords = ['insurance', 'policy', 'coverage', 'claim'];
@@ -106,12 +146,12 @@ function analyzeDocuments(documents: Document[]): AIBannerSuggestion | null {
     };
   }
 
-  // За замовчуванням - smart tagging
+  // За замовчуванням - smart tagging з контекстом про колекції
   if (documents.length >= 3) {
     return {
       type: 'smart-tagging',
-      title: 'Smart tagging available',
-      description: `I can automatically tag these ${documents.length} documents with relevant metadata. Apply smart tags?`,
+      title: 'Organize your documents',
+      description: `I found ${documents.length} documents that could be organized into a collection. I can automatically tag them and help you create a collection to keep them organized.`,
       documentCount: documents.length,
       documents: documents
     };
@@ -122,6 +162,7 @@ function analyzeDocuments(documents: Document[]): AIBannerSuggestion | null {
 
 export function AIAssistantBanner({ 
   uploadedDocuments, 
+  collections = [],
   onAddToCollection,
   onCreateCollection,
   onViewDetails,
@@ -148,7 +189,7 @@ export function AIAssistantBanner({
     }
 
     // Аналізуємо документи
-    const analyzedSuggestion = analyzeDocuments(uploadedDocuments);
+    const analyzedSuggestion = analyzeDocuments(uploadedDocuments, collections);
     
     if (!analyzedSuggestion) {
       setIsVisible(false);
@@ -158,8 +199,8 @@ export function AIAssistantBanner({
 
     setSuggestion(analyzedSuggestion);
 
-    // Показуємо через 10 секунд після завантаження
-    const delay = 10000;
+    // Показуємо через 2 секунди після завантаження (швидше)
+    const delay = 2000;
     
     const timer = setTimeout(() => {
       setIsVisible(true);
@@ -168,7 +209,7 @@ export function AIAssistantBanner({
     return () => {
       clearTimeout(timer);
     };
-  }, [uploadedDocuments]);
+  }, [uploadedDocuments, collections]);
 
   // Автоматичне закриття через 12 секунд після появи
   useEffect(() => {
@@ -231,16 +272,16 @@ export function AIAssistantBanner({
 
   return (
     <div 
-      className={`fixed bottom-[24px] right-[24px] w-[280px] bg-white rounded-[8px] shadow-sm border border-[#e8e8ec] z-50 transition-all duration-300 ${
+      className={`fixed bottom-[88px] right-[24px] w-[320px] bg-white rounded-[8px] shadow-lg border border-[#e8e8ec] z-50 transition-all duration-300 ${
         isClosing ? 'translate-x-[100%] opacity-0' : 'translate-x-0 opacity-100'
       }`}
       style={{
         animation: isVisible && !isClosing ? 'slideInRight 0.3s ease-out' : 'none',
-        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)',
+        boxShadow: '0 4px 12px 0 rgba(0, 0, 0, 0.15)',
         position: 'fixed',
-        bottom: '24px',
+        bottom: '88px', // Над кнопкою Ask Fojo (24px + 48px висота кнопки + 16px відступ)
         right: '24px',
-        width: '280px'
+        width: '320px'
       }}
     >
       {/* Header */}
@@ -268,10 +309,10 @@ export function AIAssistantBanner({
       </div>
 
       {/* Actions */}
-      <div className="px-[24px] pb-[12px]">
+      <div className="px-[24px] pb-[16px]">
         <button 
           onClick={() => onViewDetails?.(suggestion)}
-          className="h-[24px] px-[10px] border border-[#e0e1e6] bg-white rounded-[6px] text-[11px] font-medium text-[#1c2024] hover:bg-[#f9fafb] transition-colors"
+          className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[12px] font-medium text-[#1c2024] hover:bg-[#f9fafb] transition-colors"
         >
           View Details
         </button>

@@ -8,7 +8,7 @@ interface OrganizationAvatar {
 
 // Мапа кольорів для організацій (на основі зображення)
 const organizationColors: Record<string, OrganizationAvatar> = {
-  'Smith Family Office': {
+  'Smith Family': {
     initial: 'S',
     color: '#CE2C31', // Червоний
     textColor: '#FFFFFF'

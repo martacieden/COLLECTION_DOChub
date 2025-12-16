@@ -175,7 +175,7 @@ function StatusBadge({ status }: { status?: string }) {
 
 // Mock documents data - всі документи з усіх колекцій (41 документ)
 const organizationsList = [
-  'Smith Family Office',
+  'Smith Family',
   'Johnson Family Trust',
   "Herwitz's Family",
   'Wayne Estate Management',
@@ -287,7 +287,7 @@ const mockDocuments: Document[] = Array.from({ length: 41 }, (_, i) =>
 
 const defaultOrganizations: Organization[] = [
   { id: 'all', name: 'All organizations', initials: '' },
-  { id: 'smith', name: 'Smith Family Office', initials: 'S' },
+  { id: 'smith', name: 'Smith Family', initials: 'S' },
   { id: 'johnson', name: 'Johnson Family Trust', initials: 'J' },
   { id: 'herwitz', name: "Herwitz's Family", initials: 'H' },
   { id: 'wayne', name: 'Wayne Estate Management', initials: 'W' },

@@ -154,7 +154,7 @@ if (descLower.includes('invoice') && descLower.includes('all') && descLower.incl
 ```typescript
 // Використовувати існуючий список organizations
 const organizations = [
-  { id: 'smith', name: 'Smith Family Office', initials: 'S' },
+  { id: 'smith', name: 'Smith Family', initials: 'S' },
   { id: 'johnson', name: 'Johnson Family Trust', initials: 'J' },
   // ... інші
 ];

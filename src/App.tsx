@@ -103,7 +103,7 @@ interface Organization {
 
 const organizations: Organization[] = [
   { id: 'all', name: 'All organizations', initials: '' },
-  { id: 'smith', name: 'Smith Family Office', initials: 'S' },
+  { id: 'smith', name: 'Smith Family', initials: 'S' },
   { id: 'johnson', name: 'Johnson Family Trust', initials: 'J' },
   { id: 'herwitz', name: "Herwitz's Family", initials: 'H' },
   { id: 'wayne', name: 'Wayne Estate Management', initials: 'W' },
@@ -255,7 +255,7 @@ const mockDocuments: Document[] = [
     status: 'Signed',
     uploadedBy: 'Michael Chen',
     uploadedOn: 'Nov 25, 2024',
-    organization: 'Smith Family Office',
+    organization: 'Smith Family',
     collectionIds: ['1', '3'], // Oak Street Renovation, Permits & Approvals
     tags: ['Permits', 'Oak Street', 'Approved'],
     signatureStatus: 'Signed'
@@ -303,7 +303,7 @@ const mockDocuments: Document[] = [
     status: 'Waiting for Signature',
     uploadedBy: 'Joan Zhao',
     uploadedOn: 'Dec 2, 2024',
-    organization: 'Smith Family Office'
+    organization: 'Smith Family'
   },
   {
     id: 'doc-4',
@@ -482,7 +482,7 @@ const mockDocuments: Document[] = [
     status: 'Paid',
     uploadedBy: 'David Park',
     uploadedOn: 'Dec 1, 2024',
-    organization: 'Smith Family Office',
+    organization: 'Smith Family',
     category: 'Invoice',
     tags: ['Invoice', 'Plumbing', 'Maintenance'],
     vendor: 'ABC Plumbing Inc'
@@ -546,7 +546,7 @@ const mockDocuments: Document[] = [
     status: 'Paid',
     uploadedBy: 'Joan Zhao',
     uploadedOn: 'Nov 18, 2024',
-    organization: 'Smith Family Office',
+    organization: 'Smith Family',
     category: 'Invoice',
     tags: ['Invoice', 'Flooring', 'Installation'],
     vendor: 'Elite Flooring Solutions'
@@ -626,7 +626,7 @@ const mockDocuments: Document[] = [
     status: 'Paid',
     uploadedBy: 'Michael Chen',
     uploadedOn: 'Nov 1, 2024',
-    organization: 'Smith Family Office',
+    organization: 'Smith Family',
     category: 'Invoice',
     tags: ['Invoice', 'Appliances', 'Installation'],
     vendor: 'Home Appliance Pro'
@@ -706,7 +706,7 @@ const mockDocuments: Document[] = [
     status: 'Pending Payment',
     uploadedBy: 'Sarah Miller',
     uploadedOn: 'Oct 15, 2024',
-    organization: 'Smith Family Office',
+    organization: 'Smith Family',
     category: 'Invoice',
     tags: ['Invoice', 'Driveway', 'Paving'],
     vendor: 'Premier Concrete LLC'
@@ -715,21 +715,21 @@ const mockDocuments: Document[] = [
 
 // Mock collections data - винесено на рівень модуля для використання в App()
 const allCollections = [
-  { id: '1', title: 'Oak Street Renovation', count: 42, type: 'construction', description: 'All documents related to the Oak Street property renovation project including blueprints, permits, contracts, and vendor documents.', icon: '🏗️', createdOn: '13/10/2025', createdBy: 'Joan Zhao', sharedWith: ['Michael Kim', 'Alex Smith', 'Sarah Johnson'], rules: ['Category is any of Construction, Permits, Contracts', 'Project = Oak Street', 'Status is any of Active, In Progress'], autoSync: true, organization: 'Smith Family Office' },
+  { id: '1', title: 'Oak Street Renovation', count: 42, type: 'construction', description: 'All documents related to the Oak Street property renovation project including blueprints, permits, contracts, and vendor documents.', icon: '🏗️', createdOn: '13/10/2025', createdBy: 'Joan Zhao', sharedWith: ['Michael Kim', 'Alex Smith', 'Sarah Johnson'], rules: ['Category is any of Construction, Permits, Contracts', 'Project = Oak Street', 'Status is any of Active, In Progress'], autoSync: true, organization: 'Smith Family' },
   { id: '2', title: 'Executed Contracts', count: 28, type: 'legal', description: 'Signed and executed contractual agreements across all projects and vendors.', icon: '📝', createdOn: '15/09/2025', createdBy: 'Joan Zhao', sharedWith: ['Michael Kim', 'Legal Team'], rules: ['Document Type = Contract', 'Status = Signed'], autoSync: true, organization: 'Johnson Family Trust' },
-  { id: '3', title: 'Permits & Approvals', count: 15, type: 'legal', description: 'Building permits, zoning approvals, and regulatory documentation.', icon: '✅', createdOn: '20/08/2025', createdBy: 'Michael Kim', sharedWith: ['Joan Zhao', 'Alex Smith'], rules: ['Category = Permits', 'Status is any of Approved, Active'], autoSync: true, organization: 'Smith Family Office' },
+  { id: '3', title: 'Permits & Approvals', count: 15, type: 'legal', description: 'Building permits, zoning approvals, and regulatory documentation.', icon: '✅', createdOn: '20/08/2025', createdBy: 'Michael Kim', sharedWith: ['Joan Zhao', 'Alex Smith'], rules: ['Category = Permits', 'Status is any of Approved, Active'], autoSync: true, organization: 'Smith Family' },
   { id: '4', title: 'Financial - Invoices', count: 67, type: 'financial', description: 'Payment invoices and billing documents from all vendors and contractors.', icon: '💰', createdOn: '10/07/2025', createdBy: 'Joan Zhao', sharedWith: ['Finance Team', 'Michael Kim'], rules: ['Document Type = Invoice', 'Date is within last 12 months'], autoSync: true, organization: "Herwitz's Family" },
   { id: '5', title: 'Change Orders', count: 19, type: 'construction', description: 'Project modification requests and approved change orders.', icon: '🔄', createdOn: '05/06/2025', createdBy: 'Alex Smith', sharedWith: ['Joan Zhao', 'Michael Kim'], rules: ['Document Type = Change Order', 'Project = Oak Street'], autoSync: true, organization: 'Wayne Estate Management' },
   { id: '6', title: 'Lien Waivers', count: 12, type: 'legal', description: 'Lien waiver documentation from contractors and subcontractors.', icon: '📋', createdOn: '25/05/2025', createdBy: 'Michael Kim', sharedWith: ['Joan Zhao', 'Legal Team'], rules: ['Document Type = Lien Waiver'], autoSync: false, organization: 'The Robertson Foundation' },
-  { id: '7', title: 'Insurance Documents', count: 23, type: 'legal', description: 'Insurance policies, certificates, and liability documentation.', icon: '🛡️', createdOn: '18/04/2025', createdBy: 'Joan Zhao', sharedWith: ['Insurance Team', 'Michael Kim'], rules: ['Category = Insurance', 'Date is within last 24 months'], autoSync: true, organization: 'Smith Family Office' },
+  { id: '7', title: 'Insurance Documents', count: 23, type: 'legal', description: 'Insurance policies, certificates, and liability documentation.', icon: '🛡️', createdOn: '18/04/2025', createdBy: 'Joan Zhao', sharedWith: ['Insurance Team', 'Michael Kim'], rules: ['Category = Insurance', 'Date is within last 24 months'], autoSync: true, organization: 'Smith Family' },
   { id: '8', title: 'Safety Inspections', count: 31, type: 'construction', description: 'Safety inspection reports and compliance documentation.', icon: '⚠️', createdOn: '12/03/2025', createdBy: 'Alex Smith', sharedWith: ['Joan Zhao', 'Safety Team'], rules: ['Document Type = Inspection', 'Category = Safety'], autoSync: true, organization: 'Johnson Family Trust' },
-  { id: '9', title: 'Vendor Contracts', count: 38, type: 'legal', description: 'Agreements with suppliers, contractors, and service providers.', icon: '🤝', createdOn: '08/02/2025', createdBy: 'Joan Zhao', sharedWith: ['Procurement Team', 'Legal Team'], rules: ['Document Type = Contract', 'Party Type = Vendor'], autoSync: true, organization: 'Smith Family Office' },
+  { id: '9', title: 'Vendor Contracts', count: 38, type: 'legal', description: 'Agreements with suppliers, contractors, and service providers.', icon: '🤝', createdOn: '08/02/2025', createdBy: 'Joan Zhao', sharedWith: ['Procurement Team', 'Legal Team'], rules: ['Document Type = Contract', 'Party Type = Vendor'], autoSync: true, organization: 'Smith Family' },
   { id: '10', title: 'Property Appraisals', count: 8, type: 'financial', description: 'Property valuation reports and appraisal documents.', icon: '💎', createdOn: '22/01/2025', createdBy: 'Michael Kim', sharedWith: ['Joan Zhao', 'Finance Team'], rules: ['Document Type = Appraisal'], autoSync: false, organization: "Herwitz's Family" },
   { id: '11', title: 'Meeting Minutes', count: 45, type: 'general', description: 'Project meeting notes, action items, and decision logs.', icon: '📅', createdOn: '15/12/2024', createdBy: 'Joan Zhao', sharedWith: ['All Team Members'], rules: ['Document Type = Meeting Minutes', 'Date is within last 6 months'], autoSync: true, organization: 'Wayne Estate Management' },
   { id: '12', title: 'Site Photos', count: 156, type: 'construction', description: 'Construction progress photos and site documentation imagery.', icon: '📸', createdOn: '03/11/2024', createdBy: 'Alex Smith', sharedWith: ['Joan Zhao', 'Project Team'], rules: ['File Type = Image', 'Project = Oak Street'], autoSync: true, organization: 'The Robertson Foundation' },
-  { id: '13', title: 'Equipment Rentals', count: 14, type: 'financial', description: 'Equipment rental agreements and related invoices.', icon: '🚜', createdOn: '28/10/2024', createdBy: 'Joan Zhao', sharedWith: ['Operations Team'], rules: ['Category = Equipment', 'Document Type is any of Contract, Invoice'], autoSync: false, organization: 'Smith Family Office' },
+  { id: '13', title: 'Equipment Rentals', count: 14, type: 'financial', description: 'Equipment rental agreements and related invoices.', icon: '🚜', createdOn: '28/10/2024', createdBy: 'Joan Zhao', sharedWith: ['Operations Team'], rules: ['Category = Equipment', 'Document Type is any of Contract, Invoice'], autoSync: false, organization: 'Smith Family' },
   { id: '14', title: 'Warranty Documents', count: 22, type: 'general', description: 'Product warranties and manufacturer guarantees.', icon: '🔧', createdOn: '19/09/2024', createdBy: 'Michael Kim', sharedWith: ['Joan Zhao', 'Maintenance Team'], rules: ['Document Type = Warranty'], autoSync: true, organization: 'Johnson Family Trust' },
-  { id: '15', title: 'As-Built Drawings', count: 34, type: 'construction', description: 'Final construction drawings reflecting actual built conditions.', icon: '📐', createdOn: '07/08/2024', createdBy: 'Alex Smith', sharedWith: ['Joan Zhao', 'Engineering Team'], rules: ['Document Type = Drawing', 'Status = As-Built'], autoSync: true, organization: 'Smith Family Office' },
+  { id: '15', title: 'As-Built Drawings', count: 34, type: 'construction', description: 'Final construction drawings reflecting actual built conditions.', icon: '📐', createdOn: '07/08/2024', createdBy: 'Alex Smith', sharedWith: ['Joan Zhao', 'Engineering Team'], rules: ['Document Type = Drawing', 'Status = As-Built'], autoSync: true, organization: 'Smith Family' },
   { id: '16', title: 'Punch Lists', count: 11, type: 'construction', description: 'Outstanding items and completion checklists.', icon: '✓', createdOn: '25/07/2024', createdBy: 'Joan Zhao', sharedWith: ['Project Team'], rules: ['Document Type = Punch List'], autoSync: false, organization: "Herwitz's Family" },
   { id: '17', title: 'Payment Applications', count: 29, type: 'financial', description: 'Contractor payment requests and progress billing.', icon: '💵', createdOn: '14/06/2024', createdBy: 'Joan Zhao', sharedWith: ['Finance Team', 'Michael Kim'], rules: ['Document Type = Payment Application', 'Project = Oak Street'], autoSync: true, organization: 'Wayne Estate Management' },
   { id: '18', title: 'Material Orders', count: 53, type: 'construction', description: 'Purchase orders and material delivery documentation.', icon: '📦', createdOn: '02/05/2024', createdBy: 'Alex Smith', sharedWith: ['Joan Zhao', 'Procurement Team'], rules: ['Document Type = Purchase Order', 'Category = Materials'], autoSync: true, organization: 'The Robertson Foundation' },
@@ -1875,51 +1875,6 @@ function AISuggestionPreviewModal({
   );
 }
 
-// Спрощений модальний компонент для деталей банерної пропозиції AI
-function AIBannerSuggestionDetailsModal({ 
-  suggestion, 
-  onClose,
-  onAddToCollection,
-  onCreateCollection
-}: { 
-  suggestion: any; 
-  onClose: () => void; 
-  onAddToCollection?: (collectionName: any, docs: any) => void;
-  onCreateCollection?: (collectionName: any, docs: any) => void;
-}) {
-  if (!suggestion) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white rounded-[12px] shadow-xl max-w-[520px] w-full mx-[24px] p-[24px]">
-        <div className="flex items-start justify-between gap-[12px] mb-[12px]">
-          <div>
-            <h3 className="text-[16px] font-semibold text-[#1c2024]">AI suggestion</h3>
-            <p className="text-[13px] text-[#60646c]">{suggestion?.title || 'Details'}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="size-[32px] rounded-[6px] flex items-center justify-center hover:bg-[#f9fafb] transition-colors"
-          >
-            <X className="size-[16px] text-[#60646c]" />
-          </button>
-        </div>
-        <div className="text-[13px] text-[#1c2024] whitespace-pre-wrap">
-          {suggestion?.description || 'No additional details available.'}
-        </div>
-        <div className="mt-[16px] flex justify-end">
-          <button
-            onClick={onClose}
-            className="h-[32px] px-[12px] bg-[#005be2] rounded-[6px] text-[12px] text-white hover:bg-[#004fc4] transition-colors"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ========================================
 // AI GENERATED COLLECTION PREVIEW MODAL
 // ========================================
@@ -2182,6 +2137,22 @@ const mockAISuggestions: AISuggestion[] = [
 // Context-aware suggestions based on page
 const getContextSuggestions = (inputValue: string): ContextSuggestion[] => {
   if (inputValue.length < 2) return [];
+  
+  const lowerInput = inputValue.toLowerCase();
+  
+  // Спеціальна пропозиція для "create" - спрямовуємо до створення Invoice collection
+  const invoiceCollectionSuggestion: ContextSuggestion = {
+    id: 'invoice-collection',
+    text: 'Create invoice collection to organize all your financial documents',
+    icon: 'search',
+    context: 'Recommended for testing'
+  };
+  
+  // Перевіряємо, чи користувач вводить "create"
+  if (lowerInput.startsWith('create') || lowerInput === 'cre' || lowerInput === 'crea' || lowerInput === 'creat') {
+    // Повертаємо спеціальну пропозицію на першому місці
+    return [invoiceCollectionSuggestion];
+  }
   
   const allSuggestions: ContextSuggestion[] = [
     {
@@ -3980,6 +3951,7 @@ interface UploadedDocument {
   name: string;
   type: string;
   uploadedAt: Date;
+  organization?: string;
 }
 
 // Функція для перевірки відповідності документу правилам колекції
@@ -4136,8 +4108,10 @@ export default function App() {
   const [documents, setDocuments] = useState<Document[]>(mockDocuments);
   const [selectedOrganization, setSelectedOrganization] = useState<string>('all');
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
-  const [aiBannerSuggestionDetails, setAiBannerSuggestionDetails] = useState<any>(null);
   const [pinnedDocumentIds, setPinnedDocumentIds] = useState<Set<string>>(new Set());
+  const [isAIBannerChatModalOpen, setIsAIBannerChatModalOpen] = useState(false);
+  const [aiBannerChatDocuments, setAiBannerChatDocuments] = useState<Document[]>([]);
+  const [aiBannerChatQuery, setAiBannerChatQuery] = useState('');
   const [collectionToDelete, setCollectionToDelete] = useState<Collection | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
@@ -4286,7 +4260,16 @@ export default function App() {
     setIsLeftPanelCollapsed(!isLeftPanelCollapsed);
   };
 
-  const handleUploadComplete = (files: any[], selectedCollections: string[]) => {
+  const handleUploadComplete = (files: any[], selectedCollections: string[], organization: string) => {
+    // Перевірка: переконуємося, що організація передана
+    if (!organization || organization.trim() === '') {
+      console.error('[handleUploadComplete] Organization is missing!');
+      toast.error('Organization is required. Please try uploading again.');
+      return;
+    }
+    
+    console.log('[handleUploadComplete] Uploading files with organization:', organization, 'Files count:', files.length);
+    
     // Create new document entries from uploaded files
     const newDocuments: Document[] = files.map((fileInfo, index) => {
       const fileName = fileInfo.file.name;
@@ -4298,7 +4281,7 @@ export default function App() {
       });
       const docId = `DOC-${Date.now()}-${index}`;
       
-      return {
+      const newDoc = {
         id: docId,
         name: fileName,
         description: 'Recently uploaded document',
@@ -4309,10 +4292,17 @@ export default function App() {
         status: 'In Review',
         uploadedBy: 'Joan Zhao',
         uploadedOn: currentDate,
-        organization: 'Summation Partners',
+        organization: organization, // Використовуємо вибрану користувачем організацію
         collectionIds: [],
         tags: []
       };
+      
+      // Перевірка: переконуємося, що організація встановлена
+      if (!newDoc.organization || newDoc.organization.trim() === '') {
+        console.warn(`[handleUploadComplete] Organization is missing for document: ${fileName}`);
+      }
+      
+      return newDoc;
     });
 
     // Автоматично додаємо документи до колекцій на основі правил
@@ -4413,14 +4403,25 @@ export default function App() {
     }
     
     // Add new documents to the beginning of the list
-    setDocuments(prev => [...documentsWithCollections, ...prev]);
+    // Перевірка: переконуємося, що всі документи мають правильну організацію
+    const documentsToAdd = documentsWithCollections.map(doc => {
+      if (!doc.organization || doc.organization !== organization) {
+        console.warn(`[handleUploadComplete] Document ${doc.name} has wrong organization: ${doc.organization}, expected: ${organization}`);
+        return { ...doc, organization: organization };
+      }
+      return doc;
+    });
+    
+    console.log('[handleUploadComplete] Adding documents with organization:', organization);
+    setDocuments(prev => [...documentsToAdd, ...prev]);
     
     // Store uploaded documents for AI banner
     const uploadedDocsForBanner: UploadedDocument[] = files.map((fileInfo, index) => ({
       id: `uploaded-${Date.now()}-${index}`,
       name: fileInfo.file.name,
       type: fileInfo.file.name.split('.').pop()?.toLowerCase() || 'pdf',
-      uploadedAt: new Date()
+      uploadedAt: new Date(),
+      organization: organization // Зберігаємо організацію для банеру
     }));
     setUploadedDocuments(uploadedDocsForBanner);
   };
@@ -4938,8 +4939,24 @@ export default function App() {
         }
       );
     } else {
+      // Показуємо toast зі списком назв колекцій
       toast.success(
-        `${docCount} ${docCount === 1 ? 'document' : 'documents'} added to ${collectionCount} collections`
+        <div className="flex flex-col gap-[6px]">
+          <div className="text-[13px] text-[#1c2024]">
+            {docCount} {docCount === 1 ? 'document' : 'documents'} added to {collectionCount} collections
+          </div>
+          <div className="text-[12px] text-[#60646c] border-t border-[#e8e8ec] pt-[6px]">
+            <div className="font-medium mb-[4px] text-[#1c2024]">Collections:</div>
+            <ul className="list-none space-y-[2px] pl-0">
+              {collectionNames.map((name, index) => (
+                <li key={index} className="text-[11px] flex items-center gap-[6px]">
+                  <span className="w-[4px] h-[4px] rounded-full bg-[#60646c] flex-shrink-0"></span>
+                  <span>{name}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       );
     }
   };
@@ -5060,6 +5077,7 @@ export default function App() {
       {/* AI Assistant Banner */}
       <AIAssistantBanner
         uploadedDocuments={uploadedDocuments}
+        collections={collections}
         onAddToCollection={(collectionName, docs) => {
           setUploadedDocuments([]);
         }}
@@ -5067,27 +5085,64 @@ export default function App() {
           setUploadedDocuments([]);
         }}
         onViewDetails={(suggestion) => {
-          // Open modal with details
-          setAiBannerSuggestionDetails(suggestion);
+          // Конвертуємо uploadedDocuments в Document формат
+          const docsAsDocuments: Document[] = uploadedDocuments.map((uploadedDoc, index) => {
+            const fileName = uploadedDoc.name;
+            const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'pdf';
+            return {
+              id: `uploaded-${Date.now()}-${index}`,
+              name: fileName,
+              description: 'Recently uploaded document',
+              type: fileExtension.toUpperCase(),
+              attachedTo: [],
+              shared: [],
+              icon: fileExtension,
+              organization: uploadedDoc.organization || 'Unknown',
+              uploadedBy: 'Joan Zhao',
+              uploadedOn: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            };
+          });
+          
+          // Генеруємо запит на основі типу пропозиції
+          let query = 'all uploaded documents';
+          if (suggestion.type === 'smart-tagging') {
+            query = `organize these ${docsAsDocuments.length} documents`;
+          } else if (suggestion.type === 'create-collection' && suggestion.collectionName) {
+            query = `create ${suggestion.collectionName.toLowerCase()} collection`;
+          } else if (suggestion.type === 'add-to-collection' && suggestion.collectionName) {
+            query = `add to ${suggestion.collectionName.toLowerCase()}`;
+          }
+          
+          setAiBannerChatDocuments(docsAsDocuments);
+          setAiBannerChatQuery(query);
+          setIsAIBannerChatModalOpen(true);
         }}
         onDismiss={() => {
           setUploadedDocuments([]);
         }}
       />
-
-      {/* AI Banner Suggestion Details Modal */}
-      {aiBannerSuggestionDetails && (
-        <AIBannerSuggestionDetailsModal
-          suggestion={aiBannerSuggestionDetails}
-          onClose={() => setAiBannerSuggestionDetails(null)}
-          onAddToCollection={(collectionName, docs) => {
-            setUploadedDocuments([]);
-            setAiBannerSuggestionDetails(null);
+      
+      {/* AI Chat Modal for Banner Documents */}
+      {isAIBannerChatModalOpen && (
+        <AIChatModal
+          initialQuestion={aiBannerChatQuery}
+          onClose={() => {
+            setIsAIBannerChatModalOpen(false);
+            setAiBannerChatDocuments([]);
+            setAiBannerChatQuery('');
           }}
-          onCreateCollection={(collectionName, docs) => {
+          contextType="Uploaded Documents"
+          onCreateCollection={handleCreateCollection ? (name, description, rules) => {
+            handleCreateCollection(name, description, rules);
+            setIsAIBannerChatModalOpen(false);
+            setAiBannerChatDocuments([]);
+            setAiBannerChatQuery('');
             setUploadedDocuments([]);
-            setAiBannerSuggestionDetails(null);
-          }}
+          } : undefined}
+          initialSearchResults={aiBannerChatDocuments.length > 0 ? { 
+            query: aiBannerChatQuery, 
+            documents: aiBannerChatDocuments 
+          } : undefined}
         />
       )}
 

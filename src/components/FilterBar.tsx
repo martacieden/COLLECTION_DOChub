@@ -18,7 +18,7 @@ export function FilterBar({
   onAIFilterClick
 }: FilterBarProps) {
   return (
-    <div className="sticky top-0 z-20 border-b border-[#e8e8ec] px-[24px] py-[12px] bg-white flex-shrink-0 min-w-0 w-full max-w-full">
+    <div className="sticky top-0 z-20 border-b border-[#e8e8ec] px-[24px] py-[12px] bg-white flex-shrink-0 min-w-0 w-full max-w-full shadow-sm">
       <div className="flex items-center justify-between gap-[8px] min-w-0">
         <div className="flex items-center gap-[8px] min-w-0">
           {/* Filters Button */}

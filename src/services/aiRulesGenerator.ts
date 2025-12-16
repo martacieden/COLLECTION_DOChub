@@ -70,7 +70,7 @@ THE DOCUMENTS TABLE HAS THESE COLUMNS:
 • Description - Document description text
 • Type - FILE FORMAT only: PDF, DOCX, XLSX (NOT semantic type!)
 • Attached to - Projects/records (e.g., "Oak Street Renovation", "Financial - Invoices")
-• Organization - Company name (e.g., "Smith Family Office", "Johnson Family Trust")
+• Organization - Company name (e.g., "Smith Family", "Johnson Family Trust")
 • Uploaded by - Person who uploaded
 • Uploaded on - Date (e.g., "Nov 28, 2024")
 • Signature status - Signed, Pending, Waiting for Signature
@@ -87,7 +87,7 @@ AVAILABLE RULE TYPES:
    Example: "electrical" matches "Invoice #1247 - Electrical Work"
 
 3. client - Searches: Organization column
-   Use for family offices/trusts: "Smith Family Office", "Johnson Family Trust", "Summation Partners"
+   Use for family offices/trusts: "Smith Family", "Johnson Family Trust", "Summation Partners"
    
 4. vendor - Searches: Organization, Name, Description, Uploaded by
    Use for company names: "Studio XYZ", "ABC Plumbing"

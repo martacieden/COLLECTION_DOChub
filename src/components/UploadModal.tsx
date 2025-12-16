@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 interface UploadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onComplete: (files: FileInfo[], collections: string[]) => void;
+  onComplete: (files: FileInfo[], collections: string[], organization: string) => void;
   collectionOrganization?: string;
 }
 
@@ -19,7 +19,7 @@ interface FileInfo {
 type UploadStep = 'select' | 'uploading';
 
 const organizations = [
-  { id: 1, name: 'Smith Family Office', initial: 'S', color: '#FF6B6B' },
+  { id: 1, name: 'Smith Family', initial: 'S', color: '#FF6B6B' },
   { id: 2, name: 'Johnson Family Trust', initial: 'J', color: '#4ECDC4' },
   { id: 3, name: "Herwitz's Family", initial: 'H', color: '#45B7D1' },
   { id: 4, name: 'Wayne Estate Management', initial: 'W', color: '#FFA07A' },
@@ -88,6 +88,12 @@ export function UploadModal({ isOpen, onClose, onComplete, collectionOrganizatio
   };
 
   const processFiles = (files: File[]) => {
+    // Перевірка обов'язкового поля організації перед завантаженням
+    if (!selectedOrganization || selectedOrganization.trim() === '') {
+      toast.error('Please select an organization before uploading files');
+      return;
+    }
+
     const fileInfos: FileInfo[] = files.map(file => ({
       file,
       uploadProgress: 0,
@@ -116,6 +122,12 @@ export function UploadModal({ isOpen, onClose, onComplete, collectionOrganizatio
   };
 
   const handleComplete = () => {
+    // Перевірка обов'язкового поля організації
+    if (!selectedOrganization || selectedOrganization.trim() === '') {
+      toast.error('Please select an organization before uploading');
+      return;
+    }
+
     if (uploadedFiles.length > 0) {
       const fileCount = uploadedFiles.length;
       
@@ -124,10 +136,11 @@ export function UploadModal({ isOpen, onClose, onComplete, collectionOrganizatio
         `${fileCount} ${fileCount === 1 ? 'document' : 'documents'} uploaded successfully`
       );
       
-      onComplete(uploadedFiles, []);
+      onComplete(uploadedFiles, [], selectedOrganization);
       // Reset state
       setCurrentStep('select');
       setUploadedFiles([]);
+      setSelectedOrganization('');
       onClose();
     }
   };
@@ -158,13 +171,15 @@ export function UploadModal({ isOpen, onClose, onComplete, collectionOrganizatio
                 {/* Organization Dropdown */}
                 <div className="mb-[24px]">
                   <label className="block text-[14px] text-[#1c2024] mb-[8px]">
-                    Choose organization
+                    Choose organization <span className="text-red-500">*</span>
                   </label>
                   <div className="relative" ref={orgDropdownRef}>
                     <button
                       type="button"
                       onClick={() => setIsOrgDropdownOpen(!isOrgDropdownOpen)}
-                      className="w-full h-[48px] px-[16px] pr-[40px] border border-[#e0e1e6] rounded-[8px] text-[15px] text-left appearance-none focus:outline-none focus:ring-2 focus:ring-[#005be2] bg-white"
+                      className={`w-full h-[48px] px-[16px] pr-[40px] border rounded-[8px] text-[15px] text-left appearance-none focus:outline-none focus:ring-2 focus:ring-[#005be2] bg-white ${
+                        !selectedOrganization ? 'border-red-300' : 'border-[#e0e1e6]'
+                      }`}
                     >
                       <span className={selectedOrganization ? 'text-[#1c2024]' : 'text-[#9ca3af]'}>
                         {selectedOrganization || 'Where should this document live?'}
@@ -239,13 +254,15 @@ export function UploadModal({ isOpen, onClose, onComplete, collectionOrganizatio
                 {/* Organization Info */}
                 <div className="mb-[24px]">
                   <label className="block text-[14px] text-[#1c2024] mb-[8px]">
-                    Choose organization
+                    Choose organization <span className="text-red-500">*</span>
                   </label>
                   <div className="relative" ref={orgDropdownUploadingRef}>
                     <button
                       type="button"
                       onClick={() => setIsOrgDropdownOpenUploading(!isOrgDropdownOpenUploading)}
-                      className="w-full h-[48px] px-[16px] pr-[40px] border border-[#e0e1e6] rounded-[8px] text-[15px] text-left appearance-none focus:outline-none focus:ring-2 focus:ring-[#005be2] bg-white"
+                      className={`w-full h-[48px] px-[16px] pr-[40px] border rounded-[8px] text-[15px] text-left appearance-none focus:outline-none focus:ring-2 focus:ring-[#005be2] bg-white ${
+                        !selectedOrganization ? 'border-red-300' : 'border-[#e0e1e6]'
+                      }`}
                     >
                       <span className={selectedOrganization ? 'text-[#1c2024]' : 'text-[#9ca3af]'}>
                         {selectedOrganization || 'Where should this document live?'}
@@ -317,7 +334,12 @@ export function UploadModal({ isOpen, onClose, onComplete, collectionOrganizatio
               </button>
               <button
                 onClick={handleComplete}
-                className="h-[36px] px-[16px] rounded-[6px] text-[13px] bg-[#005be2] text-white hover:bg-[#004fc4]"
+                disabled={!selectedOrganization || selectedOrganization.trim() === ''}
+                className={`h-[36px] px-[16px] rounded-[6px] text-[13px] text-white transition-colors ${
+                  !selectedOrganization || selectedOrganization.trim() === ''
+                    ? 'bg-[#9ca3af] cursor-not-allowed'
+                    : 'bg-[#005be2] hover:bg-[#004fc4]'
+                }`}
               >
                 Add
               </button>
