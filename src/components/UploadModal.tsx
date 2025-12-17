@@ -259,8 +259,8 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-[24px]">
-      <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl transition-all w-[740px] max-w-[calc(100vw-48px)] h-[650px]">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-[24px]" onClick={onClose}>
+      <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl transition-all w-[740px] max-w-[calc(100vw-48px)] h-[650px]" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-[24px] py-[20px] border-b border-[#e8e8ec]">
           <h2 className="text-[16px] font-semibold text-[#1c2024]">Upload documents</h2>
@@ -396,8 +396,19 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
                 {collections.length > 0 && selectedFiles.length > 0 && (
                   <div ref={collectionsDropdownRef} className="relative mt-[24px]">
                     <button
+                      ref={collectionsButtonRef}
                       type="button"
-                      onClick={() => setIsCollectionsDropdownOpen(!isCollectionsDropdownOpen)}
+                      onClick={() => {
+                        if (collectionsButtonRef.current) {
+                          const rect = collectionsButtonRef.current.getBoundingClientRect();
+                          setDropdownPosition({
+                            top: rect.bottom + 4,
+                            left: rect.left,
+                            width: rect.width
+                          });
+                        }
+                        setIsCollectionsDropdownOpen(!isCollectionsDropdownOpen);
+                      }}
                       className="w-full flex items-center justify-between px-[12px] py-[10px] border border-[#e0e1e6] rounded-[8px] bg-white hover:bg-[#f9fafb] transition-colors"
                     >
                       <span className="text-[13px] text-[#1c2024]">Add to collections (optional)</span>
@@ -411,9 +422,20 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
                       </div>
                     </button>
                     
-                    {isCollectionsDropdownOpen && (
-                      <div className="absolute top-full left-0 right-0 mt-[4px] border border-[#e0e1e6] rounded-[8px] bg-white shadow-lg z-10 max-h-[200px] overflow-y-auto">
-                        <div className="p-[8px] space-y-[4px]">
+                    {isCollectionsDropdownOpen && typeof window !== 'undefined' && createPortal(
+                      <div
+                        className="fixed border border-[#e0e1e6] rounded-[8px] bg-white shadow-lg overflow-hidden flex flex-col"
+                        style={{
+                          top: `${dropdownPosition.top}px`,
+                          left: `${dropdownPosition.left}px`,
+                          width: `${dropdownPosition.width}px`,
+                          height: '226px',
+                          zIndex: 99999,
+                          pointerEvents: 'auto'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="overflow-y-auto p-[8px] space-y-[4px]" style={{ height: '226px' }}>
                           {collections.map((collection) => {
                             const isSelected = selectedCollectionIds.has(collection.id);
                             const collectionType = getCollectionType ? getCollectionType({ rules: collection.rules, documentIds: [] }) : 'manual';
@@ -422,8 +444,15 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
                               <button
                                 key={collection.id}
                                 type="button"
-                                onClick={() => handleToggleCollection(collection.id)}
-                                className={`w-full flex items-center gap-[8px] px-[8px] py-[6px] rounded-[6px] text-left transition-colors ${
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  handleToggleCollection(collection.id);
+                                }}
+                                onMouseDown={(e) => {
+                                  e.stopPropagation();
+                                }}
+                                className={`w-full flex items-center gap-[8px] px-[8px] py-[6px] rounded-[6px] text-left transition-colors cursor-pointer ${
                                   isSelected
                                     ? 'bg-[#ebf3ff] border border-[#005be2]'
                                     : 'hover:bg-[#f9fafb] border border-transparent'
@@ -447,7 +476,8 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
                             );
                           })}
                         </div>
-                      </div>
+                      </div>,
+                      document.body
                     )}
                   </div>
                 )}
@@ -579,15 +609,19 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
                     </button>
                     
                     {isCollectionsDropdownOpen && typeof window !== 'undefined' && createPortal(
-                      <div 
-                        className="fixed border border-[#e0e1e6] rounded-[8px] bg-white shadow-lg z-[100] h-[200px] overflow-hidden flex flex-col"
+                      <div
+                        className="fixed border border-[#e0e1e6] rounded-[8px] bg-white shadow-lg overflow-hidden flex flex-col"
                         style={{
                           top: `${dropdownPosition.top}px`,
                           left: `${dropdownPosition.left}px`,
-                          width: `${dropdownPosition.width}px`
+                          width: `${dropdownPosition.width}px`,
+                          height: '226px',
+                          zIndex: 99999,
+                          pointerEvents: 'auto'
                         }}
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <div className="flex-1 overflow-y-auto p-[8px] space-y-[4px]">
+                        <div className="overflow-y-auto p-[8px] space-y-[4px]" style={{ height: '226px' }}>
                           {collections.map((collection) => {
                             const isSelected = selectedCollectionIds.has(collection.id);
                             const collectionType = getCollectionType ? getCollectionType({ rules: collection.rules, documentIds: [] }) : 'manual';
@@ -596,8 +630,15 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
                               <button
                                 key={collection.id}
                                 type="button"
-                                onClick={() => handleToggleCollection(collection.id)}
-                                className={`w-full flex items-center gap-[8px] px-[8px] py-[6px] rounded-[6px] text-left transition-colors ${
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  handleToggleCollection(collection.id);
+                                }}
+                                onMouseDown={(e) => {
+                                  e.stopPropagation();
+                                }}
+                                className={`w-full flex items-center gap-[8px] px-[8px] py-[6px] rounded-[6px] text-left transition-colors cursor-pointer ${
                                   isSelected
                                     ? 'bg-[#ebf3ff] border border-[#005be2]'
                                     : 'hover:bg-[#f9fafb] border border-transparent'
