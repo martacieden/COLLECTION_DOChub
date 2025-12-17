@@ -77,8 +77,8 @@ THE DOCUMENTS TABLE HAS THESE COLUMNS:
 
 AVAILABLE RULE TYPES:
 
-1. document_type - Searches: Name, Description, Attached to, Category
-   Use for semantic document types found in NAME like: Invoice, Permit, Contract, Agreement, Change Order, Lien Waiver, Blueprint
+1. document_type (Document category) - Searches: Name, Description, Attached to, Category
+   Use for semantic document categories found in NAME like: Invoice, Permit, Contract, Agreement, Change Order, Lien Waiver, Blueprint
    Example: "Invoice" matches "Invoice #1247 - Electrical Work Phase 1"
 
 2. keywords - Searches: Name + Description
@@ -122,7 +122,7 @@ EXAMPLES:
 RULES:
 1. Generate a rule for EACH distinct filter criterion mentioned in the description
 2. Typical criteria to look for:
-   - Document type (invoice, permit, contract, etc.) → document_type
+   - Document category (invoice, permit, contract, etc.) → document_type
    - Family/company name → client
    - Project/location name → keywords
    - Year or date → date_range
@@ -277,7 +277,7 @@ Generate the best filtering rules for this collection.`;
  */
 export function getRuleTypeLabel(type: CollectionRule['type']): string {
   const labels: Record<CollectionRule['type'], string> = {
-    document_type: 'Document type',
+    document_type: 'Document category',
     tags: 'Tags',
     client: 'Client',
     keywords: 'Contains keywords',

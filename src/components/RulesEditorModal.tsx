@@ -20,6 +20,10 @@ interface Organization {
 interface Document {
   id: string;
   organization?: string;
+  category?: string;
+  tags?: string[];
+  name?: string;
+  description?: string;
 }
 
 interface RulesEditorModalProps {
@@ -35,7 +39,7 @@ interface RulesEditorModalProps {
 }
 
 const ruleTypeOptions = [
-  { value: 'document_type', label: 'Document type' },
+  { value: 'document_type', label: 'Document category' },
   { value: 'tags', label: 'Tags' },
   { value: 'client', label: 'Client' },
   { value: 'keywords', label: 'Keywords' },
@@ -94,6 +98,19 @@ export function RulesEditorModal({
     const allOrgs = [...new Set([...orgsFromList, ...orgsFromDocs])].sort();
     return allOrgs;
   }, [organizations, documents]);
+
+  // Отримуємо список категорій документів
+  const categoryOptions = useMemo(() => {
+    const categories = [...new Set((documents || []).map(d => d.category).filter(Boolean))].sort();
+    return categories;
+  }, [documents]);
+
+  // Отримуємо список тегів
+  const tagOptions = useMemo(() => {
+    const allTags = (documents || []).flatMap(d => d.tags || []).filter(Boolean);
+    const uniqueTags = [...new Set(allTags)].sort();
+    return uniqueTags;
+  }, [documents]);
 
   if (!isOpen) return null;
 
@@ -179,6 +196,21 @@ export function RulesEditorModal({
         setMatchedDocCount(realCount);
       }
       
+      // Якщо видалено всі правила, показуємо попередження
+      if (updated.length === 0 && prev.length > 0) {
+        toast.warning(
+          <div className="flex flex-col gap-[4px]">
+            <div className="text-[13px] text-[#1c2024] font-medium">
+              All rules removed
+            </div>
+            <div className="text-[12px] text-[#60646c]">
+              This collection will no longer be Auto-sync enabled. Documents will need to be added manually.
+            </div>
+          </div>,
+          { duration: 5000 }
+        );
+      }
+      
       return updated;
     });
   };
@@ -187,7 +219,7 @@ export function RulesEditorModal({
     const newRule: CollectionRule = {
       id: `rule-${Date.now()}-${Math.random()}`,
       type: 'document_type',
-      label: 'Document type',
+      label: 'Document category',
       value: '',
       operator: 'is',
       enabled: true,
@@ -225,12 +257,12 @@ export function RulesEditorModal({
     const generatedRules: CollectionRule[] = [];
     const descLower = description.toLowerCase();
 
-    // Document type detection - покращена логіка для Invoice
+    // Document category detection - покращена логіка для Invoice
     if (descLower.includes('invoice') || descLower.includes('invoices') || descLower.includes('payment') || descLower.includes('billing')) {
       generatedRules.push({
         id: `rule-type-${Date.now()}-1`,
         type: 'document_type',
-        label: 'Document type',
+        label: 'Document category',
         value: 'Invoice',
         operator: 'is',
         enabled: true,
@@ -240,7 +272,7 @@ export function RulesEditorModal({
       generatedRules.push({
         id: `rule-type-${Date.now()}-2`,
         type: 'document_type',
-        label: 'Document type',
+        label: 'Document category',
         value: 'Contract',
         operator: 'is',
         enabled: true,
@@ -250,7 +282,7 @@ export function RulesEditorModal({
       generatedRules.push({
         id: `rule-type-${Date.now()}-3`,
         type: 'document_type',
-        label: 'Document type',
+        label: 'Document category',
         value: 'Tax Document',
         operator: 'is',
         enabled: true,
@@ -338,6 +370,24 @@ export function RulesEditorModal({
   };
 
   const handleSave = () => {
+    // Перевірка: якщо всі правила видалені, колекція більше не буде Auto-sync enabled
+    if (rules.length === 0) {
+      toast.warning(
+        <div className="flex flex-col gap-[4px]">
+          <div className="text-[13px] text-[#1c2024] font-medium">
+            All rules removed
+          </div>
+          <div className="text-[12px] text-[#60646c]">
+            This collection will no longer be Auto-sync enabled. Documents will need to be added manually.
+          </div>
+        </div>,
+        { duration: 5000 }
+      );
+      // Все одно зберігаємо (колекція стає manual)
+      onSave(rules, description);
+      return;
+    }
+    
     // Валідація: перевірка, що хоча б одне правило увімкнено
     const enabledRules = rules.filter(r => r.enabled);
     if (enabledRules.length === 0) {
@@ -463,73 +513,124 @@ export function RulesEditorModal({
                         </button>
                       </div>
 
+                      {/* Warning when all rules are deleted */}
+                      {rules.length === 0 && (
+                        <div className="bg-[#fef3c7] border border-[#f59e0b] rounded-[8px] p-[12px] mb-[8px]">
+                          <div className="flex items-start gap-[8px]">
+                            <div className="text-[#f59e0b] mt-[2px]">
+                              <svg className="size-[16px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-[12px] font-medium text-[#92400e] mb-[2px]">
+                                No rules defined
+                              </p>
+                              <p className="text-[11px] text-[#92400e]">
+                                This collection will no longer be Auto-sync enabled. Documents will need to be added manually.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
                       <div className="space-y-[8px]">
-                        {rules.map((rule) => (
-                          <div
-                            key={rule.id}
-                            className={`flex items-center gap-[12px] transition-all ${
-                              rule.enabled
-                                ? 'opacity-100'
-                                : 'opacity-60'
-                            }`}
-                          >
-                            {/* Type Dropdown */}
-                            <select
-                              value={rule.type}
-                              onChange={(e) => updateRuleType(rule.id, e.target.value as CollectionRule['type'])}
-                              className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1 min-w-[140px]"
+                        {rules.length > 0 ? (
+                          rules.map((rule) => (
+                            <div
+                              key={rule.id}
+                              className={`flex items-center gap-[12px] transition-all ${
+                                rule.enabled
+                                  ? 'opacity-100'
+                                  : 'opacity-60'
+                              }`}
                             >
-                              {ruleTypeOptions.map(opt => (
-                                <option key={opt.value} value={opt.value}>
-                                  {opt.label}
-                                </option>
-                              ))}
-                            </select>
-
-                            {/* Operator Dropdown */}
-                            <select
-                              value={rule.operator}
-                              onChange={(e) => updateRuleOperator(rule.id, e.target.value as CollectionRule['operator'])}
-                              className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1 min-w-[120px]"
-                            >
-                              {operatorOptions.map(opt => (
-                                <option key={opt.value} value={opt.value}>
-                                  {opt.label}
-                                </option>
-                              ))}
-                            </select>
-
-                            {/* Value Input/Select */}
-                            {rule.type === 'vendor' || rule.type === 'client' ? (
+                              {/* Type Dropdown */}
                               <select
-                                value={rule.value}
-                                onChange={(e) => updateRuleValue(rule.id, e.target.value)}
-                                className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
+                                value={rule.type}
+                                onChange={(e) => updateRuleType(rule.id, e.target.value as CollectionRule['type'])}
+                                className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1 min-w-[140px]"
                               >
-                                <option value="">Select {rule.type === 'vendor' ? 'organization' : 'client'}...</option>
-                                {organizationOptions.map(org => (
-                                  <option key={org} value={org}>{org}</option>
+                                {ruleTypeOptions.map(opt => (
+                                  <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </option>
                                 ))}
                               </select>
-                            ) : (
-                              <input
-                                type="text"
-                                value={rule.value}
-                                onChange={(e) => updateRuleValue(rule.id, e.target.value)}
-                                placeholder="Value"
-                                className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
-                              />
-                            )}
 
-                            {/* Delete Button */}
-                            <button
-                              onClick={() => deleteRule(rule.id)}
-                              className="size-[40px] flex items-center justify-center rounded-[8px] border border-[#e0e1e6] hover:bg-[#fee7e9] transition-colors flex-shrink-0"
-                            >
-                              <Trash2 className="size-[16px] text-[#60646c]" />
-                            </button>
+                              {/* Operator Dropdown */}
+                              <select
+                                value={rule.operator}
+                                onChange={(e) => updateRuleOperator(rule.id, e.target.value as CollectionRule['operator'])}
+                                className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1 min-w-[120px]"
+                              >
+                                {operatorOptions.map(opt => (
+                                  <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+
+                              {/* Value Input/Select */}
+                              {rule.type === 'vendor' || rule.type === 'client' ? (
+                                <select
+                                  value={rule.value}
+                                  onChange={(e) => updateRuleValue(rule.id, e.target.value)}
+                                  className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
+                                >
+                                  <option value="">Select {rule.type === 'vendor' ? 'organization' : 'client'}...</option>
+                                  {organizationOptions.map(org => (
+                                    <option key={org} value={org}>{org}</option>
+                                  ))}
+                                </select>
+                              ) : rule.type === 'document_type' ? (
+                                <select
+                                  value={rule.value}
+                                  onChange={(e) => updateRuleValue(rule.id, e.target.value)}
+                                  className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
+                                >
+                                  <option value="">Select category...</option>
+                                  {categoryOptions.map(category => (
+                                    <option key={category} value={category}>{category}</option>
+                                  ))}
+                                </select>
+                              ) : rule.type === 'tags' ? (
+                                <select
+                                  value={rule.value}
+                                  onChange={(e) => updateRuleValue(rule.id, e.target.value)}
+                                  className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
+                                >
+                                  <option value="">Select tag...</option>
+                                  {tagOptions.map(tag => (
+                                    <option key={tag} value={tag}>{tag}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={rule.value}
+                                  onChange={(e) => updateRuleValue(rule.id, e.target.value)}
+                                  placeholder="Value"
+                                  className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
+                                />
+                              )}
+
+                              {/* Delete Button */}
+                              <button
+                                onClick={() => deleteRule(rule.id)}
+                                className="size-[40px] flex items-center justify-center rounded-[8px] border border-[#e0e1e6] hover:bg-[#fee7e9] transition-colors flex-shrink-0"
+                              >
+                                <Trash2 className="size-[16px] text-[#60646c]" />
+                              </button>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-[12px]">
+                            <p className="text-[11px] text-[#60646c]">
+                              No rules yet. Add rules manually or generate them with AI.
+                            </p>
                           </div>
-                        ))}
+                        )}
                       </div>
                     </div>
                   )}
@@ -551,7 +652,7 @@ export function RulesEditorModal({
             onClick={handleSave}
             className="h-[36px] px-[16px] bg-[#005be2] rounded-[6px] text-[13px] text-white hover:bg-[#0047b3]"
           >
-            Apply Rules
+            Apply
           </button>
         </div>
       </div>

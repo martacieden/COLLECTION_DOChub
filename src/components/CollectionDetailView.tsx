@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, Share, Users, FileText, Plus, ChevronDown, ChevronUp, Search, SlidersHorizontal, List, TrendingUp, ArrowLeft, Upload, ChevronRight, MoreVertical } from 'lucide-react';
+import { Settings, Share, Users, FileText, Plus, ChevronDown, ChevronUp, Search, SlidersHorizontal, List, TrendingUp, ArrowLeft, Upload, ChevronRight, MoreVertical, Sparkles, Folder } from 'lucide-react';
 import imgAvatar from "figma:asset/faff2adb1cb08272d6a4e4d91304adea83279eb7.png";
 import imgAvatar1 from "figma:asset/248e51d98c071d09cefd9d4449f99bd2dc3797f1.png";
 import { CollectionDocumentsTable } from './CollectionDocumentsTable';
@@ -11,11 +11,23 @@ import { getOrganizationAvatar } from '../utils/organizationUtils';
 
 interface CollectionRule {
   id: string;
-  type: 'document_type' | 'tags' | 'client' | 'keywords' | 'date_range' | 'vendor';
+  type: 'document_type' | 'tags' | 'client' | 'keywords' | 'date_range' | 'vendor' | 'file_type' | 'organization';
   label: string;
   value: string;
   operator: 'is' | 'contains' | 'equals' | 'not';
   enabled: boolean;
+}
+
+// Helper function to determine collection type
+// Auto collection: має rules (автоматично оновлюється на основі правил)
+// Manual collection: немає rules (повністю керується користувачем)
+function getCollectionType(collection: { rules?: CollectionRule[] | string[]; documentIds?: string[] }): 'auto' | 'manual' {
+  // Auto collection: має rules (навіть якщо є documentIds)
+  if (collection.rules && collection.rules.length > 0) {
+    return 'auto';
+  }
+  // Manual collection: немає rules, тільки documentIds (папка)
+  return 'manual';
 }
 
 interface CollectionDetailViewProps {
@@ -33,6 +45,7 @@ interface CollectionDetailViewProps {
     rules?: CollectionRule[] | string[];
     autoSync?: boolean;
     documentIds?: string[];
+    manuallyAddedDocumentIds?: string[];
   };
   onBack?: () => void;
   onAddDocument?: () => void;
@@ -43,6 +56,9 @@ interface CollectionDetailViewProps {
   onFiltersClick?: () => void;
   onCustomizeFiltersClick?: () => void;
   documents?: any[];
+  isProcessing?: boolean;
+  getMatchingRule?: (document: any, rules: CollectionRule[]) => CollectionRule | null;
+  getRuleDescription?: (rule: CollectionRule) => string;
 }
 
 // FileIcon component - same as in App.tsx
@@ -451,6 +467,20 @@ export function CollectionDetailHeader({ collection, onBack, onAddDocument, onSe
             <div>
               <div className="flex items-center gap-[12px] mb-[4px]">
                 <h2 className="text-[16px] font-semibold text-[#1c2024] tracking-[-0.08px]">{collection.title}</h2>
+                {(() => {
+                  const collectionType = getCollectionType({ rules: collection.rules, documentIds: collection.documentIds });
+                  if (collectionType === 'auto') {
+                    return (
+                      <span 
+                        className="px-[8px] py-[4px] bg-[#f9fafb] text-[#60646c] rounded-[6px] text-[11px] font-medium"
+                        title="Automatically updated. Documents are added or removed based on collection rules."
+                      >
+                        Auto
+                      </span>
+                    );
+                  }
+                  return null;
+                })()}
                 {collection.organization && (() => {
                   const orgAvatar = getOrganizationAvatar(collection.organization);
                   return (
@@ -473,6 +503,29 @@ export function CollectionDetailHeader({ collection, onBack, onAddDocument, onSe
                 <span>·</span>
                 <span>{collection.createdOn || '13/10/2025'}</span>
               </div>
+              {/* Description */}
+              {collection.description && collection.description.trim() !== '' ? (
+                <p className="text-[13px] text-[#1c2024] mt-[6px] leading-[1.4]">
+                  {collection.description}
+                </p>
+              ) : (
+                (() => {
+                  const collectionType = getCollectionType({ rules: collection.rules, documentIds: collection.documentIds });
+                  if (collectionType === 'auto') {
+                    return (
+                      <p className="text-[12px] text-[#60646c] mt-[4px]">
+                        Updates automatically based on rules. To change its contents, edit the rules.
+                      </p>
+                    );
+                  } else {
+                    return (
+                      <p className="text-[12px] text-[#60646c] mt-[4px]">
+                        Managed manually. Documents are added and removed by you.
+                      </p>
+                    );
+                  }
+                })()
+              )}
             </div>
           </div>
 
@@ -494,13 +547,31 @@ export function CollectionDetailHeader({ collection, onBack, onAddDocument, onSe
               <span>Share</span>
             </button>
 
-            <button 
-              onClick={onAddDocument}
-              className="h-[36px] px-[16px] bg-[#005be2] rounded-[6px] text-[13px] text-white hover:bg-[#0047b3] flex items-center gap-[6px]"
-            >
-              <Upload className="size-[16px]" />
-              <span>Upload</span>
-            </button>
+            {(() => {
+              const collectionType = getCollectionType({ rules: collection.rules, documentIds: collection.documentIds });
+              if (collectionType === 'auto') {
+                return (
+                  <button 
+                    disabled
+                    className="h-[36px] px-[16px] bg-[#e0e1e6] rounded-[6px] text-[13px] text-[#80838d] cursor-not-allowed flex items-center gap-[6px]"
+                    title="This is an auto collection. Edit the rules to change which documents appear here."
+                  >
+                    <Upload className="size-[16px]" />
+                    <span>Upload</span>
+                  </button>
+                );
+              } else {
+                return (
+                  <button 
+                    onClick={onAddDocument}
+                    className="h-[36px] px-[16px] bg-[#005be2] rounded-[6px] text-[13px] text-white hover:bg-[#0047b3] flex items-center gap-[6px]"
+                  >
+                    <Upload className="size-[16px]" />
+                    <span>Upload</span>
+                  </button>
+                );
+              }
+            })()}
           </div>
         </div>
       </div>
@@ -508,7 +579,7 @@ export function CollectionDetailHeader({ collection, onBack, onAddDocument, onSe
   );
 }
 
-export function CollectionDetailView({ collection, onBack, onAddDocument, onRemoveFromCollection, onDelete, onSettingsClick, onShareClick, onFiltersClick, onCustomizeFiltersClick, documents }: CollectionDetailViewProps) {
+export function CollectionDetailView({ collection, onBack, onAddDocument, onRemoveFromCollection, onDelete, onSettingsClick, onShareClick, onFiltersClick, onCustomizeFiltersClick, documents, isProcessing = false, getMatchingRule, getRuleDescription }: CollectionDetailViewProps) {
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
@@ -569,8 +640,22 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
   // Count visible columns in table view
   const visibleColumnsCount = 11; // Checkbox + Name + Description + Type + Attached to + Shared with + Uploaded by + Uploaded on + Organization + Signature status + Actions
 
+  // Перевіряємо чи колекція обробляється
+  const collectionType = getCollectionType({ rules: collection.rules, documentIds: collection.documentIds });
+  const isAutoCollection = collectionType === 'auto';
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-white min-w-0 h-full pt-[12px]">
+      {/* Processing indicator для Auto колекцій */}
+      {isAutoCollection && isProcessing && (
+        <div className="px-[24px] py-[12px] bg-[#f0f7ff] border-b border-[#005be2]/20">
+          <div className="flex items-center gap-[8px] text-[#005be2]">
+            <div className="size-[16px] border-2 border-[#005be2] border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-[13px] font-medium">Processing...</span>
+            <span className="text-[12px] text-[#60646c]">Updating collection based on rules</span>
+          </div>
+        </div>
+      )}
 
       {/* Details Section */}
       <div className="border-b border-[#e8e8ec] px-[24px] py-[16px] flex-shrink-0">
@@ -729,7 +814,25 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
                     <td className="p-2 align-middle whitespace-nowrap">
                       <div className="flex items-center gap-[8px]">
                         <FileIcon type={doc.type || 'file'} />
-                        <span className="text-[13px] text-[#1c2024]">{doc.name || 'Unnamed document'}</span>
+                        <div className="flex items-center gap-[6px]">
+                          <span className="text-[13px] text-[#1c2024]">{doc.name || 'Unnamed document'}</span>
+                          {(() => {
+                            const isManuallyAdded = collection.manuallyAddedDocumentIds?.includes(doc.id || '');
+                            
+                            if (isAutoCollection && isManuallyAdded) {
+                              return (
+                                <span 
+                                  className="px-[6px] py-[2px] bg-[#fff8ed] text-[#b45309] rounded-[4px] text-[10px] font-medium"
+                                  title="This document was manually added and does not match the collection rules."
+                                >
+                                  Manually added
+                                </span>
+                              );
+                            }
+                            
+                            return null;
+                          })()}
+                        </div>
                       </div>
                     </td>
                     <td className="p-2 align-middle">
@@ -846,7 +949,26 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
                 {/* Content Section */}
                 <div className="p-[12px]">
                   <h3 className="text-[13px] text-[#1c2024] mb-[4px] line-clamp-1">
-                    {doc.name || 'Unnamed document'}
+                    <div className="flex items-center gap-[6px]">
+                      <span>{doc.name || 'Unnamed document'}</span>
+                      {(() => {
+                        const collectionType = getCollectionType({ rules: collection.rules, documentIds: collection.documentIds });
+                        const isManuallyAdded = collection.manuallyAddedDocumentIds?.includes(doc.id || '');
+                        
+                            if (isAutoCollection && isManuallyAdded) {
+                              return (
+                                <span 
+                                  className="px-[6px] py-[2px] bg-[#fff8ed] text-[#b45309] rounded-[4px] text-[10px] font-medium"
+                                  title="This document was manually added and does not match the collection rules."
+                                >
+                                  Manually added
+                                </span>
+                              );
+                            }
+                            
+                            return null;
+                          })()}
+                    </div>
                   </h3>
                   <p className="text-[11px] text-[#8b8d98] line-clamp-2">
                     {doc.category || doc.description || 'No description'}...

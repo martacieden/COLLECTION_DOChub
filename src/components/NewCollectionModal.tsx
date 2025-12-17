@@ -314,12 +314,6 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
       return;
     }
 
-    // Validate rules - форсимо створення rules
-    if (generatedRules.length === 0) {
-      toast.error('Please generate rules first. Rules are required for smart collections.');
-      return;
-    }
-
     // Використовуємо collectionName як description
     const description = collectionName.trim();
     onCreateCollection(collectionName, description, generatedRules);
@@ -341,7 +335,7 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
   const enabledRulesCount = generatedRules.filter(r => r.enabled).length;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-[24px] py-[24px]">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-[24px]">
       <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl w-full max-w-[600px] max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-[24px] py-[20px] border-b border-[#e8e8ec]">
@@ -381,57 +375,57 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
             </div>
           </div>
 
-          {/* STEP 2 - Rules Editor (основний крок, завжди видимий) */}
+          {/* STEP 2 - Rules Editor (опціональний крок) */}
           <div className="space-y-[12px]">
             <div>
               <label className="block text-[13px] text-[#1c2024] mb-[8px]">
-                Filtering Rules <span className="text-[#d4183d]">*</span>
+                Filtering Rules (optional)
               </label>
               <p className="text-[11px] text-[#60646c] mb-[8px]">
-                Rules determine which documents are automatically included in this collection.
+                Rules determine which documents are automatically included in this collection. Leave empty to create a manual collection.
               </p>
             </div>
 
             {/* Rules Editor Block - завжди показуємо */}
             <div className="border border-[#e0e1e6] rounded-[8px] overflow-hidden bg-white">
               {/* Header з кнопками */}
-              <div className="flex items-center justify-between px-[16px] py-[10px] border-b border-[#e8e8ec] bg-[#f9fafb]">
-                <div className="flex items-center gap-[6px]">
-                  <p className="text-[12px] text-[#1c2024] font-medium">Rules</p>
+              <div className="flex items-center justify-between p-[16px] border-b border-[#e8e8ec] bg-[#f9fafb]">
+                <div className="flex items-center gap-[8px]">
+                  <p className="text-[13px] text-[#1c2024] font-medium">Rules</p>
                   {generatedRules.length > 0 && (
-                    <span className="px-[6px] py-[1px] rounded-[4px] bg-[#f0f7ff] border border-[#005be2] text-[10px] text-[#005be2]">
+                    <span className="px-[8px] py-[2px] rounded-[6px] bg-[#f0f7ff] border border-[#005be2] text-[11px] text-[#005be2]">
                       {enabledRulesCount} active
                     </span>
                   )}
                   {matchedDocCount > 0 && (
-                    <span className="text-[10px] text-[#60646c]">
-                      • {matchedDocCount} {matchedDocCount === 1 ? 'doc' : 'docs'}
+                    <span className="text-[11px] text-[#60646c]">
+                      • {matchedDocCount} {matchedDocCount === 1 ? 'document' : 'documents'} will be added
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-[6px]">
+                <div className="flex items-center gap-[8px]">
                   <button
                     onClick={handleGenerateRules}
                     disabled={isGenerating || !collectionName.trim()}
-                    className="flex items-center gap-[4px] h-[28px] px-[10px] bg-gradient-to-r from-[#005be2] to-[#0047b3] text-white rounded-[6px] text-[11px] hover:from-[#004fc4] hover:to-[#003d99] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="flex items-center gap-[6px] h-[32px] px-[12px] bg-gradient-to-r from-[#005be2] to-[#0047b3] text-white rounded-[6px] text-[12px] hover:from-[#004fc4] hover:to-[#003d99] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     {isGenerating ? (
                       <>
-                        <Loader2 className="size-[12px] animate-spin" />
+                        <Loader2 className="size-[14px] animate-spin" />
                         <span>Generating...</span>
                       </>
                     ) : (
                       <>
-                        <Sparkles className="size-[12px]" />
+                        <Sparkles className="size-[14px]" />
                         <span>Generate with AI</span>
                       </>
                     )}
                   </button>
                   <button 
                     onClick={addNewRule}
-                    className="flex items-center gap-[4px] h-[28px] px-[10px] border border-[#e0e1e6] rounded-[6px] text-[11px] text-[#1c2024] hover:bg-[#f9fafb] transition-colors"
+                    className="flex items-center gap-[6px] h-[32px] px-[12px] border border-[#e0e1e6] rounded-[6px] text-[12px] text-[#1c2024] hover:bg-[#f9fafb] transition-colors"
                   >
-                    <Plus className="size-[12px]" />
+                    <Plus className="size-[14px]" />
                     <span>Add rule</span>
                   </button>
                 </div>
@@ -482,13 +476,13 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
                             onChange={(e) => updateRuleType(rule.id, e.target.value as CollectionRule['type'])}
                             className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1 min-w-[140px]"
                           >
-                            <option value="document_type">Document type</option>
+                            <option value="document_type">Document category</option>
                             <option value="tags">Tags</option>
                             <option value="client">Client</option>
                             <option value="keywords">Keywords</option>
                             <option value="date_range">Date range</option>
                             <option value="vendor">Vendor</option>
-                            <option value="file_type">File type</option>
+                            <option value="file_type">File format</option>
                             <option value="organization">Organization</option>
                           </select>
 
@@ -548,7 +542,7 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
           <button
             onClick={handleCreate}
             className="h-[36px] px-[16px] rounded-[6px] text-[13px] bg-[#005be2] text-white hover:bg-[#004fc4] disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={!collectionName.trim() || generatedRules.length === 0}
+            disabled={!collectionName.trim()}
           >
             Create Collection
           </button>

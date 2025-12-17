@@ -17,6 +17,7 @@ interface Collection {
   title: string;
   icon?: string;
   rules?: CollectionRule[];
+  documentIds?: string[];
 }
 
 interface AddToCollectionModalProps {
@@ -39,6 +40,16 @@ export function AddToCollectionModal({
 
   if (!isOpen) return null;
 
+  // Helper function to determine collection type
+  const getCollectionType = (collection: { rules?: any[] | string[]; documentIds?: string[] }): 'auto' | 'manual' => {
+    if (collection.rules && collection.rules.length > 0) {
+      return 'auto';
+    }
+    return 'manual';
+  };
+
+  // Показуємо всі колекції (Manual та Auto)
+  // Auto колекції дозволяють додавання, але документи, які не відповідають rules, будуть марковані як manually added
   const filteredCollections = collections.filter(collection =>
     collection.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
