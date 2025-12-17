@@ -525,8 +525,8 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
                     })}
                   </div>
                 ) : (
-                  <div className="text-center py-[24px]">
-                    <p className="text-[12px] text-[#60646c] mb-[12px]">
+                  <div className="text-center py-[12px]">
+                    <p className="text-[11px] text-[#60646c]">
                       No rules yet. Add rules manually or generate them with AI.
                     </p>
                   </div>
