@@ -167,6 +167,60 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
     };
   };
 
+  // Генерація rules на основі name (використовуємо name як description)
+  const handleGenerateRulesFromName = async () => {
+    if (!collectionName.trim()) {
+      return;
+    }
+
+    setIsGenerating(true);
+    setAiReasoning(undefined);
+
+    console.log('[NewCollectionModal] Starting AI rule generation from name');
+    console.log('[NewCollectionModal] Collection name:', collectionName);
+
+    try {
+      const context = getDocumentContext();
+      console.log('[NewCollectionModal] Document context:', context);
+
+      // Використовуємо collectionName як description для AI
+      const result = await generateCollectionRules({
+        description: collectionName.trim(),
+        ...context,
+      });
+
+      console.log('[NewCollectionModal] AI generation successful');
+      console.log('[NewCollectionModal] Generated rules:', result.rules);
+
+      setGeneratedRules(result.rules);
+      
+      // Calculate REAL matched document count
+      const realMatchedCount = allDocuments.filter(doc => 
+        matchDocumentToRules(doc, result.rules)
+      ).length;
+      console.log('[NewCollectionModal] Real matched documents:', realMatchedCount, 'out of', allDocuments.length);
+      
+      setMatchedDocCount(realMatchedCount);
+      setAiReasoning(result.reasoning);
+      setShowRulesBlock(true);
+      setIsRulesExpanded(true);
+
+      toast.success(`AI generated ${result.rules.length} rules`);
+    } catch (error) {
+      console.error('[NewCollectionModal] AI generation error:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(`Failed to generate rules: ${errorMessage}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Генерація rules на вимогу (кнопка)
+  const handleGenerateRules = async () => {
+    await handleGenerateRulesFromName();
+  };
+
   // Auto-generate name when documents are selected
   useEffect(() => {
     if (isOpen && selectedDocuments.length > 0 && !collectionName) {
@@ -204,11 +258,6 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
   }, [generatedRules, allDocuments]);
 
   if (!isOpen) return null;
-
-  // Генерація rules на вимогу (кнопка)
-  const handleGenerateRules = async () => {
-    await handleGenerateRulesFromName();
-  };
 
   const toggleRule = (ruleId: string) => {
     setGeneratedRules(prev =>
@@ -332,7 +381,7 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
             </div>
           </div>
 
-          {/* STEP 2 - AI Rules (основний крок) */}
+          {/* STEP 2 - Rules Editor (основний крок, завжди видимий) */}
           <div className="space-y-[12px]">
             <div>
               <label className="block text-[13px] text-[#1c2024] mb-[8px]">
@@ -343,144 +392,148 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
               </p>
             </div>
 
-            {/* Generate Rules Button - показуємо якщо rules ще не згенеровані */}
-            {!showRulesBlock && (
-              <button
-                onClick={handleGenerateRules}
-                disabled={isGenerating || !collectionName.trim()}
-                className="flex items-center gap-[8px] h-[36px] px-[16px] bg-gradient-to-r from-[#005be2] to-[#0047b3] text-white rounded-[8px] text-[13px] hover:from-[#004fc4] hover:to-[#003d99] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="size-[16px] animate-spin" />
-                    <span>AI is analyzing...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="size-[16px]" />
-                    <span>Generate rules with AI</span>
-                  </>
-                )}
-              </button>
-            )}
+            {/* Rules Editor Block - завжди показуємо */}
+            <div className="border border-[#e0e1e6] rounded-[8px] overflow-hidden bg-white">
+              {/* Header з кнопками */}
+              <div className="flex items-center justify-between p-[16px] border-b border-[#e8e8ec] bg-[#f9fafb]">
+                <div className="flex items-center gap-[8px]">
+                  <p className="text-[13px] text-[#1c2024] font-medium">Rules</p>
+                  {generatedRules.length > 0 && (
+                    <span className="px-[8px] py-[2px] rounded-[6px] bg-[#f0f7ff] border border-[#005be2] text-[11px] text-[#005be2]">
+                      {enabledRulesCount} active
+                    </span>
+                  )}
+                  {matchedDocCount > 0 && (
+                    <span className="text-[11px] text-[#60646c]">
+                      • {matchedDocCount} {matchedDocCount === 1 ? 'document' : 'documents'} will be added
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-[8px]">
+                  <button
+                    onClick={handleGenerateRules}
+                    disabled={isGenerating || !collectionName.trim()}
+                    className="flex items-center gap-[6px] h-[32px] px-[12px] bg-gradient-to-r from-[#005be2] to-[#0047b3] text-white rounded-[6px] text-[12px] hover:from-[#004fc4] hover:to-[#003d99] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="size-[14px] animate-spin" />
+                        <span>Generating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="size-[14px]" />
+                        <span>Generate with AI</span>
+                      </>
+                    )}
+                  </button>
+                  <button 
+                    onClick={addNewRule}
+                    className="flex items-center gap-[6px] h-[32px] px-[12px] border border-[#e0e1e6] rounded-[6px] text-[12px] text-[#1c2024] hover:bg-[#f9fafb] transition-colors"
+                  >
+                    <Plus className="size-[14px]" />
+                    <span>Add rule</span>
+                  </button>
+                </div>
+              </div>
 
-            {/* Generated Rules Block - показуємо одразу після генерації */}
-            {(showRulesBlock || generatedRules.length > 0) && generatedRules.length > 0 && (
-              <div className="border border-[#e0e1e6] rounded-[8px] overflow-hidden bg-white">
-                {/* Summary Header - Always Visible */}
-                <button
-                  onClick={() => setIsRulesExpanded(!isRulesExpanded)}
-                  className="w-full flex items-center justify-between p-[16px] hover:bg-[#f9fafb] transition-colors"
-                >
-                  <div className="flex items-center gap-[12px]">
-                    <div className="text-left">
-                      <div className="flex items-center gap-[8px]">
-                        <p className="text-[13px] text-[#1c2024]">AI-Generated Rules</p>
-                        <span className="px-[8px] py-[2px] rounded-[6px] bg-[#f0f7ff] border border-[#005be2] text-[11px] text-[#005be2]">
-                          {enabledRulesCount} active
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-[#60646c] mt-[2px]">
-                        {matchedDocCount} {matchedDocCount === 1 ? 'document' : 'documents'} will be added
-                      </p>
-                    </div>
+              {/* AI Reasoning (якщо є) */}
+              {aiReasoning && (
+                <div className="border-b border-[#e8e8ec] px-[16px] py-[12px] bg-[#f5f3ff]">
+                  <p className="text-[11px] text-[#7c3aed]">
+                    <span className="font-medium">AI reasoning:</span> {aiReasoning}
+                  </p>
+                </div>
+              )}
+
+              {/* Rules List */}
+              <div className="p-[16px] bg-[#f9fafb] space-y-[12px]">
+                {generatedRules.length > 0 ? (
+                  <div className="space-y-[8px]">
+                    {generatedRules.map((rule) => {
+                      return (
+                        <div
+                          key={rule.id}
+                          className={`flex items-center gap-[12px] transition-all ${
+                            rule.enabled
+                              ? 'opacity-100'
+                              : 'opacity-60'
+                          }`}
+                        >
+                          {/* Enable/Disable toggle */}
+                          <button
+                            onClick={() => toggleRule(rule.id)}
+                            className={`size-[20px] rounded-[4px] border-2 flex items-center justify-center transition-colors ${
+                              rule.enabled
+                                ? 'bg-[#005be2] border-[#005be2]'
+                                : 'bg-white border-[#e0e1e6]'
+                            }`}
+                          >
+                            {rule.enabled && (
+                              <svg className="size-[12px] text-white" fill="none" viewBox="0 0 16 16">
+                                <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            )}
+                          </button>
+
+                          {/* Select filter dropdown */}
+                          <select
+                            value={rule.type}
+                            onChange={(e) => updateRuleType(rule.id, e.target.value as CollectionRule['type'])}
+                            className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1 min-w-[140px]"
+                          >
+                            <option value="document_type">Document type</option>
+                            <option value="tags">Tags</option>
+                            <option value="client">Client</option>
+                            <option value="keywords">Keywords</option>
+                            <option value="date_range">Date range</option>
+                            <option value="vendor">Vendor</option>
+                            <option value="file_type">File type</option>
+                            <option value="organization">Organization</option>
+                          </select>
+
+                          {/* Operator dropdown */}
+                          <select
+                            value={rule.operator}
+                            onChange={(e) => updateRuleOperator(rule.id, e.target.value as CollectionRule['operator'])}
+                            className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1 min-w-[120px]"
+                          >
+                            <option value="is">is</option>
+                            <option value="contains">contains</option>
+                            <option value="equals">equals</option>
+                            <option value="not">is not</option>
+                          </select>
+
+                          {/* Value input */}
+                          <input
+                            type="text"
+                            value={rule.value}
+                            onChange={(e) => updateRuleValue(rule.id, e.target.value)}
+                            placeholder="Value"
+                            className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
+                          />
+
+                          {/* Delete button */}
+                          <button
+                            onClick={() => removeRule(rule.id)}
+                            className="size-[40px] flex items-center justify-center rounded-[8px] border border-[#e0e1e6] hover:bg-[#fee7e9] transition-colors flex-shrink-0"
+                          >
+                            <Trash2 className="size-[16px] text-[#60646c]" />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <ChevronDown className={`size-[20px] text-[#60646c] transition-transform ${isRulesExpanded ? 'rotate-180' : ''}`} />
-                </button>
-
-                {/* AI Reasoning (if available) */}
-                {isRulesExpanded && aiReasoning && (
-                  <div className="border-t border-[#e8e8ec] px-[16px] py-[12px] bg-[#f5f3ff]">
-                    <p className="text-[11px] text-[#7c3aed]">
-                      <span className="font-medium">AI reasoning:</span> {aiReasoning}
+                ) : (
+                  <div className="text-center py-[24px]">
+                    <p className="text-[12px] text-[#60646c] mb-[12px]">
+                      No rules yet. Add rules manually or generate them with AI.
                     </p>
                   </div>
                 )}
-
-                {/* Expandable Rules List */}
-                {isRulesExpanded && (
-                  <div className="border-t border-[#e8e8ec] p-[16px] bg-[#f9fafb] space-y-[12px]">
-                    <div className="flex items-center justify-between mb-[8px]">
-                      <p className="text-[11px] text-[#60646c] uppercase tracking-wider">Conditional Rules</p>
-                      <button 
-                        onClick={addNewRule}
-                        className="flex items-center gap-[4px] text-[11px] text-[#005be2] hover:underline"
-                      >
-                        <Plus className="size-[12px]" />
-                        <span>Add rule</span>
-                      </button>
-                    </div>
-
-                    <div className="space-y-[8px]">
-                      {generatedRules.map((rule) => {
-                        return (
-                          <div
-                            key={rule.id}
-                            className={`flex items-center gap-[12px] transition-all ${
-                              rule.enabled
-                                ? 'opacity-100'
-                                : 'opacity-60'
-                            }`}
-                          >
-                            {/* Select filter dropdown */}
-                            <select
-                              value={rule.type}
-                              onChange={(e) => updateRuleType(rule.id, e.target.value as CollectionRule['type'])}
-                              className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1 min-w-[140px]"
-                            >
-                              <option value="document_type">Document type</option>
-                              <option value="tags">Tags</option>
-                              <option value="client">Client</option>
-                              <option value="keywords">Keywords</option>
-                              <option value="date_range">Date range</option>
-                              <option value="vendor">Vendor</option>
-                            </select>
-
-                            {/* Operator dropdown */}
-                            <select
-                              value={rule.operator}
-                              onChange={(e) => updateRuleOperator(rule.id, e.target.value as CollectionRule['operator'])}
-                              className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1 min-w-[120px]"
-                            >
-                              <option value="is">is</option>
-                              <option value="contains">contains</option>
-                              <option value="equals">equals</option>
-                              <option value="not">is not</option>
-                            </select>
-
-                            {/* Value input */}
-                            <input
-                              type="text"
-                              value={rule.value}
-                              onChange={(e) => updateRuleValue(rule.id, e.target.value)}
-                              placeholder="Value"
-                              className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
-                            />
-
-                            {/* Delete button */}
-                            <button
-                              onClick={() => removeRule(rule.id)}
-                              className="size-[40px] flex items-center justify-center rounded-[8px] border border-[#e0e1e6] hover:bg-[#fee7e9] transition-colors flex-shrink-0"
-                            >
-                              <Trash2 className="size-[16px] text-[#60646c]" />
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
               </div>
-            )}
+            </div>
 
-            {/* No rules generated yet hint */}
-            {!showRulesBlock && generatedRules.length === 0 && (
-              <div className="border border-[#e0e1e6] rounded-[8px] p-[16px] bg-[#f9fafb]">
-                <p className="text-[11px] text-[#60646c]">
-                  Rules are required to create a smart collection. Click "Generate rules with AI" to automatically create filtering rules based on the collection name.
-                </p>
-              </div>
-            )}
           </div>
         </div>
 
