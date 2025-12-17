@@ -341,7 +341,7 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
   const enabledRulesCount = generatedRules.filter(r => r.enabled).length;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-[24px]">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-[24px] py-[24px]">
       <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl w-full max-w-[600px] max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-[24px] py-[20px] border-b border-[#e8e8ec]">
