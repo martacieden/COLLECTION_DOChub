@@ -144,11 +144,10 @@ export type { CollectionRule };
 
 export function NewCollectionModal({ isOpen, onClose, onCreateCollection, selectedDocuments = [], allDocuments = [], onOpenRulesEditor }: NewCollectionModalProps) {
   const [collectionName, setCollectionName] = useState('');
-  const [description, setDescription] = useState('');
   const [generatedRules, setGeneratedRules] = useState<CollectionRule[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showRulesBlock, setShowRulesBlock] = useState(false);
-  const [isRulesExpanded, setIsRulesExpanded] = useState(false);
+  const [isRulesExpanded, setIsRulesExpanded] = useState(true); // За замовчуванням розгорнуто
   const [matchedDocCount, setMatchedDocCount] = useState(0);
   const [nameError, setNameError] = useState('');
   const [aiReasoning, setAiReasoning] = useState<string | undefined>();
@@ -168,29 +167,32 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
     };
   };
 
-  // Auto-generate name and description when documents are selected
+  // Auto-generate name when documents are selected
   useEffect(() => {
-    if (isOpen && selectedDocuments.length > 0) {
-      // Generate automatic name and description based on selected documents
-      if (!collectionName) {
-        const docTypes = [...new Set(selectedDocuments.map(d => d.type).filter(Boolean))];
-        const categories = [...new Set(selectedDocuments.map(d => d.category).filter(Boolean))];
-        
-        if (categories.length > 0) {
-          setCollectionName(`${categories[0]} Documents`);
-        } else if (docTypes.length > 0) {
-          setCollectionName(`${docTypes[0]} Files`);
-        } else {
-          setCollectionName(`Collection from ${selectedDocuments.length} documents`);
-        }
-      }
+    if (isOpen && selectedDocuments.length > 0 && !collectionName) {
+      // Generate automatic name based on selected documents
+      const docTypes = [...new Set(selectedDocuments.map(d => d.type).filter(Boolean))];
+      const categories = [...new Set(selectedDocuments.map(d => d.category).filter(Boolean))];
       
-      if (!description) {
-        setDescription(`Collection created from ${selectedDocuments.length} selected ${selectedDocuments.length === 1 ? 'document' : 'documents'}.`);
+      if (categories.length > 0) {
+        setCollectionName(`${categories[0]} Documents`);
+      } else if (docTypes.length > 0) {
+        setCollectionName(`${docTypes[0]} Files`);
+      } else {
+        setCollectionName(`Collection from ${selectedDocuments.length} documents`);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, selectedDocuments.length]);
+
+  // Автоматично генерувати rules на основі name, якщо є selectedDocuments
+  useEffect(() => {
+    if (isOpen && collectionName.trim() && selectedDocuments.length > 0 && generatedRules.length === 0 && !isGenerating) {
+      // Автоматично генеруємо rules на основі name та selectedDocuments
+      handleGenerateRulesFromName();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, collectionName, selectedDocuments.length]);
 
   // Recalculate matched count whenever rules change
   useEffect(() => {
@@ -203,52 +205,9 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
 
   if (!isOpen) return null;
 
+  // Генерація rules на вимогу (кнопка)
   const handleGenerateRules = async () => {
-    if (!description.trim()) {
-      toast.error('Please enter a description first');
-      return;
-    }
-
-    setIsGenerating(true);
-    setAiReasoning(undefined);
-
-    console.log('[NewCollectionModal] Starting AI rule generation');
-    console.log('[NewCollectionModal] Description:', description);
-
-    try {
-      const context = getDocumentContext();
-      console.log('[NewCollectionModal] Document context:', context);
-
-      const result = await generateCollectionRules({
-        description: description.trim(),
-        ...context,
-      });
-
-      console.log('[NewCollectionModal] AI generation successful');
-      console.log('[NewCollectionModal] Generated rules:', result.rules);
-
-      setGeneratedRules(result.rules);
-      
-      // Calculate REAL matched document count
-      const realMatchedCount = allDocuments.filter(doc => 
-        matchDocumentToRules(doc, result.rules)
-      ).length;
-      console.log('[NewCollectionModal] Real matched documents:', realMatchedCount, 'out of', allDocuments.length);
-      
-      setMatchedDocCount(realMatchedCount);
-      setAiReasoning(result.reasoning);
-      setShowRulesBlock(true);
-      setIsRulesExpanded(true);
-
-      toast.success(`AI generated ${result.rules.length} rules`);
-    } catch (error) {
-      console.error('[NewCollectionModal] AI generation error:', error);
-      
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      toast.error(`Failed to generate rules: ${errorMessage}`);
-    } finally {
-      setIsGenerating(false);
-    }
+    await handleGenerateRulesFromName();
   };
 
   const toggleRule = (ruleId: string) => {
@@ -306,17 +265,24 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
       return;
     }
 
+    // Validate rules - форсимо створення rules
+    if (generatedRules.length === 0) {
+      toast.error('Please generate rules first. Rules are required for smart collections.');
+      return;
+    }
+
+    // Використовуємо collectionName як description
+    const description = collectionName.trim();
     onCreateCollection(collectionName, description, generatedRules);
     handleClose();
   };
 
   const handleClose = () => {
     setCollectionName('');
-    setDescription('');
     setGeneratedRules([]);
     setIsGenerating(false);
     setShowRulesBlock(false);
-    setIsRulesExpanded(false);
+    setIsRulesExpanded(true);
     setMatchedDocCount(0);
     setNameError('');
     setAiReasoning(undefined);
@@ -345,7 +311,7 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
           <div className="space-y-[12px]">
             <div>
               <label className="block text-[13px] text-[#1c2024] mb-[8px]">
-                Name of collection <span className="text-[#d4183d]">*</span>
+                Collection name <span className="text-[#d4183d]">*</span>
               </label>
               <input
                 type="text"
@@ -360,47 +326,46 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
               {nameError && (
                 <p className="text-[11px] text-[#d4183d] mt-[4px]">{nameError}</p>
               )}
+              <p className="text-[11px] text-[#60646c] mt-[4px]">
+                AI will automatically generate filtering rules based on the collection name.
+              </p>
             </div>
           </div>
 
-          {/* STEP 2 - Description & AI Rules */}
+          {/* STEP 2 - AI Rules (основний крок) */}
           <div className="space-y-[12px]">
             <div>
               <label className="block text-[13px] text-[#1c2024] mb-[8px]">
-                Description & AI Rules
+                Filtering Rules <span className="text-[#d4183d]">*</span>
               </label>
               <p className="text-[11px] text-[#60646c] mb-[8px]">
-                Describe your collection and let AI suggest filtering rules.
+                Rules determine which documents are automatically included in this collection.
               </p>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="e.g. All documents related to our Malibu property&#10;Invoices from all household vendors for 2023–2024&#10;Documents related to tax filings for Client A"
-                className="w-full min-h-[100px] p-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] resize-none focus:outline-none focus:ring-2 focus:ring-[#005be2]"
-              />
             </div>
 
-            {/* Generate Rules Button */}
-            <button
-              onClick={handleGenerateRules}
-              disabled={isGenerating || !description.trim()}
-              className="flex items-center gap-[8px] h-[36px] px-[16px] bg-gradient-to-r from-[#005be2] to-[#0047b3] text-white rounded-[8px] text-[13px] hover:from-[#004fc4] hover:to-[#003d99] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="size-[16px] animate-spin" />
-                  <span>AI is analyzing your description...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="size-[16px]" />
-                  <span>Generate rules with AI</span>
-                </>
-              )}
-            </button>
+            {/* Generate Rules Button - показуємо якщо rules ще не згенеровані */}
+            {!showRulesBlock && (
+              <button
+                onClick={handleGenerateRules}
+                disabled={isGenerating || !collectionName.trim()}
+                className="flex items-center gap-[8px] h-[36px] px-[16px] bg-gradient-to-r from-[#005be2] to-[#0047b3] text-white rounded-[8px] text-[13px] hover:from-[#004fc4] hover:to-[#003d99] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="size-[16px] animate-spin" />
+                    <span>AI is analyzing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="size-[16px]" />
+                    <span>Generate rules with AI</span>
+                  </>
+                )}
+              </button>
+            )}
 
-            {/* Generated Rules Block */}
-            {showRulesBlock && generatedRules.length > 0 && (
+            {/* Generated Rules Block - показуємо одразу після генерації */}
+            {(showRulesBlock || generatedRules.length > 0) && generatedRules.length > 0 && (
               <div className="border border-[#e0e1e6] rounded-[8px] overflow-hidden bg-white">
                 {/* Summary Header - Always Visible */}
                 <button
@@ -509,10 +474,12 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
             )}
 
             {/* No rules generated yet hint */}
-            {!showRulesBlock && (
-              <p className="text-[11px] text-[#60646c] italic">
-                Click "Generate rules with AI" to analyze your description and create smart filtering rules.
-              </p>
+            {!showRulesBlock && generatedRules.length === 0 && (
+              <div className="border border-[#e0e1e6] rounded-[8px] p-[16px] bg-[#f9fafb]">
+                <p className="text-[11px] text-[#60646c]">
+                  Rules are required to create a smart collection. Click "Generate rules with AI" to automatically create filtering rules based on the collection name.
+                </p>
+              </div>
             )}
           </div>
         </div>
@@ -528,7 +495,7 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
           <button
             onClick={handleCreate}
             className="h-[36px] px-[16px] rounded-[6px] text-[13px] bg-[#005be2] text-white hover:bg-[#004fc4] disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={!collectionName.trim()}
+            disabled={!collectionName.trim() || generatedRules.length === 0}
           >
             Create Collection
           </button>
