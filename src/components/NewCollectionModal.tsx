@@ -395,7 +395,7 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
             {/* Rules Editor Block - завжди показуємо */}
             <div className="border border-[#e0e1e6] rounded-[8px] overflow-hidden bg-white">
               {/* Header з кнопками */}
-              <div className="flex items-center justify-between px-[12px] py-[10px] border-b border-[#e8e8ec] bg-[#f9fafb]">
+              <div className="flex items-center justify-between px-[16px] py-[10px] border-b border-[#e8e8ec] bg-[#f9fafb]">
                 <div className="flex items-center gap-[6px]">
                   <p className="text-[12px] text-[#1c2024] font-medium">Rules</p>
                   {generatedRules.length > 0 && (
