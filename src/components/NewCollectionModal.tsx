@@ -395,43 +395,43 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
             {/* Rules Editor Block - завжди показуємо */}
             <div className="border border-[#e0e1e6] rounded-[8px] overflow-hidden bg-white">
               {/* Header з кнопками */}
-              <div className="flex items-center justify-between p-[16px] border-b border-[#e8e8ec] bg-[#f9fafb]">
-                <div className="flex items-center gap-[8px]">
-                  <p className="text-[13px] text-[#1c2024] font-medium">Rules</p>
+              <div className="flex items-center justify-between px-[12px] py-[10px] border-b border-[#e8e8ec] bg-[#f9fafb]">
+                <div className="flex items-center gap-[6px]">
+                  <p className="text-[12px] text-[#1c2024] font-medium">Rules</p>
                   {generatedRules.length > 0 && (
-                    <span className="px-[8px] py-[2px] rounded-[6px] bg-[#f0f7ff] border border-[#005be2] text-[11px] text-[#005be2]">
+                    <span className="px-[6px] py-[1px] rounded-[4px] bg-[#f0f7ff] border border-[#005be2] text-[10px] text-[#005be2]">
                       {enabledRulesCount} active
                     </span>
                   )}
                   {matchedDocCount > 0 && (
-                    <span className="text-[11px] text-[#60646c]">
-                      • {matchedDocCount} {matchedDocCount === 1 ? 'document' : 'documents'} will be added
+                    <span className="text-[10px] text-[#60646c]">
+                      • {matchedDocCount} {matchedDocCount === 1 ? 'doc' : 'docs'}
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-[8px]">
+                <div className="flex items-center gap-[6px]">
                   <button
                     onClick={handleGenerateRules}
                     disabled={isGenerating || !collectionName.trim()}
-                    className="flex items-center gap-[6px] h-[32px] px-[12px] bg-gradient-to-r from-[#005be2] to-[#0047b3] text-white rounded-[6px] text-[12px] hover:from-[#004fc4] hover:to-[#003d99] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="flex items-center gap-[4px] h-[28px] px-[10px] bg-gradient-to-r from-[#005be2] to-[#0047b3] text-white rounded-[6px] text-[11px] hover:from-[#004fc4] hover:to-[#003d99] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     {isGenerating ? (
                       <>
-                        <Loader2 className="size-[14px] animate-spin" />
+                        <Loader2 className="size-[12px] animate-spin" />
                         <span>Generating...</span>
                       </>
                     ) : (
                       <>
-                        <Sparkles className="size-[14px]" />
+                        <Sparkles className="size-[12px]" />
                         <span>Generate with AI</span>
                       </>
                     )}
                   </button>
                   <button 
                     onClick={addNewRule}
-                    className="flex items-center gap-[6px] h-[32px] px-[12px] border border-[#e0e1e6] rounded-[6px] text-[12px] text-[#1c2024] hover:bg-[#f9fafb] transition-colors"
+                    className="flex items-center gap-[4px] h-[28px] px-[10px] border border-[#e0e1e6] rounded-[6px] text-[11px] text-[#1c2024] hover:bg-[#f9fafb] transition-colors"
                   >
-                    <Plus className="size-[14px]" />
+                    <Plus className="size-[12px]" />
                     <span>Add rule</span>
                   </button>
                 </div>
