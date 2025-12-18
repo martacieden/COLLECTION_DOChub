@@ -40,7 +40,7 @@ export function BulkActionsBar({
   const topOffset = hasQuickFilters ? 112 : 56;
 
   return (
-    <div className={`sticky z-[15] px-[24px] pt-[8px] pb-[8px] bg-white`} style={{ top: `${topOffset}px` }}>
+    <div className={`sticky px-[24px] pt-[8px] pb-[8px] bg-white`} style={{ top: `${topOffset}px`, zIndex: 100 }}>
       <div className="bg-[#f0f0f3] border border-[#e0e1e6] rounded-[8px] px-[24px] py-[12px] flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-[12px]">
           <span className="text-[13px] text-[#1c2024]">{selectedCount} selected</span>

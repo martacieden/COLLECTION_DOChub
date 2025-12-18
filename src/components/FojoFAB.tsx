@@ -23,3 +23,4 @@ export function FojoFAB({ onClick, isChatOpen }: FojoFABProps) {
     </button>
   );
 }
+

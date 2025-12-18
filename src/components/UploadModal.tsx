@@ -273,9 +273,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
         </div>
 
         {/* Main Content */}
-        <div className="flex flex-1 overflow-hidden">
-          <div className="flex flex-col w-full">
-
+        <div className="flex flex-1 overflow-hidden flex-col">
           {/* Content */}
           <div className="flex-1 overflow-y-auto">
             {/* Single Step: Select Files & Configure */}
@@ -360,14 +358,14 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
 
                 {/* Selected Files List */}
                 {selectedFiles.length > 0 && (
-                  <div className="mt-[24px] border border-[#e0e1e6] rounded-[8px] overflow-hidden">
-                    <div className="bg-[#f9fafb] border-b border-[#e0e1e6] px-[16px] py-[8px]">
+                  <div className="mt-[24px] border border-[#e0e1e6] rounded-[8px] overflow-hidden flex flex-col">
+                    <div className="bg-[#f9fafb] border-b border-[#e0e1e6] px-[16px] py-[8px] flex-shrink-0">
                       <div className="flex items-center gap-[16px]">
                         <p className="text-[13px] font-medium text-[#80838d]">Name</p>
                         <p className="text-[13px] font-medium text-[#80838d]">Details</p>
                       </div>
                     </div>
-                    <div>
+                    <div className={`overflow-y-auto ${selectedFiles.length > 6 ? 'max-h-[240px]' : ''}`}>
                       {selectedFiles.map((file, index) => {
                         const { bgColor } = getFileIcon(file.name);
                         return (
@@ -489,199 +487,6 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
               </div>
             )}
 
-            {/* Step 3: Uploading (залишаємо як є) */}
-            {currentStep === 'uploading' && (
-              <div className="p-[32px] space-y-[24px]">
-                <div>
-                  <h3 className="text-[14px] font-semibold text-[#1c2024] mb-[16px]">Preview & Confirm</h3>
-                  <p className="text-[12px] text-[#60646c] mb-[20px]">
-                    Review and edit document details before uploading
-                  </p>
-                </div>
-
-                {/* Organization Selection */}
-                <div>
-                  <label className="block text-[13px] text-[#1c2024] mb-[8px]">
-                    Organization <span className="text-[#d4183d]">*</span>
-                  </label>
-                  <div className="relative" ref={orgDropdownRef}>
-                    <button
-                      type="button"
-                      onClick={() => setIsOrgDropdownOpen(!isOrgDropdownOpen)}
-                      className={`w-full h-[40px] px-[12px] pr-[40px] border rounded-[8px] text-[13px] text-left focus:outline-none focus:ring-2 focus:ring-[#005be2] bg-white ${
-                        !selectedOrganization ? 'border-[#d4183d]' : 'border-[#e0e1e6]'
-                      }`}
-                    >
-                      <span className={selectedOrganization ? 'text-[#1c2024]' : 'text-[#9ca3af]'}>
-                        {selectedOrganization || 'Select organization'}
-                      </span>
-                    </button>
-                    <ChevronDown className="size-[16px] text-[#9ca3af] absolute right-[12px] top-1/2 -translate-y-1/2 pointer-events-none" />
-                    
-                    {isOrgDropdownOpen && (
-                      <div className="absolute top-full left-0 right-0 mt-[8px] bg-white border border-[#e0e1e6] rounded-[8px] shadow-lg z-50 py-[8px] max-h-[300px] overflow-y-auto">
-                        {organizations.map(org => (
-                          <button
-                            key={org.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedOrganization(org.name);
-                              setIsOrgDropdownOpen(false);
-                            }}
-                            className="w-full px-[12px] py-[8px] text-left text-[13px] text-[#1c2024] hover:bg-[#f9fafb] transition-colors flex items-center gap-[8px]"
-                          >
-                            <div 
-                              className="size-[24px] rounded-full flex items-center justify-center text-white shrink-0"
-                              style={{ backgroundColor: org.color }}
-                            >
-                              <span className="text-[11px]">{org.initial}</span>
-                            </div>
-                            <span>{org.name}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-
-                {/* Collections Selection */}
-                {collections.length > 0 && selectedFiles.length > 0 && (
-                  <div ref={collectionsDropdownRef} className="relative mt-[24px]">
-                    <label className="block text-[13px] text-[#1c2024] mb-[8px]">
-                      Add to collections <span className="text-[#9ca3af]">(optional)</span>
-                    </label>
-                    
-                    {/* Selected Collections Tags */}
-                    {selectedCollectionIds.size > 0 && (
-                      <div className="flex flex-wrap gap-[6px] mb-[8px]">
-                        {[...selectedCollectionIds].map((collectionId) => {
-                          const collection = collections.find(col => col.id === collectionId);
-                          if (!collection) return null;
-                          const collectionType = getCollectionType ? getCollectionType({ rules: collection.rules, documentIds: [] }) : 'manual';
-                          
-                          return (
-                            <div
-                              key={collectionId}
-                              className="flex items-center gap-[6px] px-[8px] py-[4px] bg-[#ebf3ff] border border-[#005be2] rounded-[6px]"
-                            >
-                              <span className="text-[14px]">{collection.icon || '📁'}</span>
-                              <span className="text-[12px] font-medium text-[#1c2024]">{collection.title}</span>
-                              {collectionType === 'auto' && (
-                                <span className="px-[4px] py-[1px] bg-[#f9fafb] text-[#60646c] rounded-[4px] text-[10px] font-medium">
-                                  Auto
-                                </span>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => handleToggleCollection(collectionId)}
-                                className="ml-[4px] text-[#005be2] hover:text-[#0047b3]"
-                              >
-                                <X className="size-[12px]" />
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                    
-                    {/* Dropdown Button */}
-                    <button
-                      ref={collectionsButtonRef}
-                      type="button"
-                      onClick={() => {
-                        if (collectionsButtonRef.current) {
-                          const rect = collectionsButtonRef.current.getBoundingClientRect();
-                          setDropdownPosition({
-                            top: rect.bottom + 4,
-                            left: rect.left,
-                            width: rect.width
-                          });
-                        }
-                        setIsCollectionsDropdownOpen(!isCollectionsDropdownOpen);
-                      }}
-                      className="w-full flex items-center justify-between px-[12px] py-[8px] border border-[#e0e1e6] rounded-[8px] bg-white hover:bg-[#f9fafb] transition-colors"
-                    >
-                      <span className="text-[13px] text-[#60646c]">
-                        {selectedCollectionIds.size > 0 ? 'Add more collections' : 'Select collections'}
-                      </span>
-                      <ChevronDown className={`size-[16px] text-[#60646c] transition-transform ${isCollectionsDropdownOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    
-                    {isCollectionsDropdownOpen && typeof window !== 'undefined' && createPortal(
-                      <div
-                        className="fixed border border-[#e0e1e6] rounded-[8px] bg-white shadow-lg overflow-hidden flex flex-col"
-                        style={{
-                          top: `${dropdownPosition.top}px`,
-                          left: `${dropdownPosition.left}px`,
-                          width: `${dropdownPosition.width}px`,
-                          height: '226px',
-                          zIndex: 99999,
-                          pointerEvents: 'auto'
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div className="overflow-y-auto p-[8px] space-y-[4px]" style={{ height: '226px' }}>
-                          {collections.map((collection) => {
-                            const isSelected = selectedCollectionIds.has(collection.id);
-                            const collectionType = getCollectionType ? getCollectionType({ rules: collection.rules, documentIds: [] }) : 'manual';
-                            
-                            return (
-                              <button
-                                key={collection.id}
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  e.preventDefault();
-                                  handleToggleCollection(collection.id);
-                                }}
-                                onMouseDown={(e) => {
-                                  e.stopPropagation();
-                                }}
-                                className={`w-full flex items-center gap-[8px] px-[8px] py-[6px] rounded-[6px] text-left transition-colors cursor-pointer ${
-                                  isSelected
-                                    ? 'bg-[#ebf3ff] border border-[#005be2]'
-                                    : 'hover:bg-[#f9fafb] border border-transparent'
-                                }`}
-                              >
-                                <Checkbox
-                                  checked={isSelected}
-                                  onCheckedChange={() => handleToggleCollection(collection.id)}
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                                <span className="text-[16px]">{collection.icon || '📁'}</span>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-[12px] font-medium text-[#1c2024] truncate">{collection.title}</p>
-                                </div>
-                                {collectionType === 'auto' && (
-                                  <span className="px-[4px] py-[1px] bg-[#f9fafb] text-[#60646c] rounded-[4px] text-[10px] font-medium">
-                                    Auto
-                                  </span>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>,
-                      document.body
-                    )}
-                  </div>
-                )}
-
-                {/* Summary */}
-                {selectedCollectionIds.size > 0 && (
-                  <div className="bg-[#f0f7ff] border border-[#005be2]/20 rounded-[8px] p-[12px]">
-                    <p className="text-[12px] text-[#005be2] font-medium">
-                      This document will be added to: {collections
-                        .filter(col => selectedCollectionIds.has(col.id))
-                        .map(col => col.title)
-                        .join(' / ')}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* Step 3: Uploading Files */}
             {currentStep === 'uploading' && (
               <div className="p-[32px]">
@@ -700,7 +505,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
 
           {/* Footer */}
           {(currentStep === 'select' || currentStep === 'preview') && (
-            <div className="flex items-center justify-end gap-[12px] px-[24px] py-[16px] border-t border-[#e8e8ec]">
+            <div className="flex items-center justify-end gap-[12px] px-[24px] py-[16px] border-t border-[#e8e8ec] flex-shrink-0">
               <button
                 onClick={onClose}
                 className="h-[36px] px-[16px] rounded-[6px] text-[13px] border border-[#e0e1e6] text-[#1c2024] hover:bg-[#f9fafb]"
@@ -722,7 +527,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
           )}
           
           {currentStep === 'uploading' && (
-            <div className="flex items-center justify-end gap-[12px] px-[24px] py-[16px] border-t border-[#e8e8ec]">
+            <div className="flex items-center justify-end gap-[12px] px-[24px] py-[16px] border-t border-[#e8e8ec] flex-shrink-0">
               <button
                 onClick={onClose}
                 disabled={uploadedFiles.some(f => f.status === 'uploading')}
@@ -732,7 +537,6 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
               </button>
             </div>
           )}
-          </div>
         </div>
       </div>
     </div>

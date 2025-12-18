@@ -936,7 +936,7 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
                     type="checkbox"
                     checked={selectedDocuments.includes(doc.id)}
                     onChange={() => handleSelectDocument(doc.id)}
-                    className="size-[16px] rounded border-[#e0e1e6] text-[#005be2] focus:ring-[#005be2] cursor-pointer bg-white shadow-sm"
+                    className="size-[16px] rounded border-[#e0e1e6] text-[#9ca3af] focus:ring-[#9ca3af] cursor-pointer bg-white shadow-sm"
                   />
                 </div>
 

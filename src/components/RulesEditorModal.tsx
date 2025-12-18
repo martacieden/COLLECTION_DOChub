@@ -549,7 +549,8 @@ export function RulesEditorModal({
                               <select
                                 value={rule.type}
                                 onChange={(e) => updateRuleType(rule.id, e.target.value as CollectionRule['type'])}
-                                className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1 min-w-[140px]"
+                                className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
+                                style={{ minWidth: 0 }}
                               >
                                 {ruleTypeOptions.map(opt => (
                                   <option key={opt.value} value={opt.value}>
@@ -562,7 +563,8 @@ export function RulesEditorModal({
                               <select
                                 value={rule.operator}
                                 onChange={(e) => updateRuleOperator(rule.id, e.target.value as CollectionRule['operator'])}
-                                className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1 min-w-[120px]"
+                                className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
+                                style={{ minWidth: 0 }}
                               >
                                 {operatorOptions.map(opt => (
                                   <option key={opt.value} value={opt.value}>
@@ -577,6 +579,7 @@ export function RulesEditorModal({
                                   value={rule.value}
                                   onChange={(e) => updateRuleValue(rule.id, e.target.value)}
                                   className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
+                                  style={{ minWidth: 0 }}
                                 >
                                   <option value="">Select {rule.type === 'vendor' ? 'organization' : 'client'}...</option>
                                   {organizationOptions.map(org => (
@@ -588,6 +591,7 @@ export function RulesEditorModal({
                                   value={rule.value}
                                   onChange={(e) => updateRuleValue(rule.id, e.target.value)}
                                   className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
+                                  style={{ minWidth: 0 }}
                                 >
                                   <option value="">Select category...</option>
                                   {categoryOptions.map(category => (
@@ -599,6 +603,7 @@ export function RulesEditorModal({
                                   value={rule.value}
                                   onChange={(e) => updateRuleValue(rule.id, e.target.value)}
                                   className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
+                                  style={{ minWidth: 0 }}
                                 >
                                   <option value="">Select tag...</option>
                                   {tagOptions.map(tag => (
@@ -612,6 +617,7 @@ export function RulesEditorModal({
                                   onChange={(e) => updateRuleValue(rule.id, e.target.value)}
                                   placeholder="Value"
                                   className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
+                                  style={{ minWidth: 0 }}
                                 />
                               )}
 
