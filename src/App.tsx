@@ -58,6 +58,7 @@ interface Collection {
   autoSync?: boolean;
   documentIds?: string[]; // IDs документів, які явно додані до колекції
   manuallyAddedDocumentIds?: string[]; // IDs документів, доданих вручну до Auto колекції (не відповідають rules)
+  excludedDocumentIds?: string[]; // IDs документів, які користувач явно виключив з Auto колекції (навіть якщо відповідають rules)
   isFavorite?: boolean; // Чи є колекція улюбленою (favorite)
   isAIGenerated?: boolean; // Чи створена колекція з AI suggestion
 }
@@ -1102,26 +1103,39 @@ function DocumentCardBlock({ documents, onCreateCollection, defaultViewMode = 'l
           </table>
         </div>
       ) : (
-        <div className="grid grid-cols-4 gap-[12px]">
-          {documents.map((doc, index) => (
-            <div 
-              key={index}
-              className="flex flex-col border border-[#e8e8ec] rounded-[8px] overflow-hidden hover:border-[#005be2] transition-colors cursor-pointer"
-            >
-              <div className="h-[100px] bg-gradient-to-br from-[#f9fafb] to-[#f0f0f3] flex items-center justify-center">
-                <div className="flex flex-col items-center gap-[6px]">
-                  <div className="size-[24px] flex items-center justify-center">
-                    <FileIcon type={doc.type} />
+        <div className="grid grid-cols-4 gap-[12px] mt-[8px] mb-[8px]">
+          {documents.map((doc, index) => {
+            const docId = doc.id || `doc-${index}`;
+            const isSelected = selectedDocuments.has(docId);
+            return (
+              <div 
+                key={index}
+                className="flex flex-col border border-[#e8e8ec] rounded-[8px] overflow-hidden hover:border-[#005be2] transition-colors cursor-pointer relative"
+              >
+                {/* Checkbox */}
+                <div className="absolute top-[8px] right-[8px] z-10" onClick={(e) => e.stopPropagation()}>
+                  <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={() => handleSelectDocument(docId)}
+                    className="bg-white shadow-sm"
+                  />
+                </div>
+                
+                <div className="h-[100px] bg-gradient-to-br from-[#f9fafb] to-[#f0f0f3] flex items-center justify-center">
+                  <div className="flex flex-col items-center gap-[6px]">
+                    <div className="size-[24px] flex items-center justify-center">
+                      <FileIcon type={doc.type} />
+                    </div>
+                    <span className="text-[10px] text-[#8b8d98] uppercase tracking-wider">{doc.type}</span>
                   </div>
-                  <span className="text-[10px] text-[#8b8d98] uppercase tracking-wider">{doc.type}</span>
+                </div>
+                <div className="p-[12px]">
+                  <p className="text-[13px] text-[#1c2024] line-clamp-1 mb-[4px]">{doc.name}</p>
+                  <p className="text-[11px] text-[#60646c] line-clamp-2">{doc.description}</p>
                 </div>
               </div>
-              <div className="p-[12px]">
-                <p className="text-[13px] text-[#1c2024] line-clamp-1 mb-[4px]">{doc.name}</p>
-                <p className="text-[11px] text-[#60646c] line-clamp-2">{doc.description}</p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
       
@@ -1150,7 +1164,7 @@ function DocumentCardBlock({ documents, onCreateCollection, defaultViewMode = 'l
             className="h-[28px] px-[12px] bg-[#005be2] rounded-[6px] text-[12px] text-white hover:bg-[#004fc4] transition-colors flex items-center justify-center gap-[6px]"
           >
             <Plus className="size-[14px]" />
-            <span>Create collection</span>
+            <span className="text-[10px]">Create collection</span>
           </button>
         </div>
       )}
@@ -1503,8 +1517,15 @@ function AISearchResultsBlock({
           </button>
           <button
             onClick={() => {
-              if (onViewAnalytics && documents.length > 0) {
-                onViewAnalytics(documents);
+              if (documents.length > 0) {
+                if (onViewAnalytics) {
+                  onViewAnalytics(documents);
+                } else {
+                  // Fallback: показуємо toast, якщо обробник не передано
+                  toast.info(`Analytics for ${documents.length} document${documents.length !== 1 ? 's' : ''}`, {
+                    description: 'Analytics feature is not available in this context'
+                  });
+                }
               }
             }}
             disabled={documents.length === 0}
@@ -5068,10 +5089,13 @@ export default function App() {
     const updatedCollections = collections.map(collection => {
       if (!collection.autoSync || !collection.rules) return collection;
       
+      const excludedIds = collection.excludedDocumentIds || [];
       const matchedDocIds: string[] = [];
       newDocuments.forEach(doc => {
-        if (matchDocumentToRules(doc, collection.rules!)) {
-          matchedDocIds.push(doc.id!);
+        const docId = doc.id || '';
+        // Не додаємо документи, які користувач явно виключив
+        if (!excludedIds.includes(docId) && matchDocumentToRules(doc, collection.rules!)) {
+          matchedDocIds.push(docId);
         }
       });
       
@@ -5231,9 +5255,15 @@ export default function App() {
         }
         
         // Знаходимо всі документи, які відповідають правилам
-        const matchingDocuments = allDocuments.filter(doc => 
-          matchDocumentToRules(doc, validRules)
-        );
+        const excludedIds = collection.excludedDocumentIds || [];
+        const matchingDocuments = allDocuments.filter(doc => {
+          const docId = doc.id || '';
+          // Виключаємо документи, які користувач явно виключив
+          if (excludedIds.includes(docId)) {
+            return false;
+          }
+          return matchDocumentToRules(doc, validRules);
+        });
         
         const matchingDocIds = matchingDocuments.map(doc => doc.id || '').filter(id => id !== '');
         
@@ -5245,6 +5275,7 @@ export default function App() {
           ...collection,
           documentIds: allDocumentIds,
           manuallyAddedDocumentIds: manuallyAddedIds, // Зберігаємо manually added
+          excludedDocumentIds: excludedIds, // Зберігаємо excluded
           count: allDocumentIds.length
         };
       });
@@ -5775,55 +5806,57 @@ export default function App() {
     // Перевіряємо, чи це Auto колекція
     const collection = collections.find(col => col.id === collectionId);
     if (collection && getCollectionType({ rules: collection.rules, documentIds: collection.documentIds }) === 'auto') {
-      // Для Auto колекцій дозволяємо видаляти тільки manually added документи
+      // Для Auto колекцій дозволяємо видаляти будь-які документи
+      // Документи, які відповідають rules, додаємо до excludedDocumentIds
       const manuallyAddedIds = collection.manuallyAddedDocumentIds || [];
+      const excludedIds = collection.excludedDocumentIds || [];
       const documentsToRemove = documents.filter(doc => documentIds.includes(doc.id || ''));
       
-      // Перевіряємо, чи всі документи для видалення є manually added
-      const allManuallyAdded = documentsToRemove.every(doc => manuallyAddedIds.includes(doc.id || ''));
+      // Розділяємо документи на manually added та rule-matched
+      const manuallyAddedToRemove: string[] = [];
+      const ruleMatchedToExclude: string[] = [];
       
-      if (!allManuallyAdded) {
-        // Якщо є документи, які відповідають rules - блокуємо видалення
-        const matchingDocs = documentsToRemove.filter(doc => 
-          !manuallyAddedIds.includes(doc.id || '') && 
-          collection.rules && 
-          matchDocumentToRules(doc, collection.rules)
-        );
-        
-        if (matchingDocs.length > 0) {
-          // Знаходимо які правила відповідають
-          const ruleDescriptions = matchingDocs.map(doc => {
-            const rule = getMatchingRule(doc, collection.rules!);
-            return rule ? getRuleDescription(rule) : 'collection rules';
-          });
-          const uniqueRules = [...new Set(ruleDescriptions)];
-          
-          toast.error(
-            `Cannot remove ${matchingDocs.length} ${matchingDocs.length === 1 ? 'document' : 'documents'} that match the collection rules. ${uniqueRules.length > 0 ? `Matched by: ${uniqueRules[0]}` : 'Edit the rules to change which documents appear here.'} Only manually added documents can be removed.`,
-            { duration: 7000 }
-          );
-          return; // Не продовжуємо видалення
+      documentsToRemove.forEach(doc => {
+        const docId = doc.id || '';
+        if (manuallyAddedIds.includes(docId)) {
+          manuallyAddedToRemove.push(docId);
+        } else if (collection.rules && matchDocumentToRules(doc, collection.rules)) {
+          // Документ відповідає правилам - додаємо до excluded
+          ruleMatchedToExclude.push(docId);
         }
-      }
+      });
       
-      // Видаляємо manually added документи зі списку
-      const manuallyAddedToRemove = documentIds.filter(id => manuallyAddedIds.includes(id));
-      
-      // Оновлюємо manuallyAddedDocumentIds
+      // Оновлюємо колекцію: видаляємо manually added та додаємо до excluded
       setCollections(prev => {
         const updated = prev.map(col => {
           if (col.id === collectionId) {
             const updatedManuallyAdded = (col.manuallyAddedDocumentIds || []).filter(
               id => !manuallyAddedToRemove.includes(id)
             );
+            const updatedExcluded = [...new Set([...(col.excludedDocumentIds || []), ...ruleMatchedToExclude])];
+            // Видаляємо documentIds, які були видалені
+            const updatedDocumentIds = (col.documentIds || []).filter(id => !documentIds.includes(id));
+            
             return {
               ...col,
-              manuallyAddedDocumentIds: updatedManuallyAdded
+              manuallyAddedDocumentIds: updatedManuallyAdded,
+              excludedDocumentIds: updatedExcluded,
+              documentIds: updatedDocumentIds,
+              count: updatedDocumentIds.length
             };
           }
           return col;
         });
         saveCollectionsToStorage(updated);
+        
+        // Оновлюємо selectedCollection якщо це поточна колекція
+        if (selectedCollection && selectedCollection.id === collectionId) {
+          const updatedCollection = updated.find(col => col.id === collectionId);
+          if (updatedCollection) {
+            setSelectedCollection(updatedCollection);
+          }
+        }
+        
         return updated;
       });
     }
@@ -5842,6 +5875,7 @@ export default function App() {
       });
       
       // Якщо це rule-based колекція, автоматично оновлюємо всі колекції
+      // Використовуємо оновлені колекції з excludedDocumentIds
       if (collection && collection.autoSync) {
         setTimeout(() => {
           updateAllRuleBasedCollections(updated);
@@ -5851,33 +5885,35 @@ export default function App() {
       return updated;
     });
 
-    // Оновлюємо колекції - видаляємо documentIds та зберігаємо
-    setCollections(prev => {
-      const updated = prev.map(col => {
-        if (col.id === collectionId) {
-          const updatedDocumentIds = (col.documentIds || []).filter(id => !documentIds.includes(id));
-          return {
-            ...col,
-            documentIds: updatedDocumentIds,
-            count: updatedDocumentIds.length
-          };
+    // Для manual колекцій оновлюємо documentIds
+    if (!collection || getCollectionType({ rules: collection.rules, documentIds: collection.documentIds }) !== 'auto') {
+      setCollections(prev => {
+        const updated = prev.map(col => {
+          if (col.id === collectionId) {
+            const updatedDocumentIds = (col.documentIds || []).filter(id => !documentIds.includes(id));
+            return {
+              ...col,
+              documentIds: updatedDocumentIds,
+              count: updatedDocumentIds.length
+            };
+          }
+          return col;
+        });
+        
+        // Зберігаємо в localStorage
+        saveCollectionsToStorage(updated);
+        
+        // Оновлюємо selectedCollection якщо це поточна колекція
+        if (selectedCollection && selectedCollection.id === collectionId) {
+          const updatedCollection = updated.find(col => col.id === collectionId);
+          if (updatedCollection) {
+            setSelectedCollection(updatedCollection);
+          }
         }
-        return col;
+        
+        return updated;
       });
-      
-      // Зберігаємо в localStorage
-      saveCollectionsToStorage(updated);
-      
-      // Оновлюємо selectedCollection якщо це поточна колекція
-      if (selectedCollection && selectedCollection.id === collectionId) {
-        const updatedCollection = updated.find(col => col.id === collectionId);
-        if (updatedCollection) {
-          setSelectedCollection(updatedCollection);
-        }
-      }
-      
-      return updated;
-    });
+    }
 
     toast.success(`${documentIds.length} ${documentIds.length === 1 ? 'document' : 'documents'} removed from collection`);
   };
