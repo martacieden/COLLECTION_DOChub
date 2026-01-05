@@ -25,6 +25,7 @@ import { CollectionSettingsModal } from './components/CollectionSettingsModal';
 import { AISearchResults } from './components/AISearchResults';
 import { FojoFAB } from './components/FojoFAB';
 import { FojoChatPanel } from './components/FojoChatPanel';
+import { AnalyticsModal } from './components/AnalyticsModal';
 import { getOrganizationAvatar } from './utils/organizationUtils';
 
 // ========================================
@@ -991,11 +992,35 @@ function ContextSuggestionsDropdown({
 // RESULT BLOCKS
 // ========================================
 
-function DocumentCardBlock({ documents, onCreateCollection }: { documents: Document[]; onCreateCollection?: (name: string, description: string, rules: CollectionRule[]) => void }) {
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
+function DocumentCardBlock({ documents, onCreateCollection, defaultViewMode = 'list' }: { documents: Document[]; onCreateCollection?: (name: string, description: string, rules: CollectionRule[]) => void; defaultViewMode?: 'list' | 'grid' }) {
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>(defaultViewMode);
+  const [selectedDocuments, setSelectedDocuments] = useState<Set<string>>(new Set(documents.map(doc => doc.id || '').filter(Boolean)));
+
+  const handleSelectDocument = (docId: string) => {
+    setSelectedDocuments(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(docId)) {
+        newSet.delete(docId);
+      } else {
+        newSet.add(docId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedDocuments.size === documents.length) {
+      setSelectedDocuments(new Set());
+    } else {
+      const allIds = new Set(documents.map(doc => doc.id || '').filter(Boolean));
+      setSelectedDocuments(allIds);
+    }
+  };
+
+  const allSelected = documents.length > 0 && selectedDocuments.size === documents.length;
 
   return (
-    <div className="bg-white rounded-[8px] border border-[#e8e8ec] p-[16px]">
+    <div className="bg-white rounded-[8px] border border-[#e8e8ec] p-[16px] w-full">
       <div className="flex items-center justify-between mb-[12px]">
         <h3 className="text-[13px] font-semibold text-[#60646c]">Documents</h3>
         
@@ -1035,28 +1060,44 @@ function DocumentCardBlock({ documents, onCreateCollection }: { documents: Docum
           <table className="w-full caption-bottom text-sm">
             <thead className="[&_tr]:border-b">
               <tr className="border-b transition-colors">
+                <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap w-[40px]">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={handleSelectAll}
+                  />
+                </th>
                 <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap">Name</th>
-                <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap">Type</th>
                 <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap">Description</th>
+                <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap">Uploaded by</th>
               </tr>
             </thead>
             <tbody className="[&_tr:last-child]:border-0">
-              {documents.map((doc, index) => (
-                <tr key={index} className="border-b transition-colors hover:bg-[#f9fafb] cursor-pointer">
-                  <td className="p-2 align-middle whitespace-nowrap">
-                    <div className="flex items-center gap-[8px]">
-                      <FileIcon type={doc.type} />
-                      <span className="text-[13px] text-[#1c2024]">{doc.name}</span>
-                    </div>
-                  </td>
-                  <td className="p-2 align-middle whitespace-nowrap">
-                    <span className="text-[13px] text-[#60646c]">{doc.type}</span>
-                  </td>
-                  <td className="p-2 align-middle">
-                    <span className="text-[13px] text-[#60646c] line-clamp-1">{doc.description}</span>
-                  </td>
-                </tr>
-              ))}
+              {documents.map((doc, index) => {
+                const docId = doc.id || `doc-${index}`;
+                const isSelected = selectedDocuments.has(docId);
+                return (
+                  <tr key={docId} className="border-b transition-colors hover:bg-[#f9fafb]">
+                    <td className="p-2 align-middle" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => handleSelectDocument(docId)}
+                      />
+                    </td>
+                    <td className="p-2 align-middle whitespace-nowrap">
+                      <div className="flex items-center gap-[8px]">
+                        <FileIcon type={doc.type || 'file'} />
+                        <span className="text-[13px] text-[#1c2024]">{doc.name || 'Unnamed document'}</span>
+                      </div>
+                    </td>
+                    <td className="p-2 align-middle">
+                      <span className="text-[13px] text-[#60646c] line-clamp-1">{doc.description || '-'}</span>
+                    </td>
+                    <td className="p-2 align-middle whitespace-nowrap">
+                      <span className="text-[13px] text-[#60646c]">{doc.uploadedBy || '-'}</span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -1282,11 +1323,15 @@ function calculateDocumentMetadata(documents: Document[]) {
 function AISearchResultsBlock({ 
   query, 
   documents, 
-  onCreateCollection 
+  onCreateCollection,
+  onViewDocuments,
+  onViewAnalytics
 }: { 
   query: string; 
   documents: Document[]; 
   onCreateCollection?: (name: string, description: string, rules: CollectionRule[]) => void;
+  onViewDocuments?: (documents: Document[]) => void;
+  onViewAnalytics?: (documents: Document[]) => void;
 }) {
   const intent = detectSearchIntent(query);
   const metadata = calculateDocumentMetadata(documents);
@@ -1323,7 +1368,7 @@ function AISearchResultsBlock({
   };
   
   return (
-    <div className="bg-white rounded-[8px] border border-[#e8e8ec] p-[20px]">
+    <div className="bg-white rounded-[8px] border border-[#e8e8ec] p-[20px]" style={{ width: '600px', maxWidth: '100%' }}>
       {/* Summary Header */}
       <div className="flex items-start gap-[12px] mb-[16px]">
         <div className="bg-gradient-to-br from-[#f5f3ff] to-[#ede9fe] size-[36px] rounded-[8px] flex items-center justify-center flex-shrink-0">
@@ -1445,13 +1490,25 @@ function AISearchResultsBlock({
             </button>
           )}
           <button
-            className="h-[36px] px-[16px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px] transition-colors"
+            onClick={() => {
+              if (onViewDocuments && documents.length > 0) {
+                onViewDocuments(documents);
+              }
+            }}
+            disabled={documents.length === 0}
+            className="h-[36px] px-[16px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <FileText className="size-[16px]" />
             <span>View documents</span>
           </button>
           <button
-            className="h-[36px] px-[16px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px] transition-colors"
+            onClick={() => {
+              if (onViewAnalytics && documents.length > 0) {
+                onViewAnalytics(documents);
+              }
+            }}
+            disabled={documents.length === 0}
+            className="h-[36px] px-[16px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <TrendingUp className="size-[14px]" />
             <span>See summary analytics</span>
@@ -1471,13 +1528,17 @@ function AIChatModal({
   onClose,
   contextType,
   onCreateCollection,
-  initialSearchResults
+  initialSearchResults,
+  onViewDocuments,
+  onViewAnalytics
 }: { 
   initialQuestion: string; 
   onClose: () => void;
   contextType: string;
   onCreateCollection?: (name: string, description: string, rules: CollectionRule[]) => void;
   initialSearchResults?: { query: string; documents: Document[] };
+  onViewDocuments?: (documents: Document[]) => void;
+  onViewAnalytics?: (documents: Document[]) => void;
 }) {
   const formatDateRange = (min?: Date | null, max?: Date | null) => {
     if (!min || !max) return null;
@@ -1566,11 +1627,55 @@ function AIChatModal({
   
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [followUpQuestion, setFollowUpQuestion] = useState('');
+  const [viewedDocuments, setViewedDocuments] = useState<Document[] | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Обробники для кнопок з продовженням чату
+  const handleViewDocumentsWithChat = (docs: Document[]) => {
+    // Додаємо повідомлення користувача в чат
+    const userMessage: ChatMessage = {
+      role: 'user',
+      content: 'Show me these documents'
+    };
+    
+    const assistantMessage: ChatMessage = {
+      role: 'assistant',
+      content: `Here are ${docs.length} document${docs.length !== 1 ? 's' : ''} that match your search:`,
+      resultBlocks: [
+        {
+          type: 'document-cards',
+          data: docs
+        }
+      ]
+    };
+
+    setMessages(prev => [...prev, userMessage, assistantMessage]);
+    setViewedDocuments(docs);
+  };
+
+  const handleViewAnalyticsWithChat = (docs: Document[]) => {
+    // Додаємо повідомлення користувача в чат
+    const userMessage: ChatMessage = {
+      role: 'user',
+      content: 'Show me analytics for these documents'
+    };
+    
+    const assistantMessage: ChatMessage = {
+      role: 'assistant',
+      content: `Opening analytics for ${docs.length} document${docs.length !== 1 ? 's' : ''}.`
+    };
+
+    setMessages(prev => [...prev, userMessage, assistantMessage]);
+    
+    // Викликаємо оригінальний обробник
+    if (onViewAnalytics) {
+      onViewAnalytics(docs);
+    }
+  };
 
   const handleSendFollowUp = () => {
     if (followUpQuestion.trim()) {
@@ -1660,7 +1765,7 @@ function AIChatModal({
                       </div>
                       {message.resultBlocks?.map((block, blockIndex) => (
                         <div key={blockIndex}>
-                          {block.type === 'document-cards' && <DocumentCardBlock documents={block.data} onCreateCollection={onCreateCollection} />}
+                          {block.type === 'document-cards' && <DocumentCardBlock documents={block.data} onCreateCollection={onCreateCollection} defaultViewMode="list" />}
                           {block.type === 'metadata' && <MetadataBlock metadata={block.data} />}
                           {block.type === 'search-results' && <SearchResultBlock results={block.data} />}
                           {block.type === 'summary' && <SummaryBlock insights={block.data} />}
@@ -1669,6 +1774,8 @@ function AIChatModal({
                               query={block.data.query} 
                               documents={block.data.documents} 
                               onCreateCollection={onCreateCollection}
+                              onViewDocuments={onViewDocuments ? handleViewDocumentsWithChat : undefined}
+                              onViewAnalytics={onViewAnalytics ? handleViewAnalyticsWithChat : undefined}
                             />
                           )}
                         </div>
@@ -1821,56 +1928,64 @@ function AISuggestionPreviewModal({
         
         {/* Content */}
         <div className="flex-1 overflow-auto px-[24px] py-[16px]">
-          {/* Selection controls */}
-          <div className="flex items-center justify-between mb-[12px]">
-            <div className="flex items-center gap-[8px]">
-              <Checkbox
-                checked={selectedDocumentIds.size === previewDocuments.length && previewDocuments.length > 0}
-                onCheckedChange={handleSelectAll}
-              />
-              <span className="text-[12px] text-[#60646c]">
-                {selectedDocumentIds.size} of {previewDocuments.length} documents selected
-              </span>
-            </div>
+          {/* Selection info */}
+          <div className="mb-[12px]">
+            <span className="text-[12px] text-[#60646c]">
+              {selectedDocumentIds.size} of {previewDocuments.length} documents selected
+            </span>
           </div>
           
-          {/* Grid view */}
-          <div className="grid grid-cols-4 gap-[12px]">
-            {previewDocuments.map((doc, index) => {
-              const docId = doc.id || '';
-              const isSelected = selectedDocumentIds.has(docId);
-              return (
-                <div 
-                  key={index}
-                  onClick={() => handleToggleDocument(docId)}
-                  className={`flex flex-col border rounded-[8px] overflow-hidden transition-colors cursor-pointer relative ${
-                    isSelected ? 'border-[#005be2] bg-[#ebf3ff]' : 'border-[#e8e8ec] hover:border-[#005be2]'
-                  }`}
-                >
-                  {/* Checkbox overlay */}
-                  <div className="absolute top-[8px] right-[8px] z-10" onClick={(e) => e.stopPropagation()}>
+          {/* Table view */}
+          <div className="border border-[#e0e1e6] rounded-[8px] overflow-hidden">
+            <table className="caption-bottom text-sm w-full">
+              <thead className="[&_tr]:border-b bg-[#f9fafb]">
+                <tr className="border-b transition-colors">
+                  <th className="h-10 px-2 text-left align-middle w-[40px] min-w-[40px]">
                     <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={() => handleToggleDocument(docId)}
+                      checked={selectedDocumentIds.size === previewDocuments.length && previewDocuments.length > 0}
+                      onCheckedChange={handleSelectAll}
                     />
-                  </div>
-                  {/* Document preview/thumbnail */}
-                  <div className="aspect-[3/2] bg-gradient-to-br from-[#f9fafb] to-[#f0f0f3] flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-[8px]">
-                      <div className="size-[32px] flex items-center justify-center">
-                        <FileIcon type={doc.type} />
-                      </div>
-                      <span className="text-[10px] font-semibold text-[#8b8d98] uppercase tracking-wider">{doc.type}</span>
-                    </div>
-                  </div>
-                  {/* Document info */}
-                  <div className="p-[12px]">
-                    <p className="text-[13px] font-semibold text-[#1c2024] truncate mb-[4px]">{doc.name}</p>
-                    <p className="text-[12px] text-[#60646c] line-clamp-2 min-h-[32px]">{doc.description}</p>
-                  </div>
-                </div>
-              );
-            })}
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[200px]">Name</th>
+                  <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[80px]">Type</th>
+                  <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[300px]">Description</th>
+                </tr>
+              </thead>
+              <tbody className="[&_tr:last-child]:border-0">
+                {previewDocuments.map((doc, index) => {
+                  const docId = doc.id || '';
+                  const isSelected = selectedDocumentIds.has(docId);
+                  return (
+                    <tr 
+                      key={index}
+                      onClick={() => handleToggleDocument(docId)}
+                      className={`border-b transition-colors cursor-pointer ${
+                        isSelected ? 'bg-[#ebf3ff] hover:bg-[#d6e7ff]' : 'hover:bg-[#f9fafb]'
+                      }`}
+                    >
+                      <td className="p-2 align-middle" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => handleToggleDocument(docId)}
+                        />
+                      </td>
+                      <td className="p-2 align-middle whitespace-nowrap">
+                        <div className="flex items-center gap-[8px]">
+                          <FileIcon type={doc.type || 'file'} />
+                          <span className="text-[13px] text-[#1c2024]">{doc.name || 'Unnamed document'}</span>
+                        </div>
+                      </td>
+                      <td className="p-2 align-middle whitespace-nowrap">
+                        <span className="text-[13px] text-[#1c2024]">{doc.type || 'File'}</span>
+                      </td>
+                      <td className="p-2 align-middle">
+                        <span className="text-[13px] text-[#60646c]">{doc.description || '-'}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
         
@@ -2481,7 +2596,107 @@ function getCollectionType(collection: { rules?: CollectionRule[] | string[]; do
   return 'manual';
 }
 
-function CollectionCard({ title, organization, onClick, collectionId, sharedWith, icon, onDelete, autoSync, rules, count }: { title: string; organization?: string; onClick?: () => void; collectionId?: string; sharedWith?: string[]; icon?: string; onDelete?: (collectionId: string) => void; autoSync?: boolean; rules?: CollectionRule[] | string[]; count?: number }) {
+// Generate collection description based on documents and rules
+function generateCollectionDescription(
+  documents: Document[],
+  rules: CollectionRule[] | string[] | undefined,
+  collectionType: 'auto' | 'manual',
+  documentIds?: string[],
+  count?: number
+): string {
+  const enabledRules = Array.isArray(rules) 
+    ? rules.filter((r): r is CollectionRule => typeof r !== 'string' && r.enabled && r.value?.trim())
+    : [];
+
+  // If collection is empty
+  if ((!documents || documents.length === 0) && enabledRules.length === 0) {
+    return 'Collection is empty or rules are not added yet.';
+  }
+
+  // Build description based on rules and documents
+  const descriptionParts: string[] = [];
+
+  if (collectionType === 'auto' && enabledRules.length > 0) {
+    // Auto collection with rules - describe based on rules
+    const ruleDescriptions: string[] = [];
+    enabledRules.slice(0, 2).forEach(rule => {
+      if (rule.type === 'document_type') {
+        ruleDescriptions.push(`${rule.value} documents`);
+      } else if (rule.type === 'keywords') {
+        ruleDescriptions.push(`documents with "${rule.value}"`);
+      } else if (rule.type === 'client') {
+        ruleDescriptions.push(`documents for ${rule.value}`);
+      } else if (rule.type === 'vendor') {
+        ruleDescriptions.push(`documents from ${rule.value}`);
+      } else if (rule.type === 'tags') {
+        ruleDescriptions.push(`documents tagged "${rule.value}"`);
+      }
+    });
+    
+    if (ruleDescriptions.length > 0) {
+      const countText = count !== undefined && count > 0 ? ` (${count} ${count === 1 ? 'match' : 'matches'})` : '';
+      descriptionParts.push(`Auto-collected ${ruleDescriptions.join(' and ')}${countText}`);
+    }
+    
+    // Add second line with document types if available
+    if (documents.length > 0) {
+      const docTypes = new Set<string>();
+      documents.forEach(doc => {
+        if (doc.type) docTypes.add(doc.type);
+      });
+      if (docTypes.size > 0) {
+        const topDocTypes = Array.from(docTypes).slice(0, 2);
+        descriptionParts.push(`Contains ${topDocTypes.join(', ')} files`);
+      }
+    }
+  } else if (documents.length > 0) {
+    // Manual collection - describe based on actual documents
+    const docTypes = new Set<string>();
+    const categories = new Set<string>();
+    const organizations = new Set<string>();
+
+    documents.forEach(doc => {
+      if (doc.type) docTypes.add(doc.type);
+      if (doc.category) categories.add(doc.category);
+      if (doc.organization) organizations.add(doc.organization);
+    });
+
+    const topDocTypes = Array.from(docTypes).slice(0, 2);
+    const topOrgs = Array.from(organizations).slice(0, 1);
+    
+    if (topDocTypes.length > 0) {
+      descriptionParts.push(`Contains ${topDocTypes.join(', ')} files`);
+    }
+    if (topOrgs.length > 0) {
+      descriptionParts.push(`from ${topOrgs[0]}`);
+    }
+    
+    // If no types but has categories
+    if (topDocTypes.length === 0 && categories.size > 0) {
+      const topCategories = Array.from(categories).slice(0, 2);
+      descriptionParts.push(`${topCategories.join(', ')} documents`);
+    }
+  }
+
+  // If we have rules but no description yet
+  if (descriptionParts.length === 0 && enabledRules.length > 0) {
+    descriptionParts.push(`Configured with ${enabledRules.length} filtering rule${enabledRules.length > 1 ? 's' : ''}`);
+  }
+
+  // If still no description, use generic
+  if (descriptionParts.length === 0) {
+    if (documents.length > 0) {
+      descriptionParts.push(`${documents.length} document${documents.length > 1 ? 's' : ''} in collection`);
+    } else {
+      return 'Collection is empty or rules are not added yet.';
+    }
+  }
+
+  // Return first two parts as two lines (max 2 lines)
+  return descriptionParts.slice(0, 2).join('. ');
+}
+
+function CollectionCard({ title, organization, onClick, collectionId, sharedWith, icon, onDelete, autoSync, rules, count, documents, documentIds }: { title: string; organization?: string; onClick?: () => void; collectionId?: string; sharedWith?: string[]; icon?: string; onDelete?: (collectionId: string) => void; autoSync?: boolean; rules?: CollectionRule[] | string[]; count?: number; documents?: Document[]; documentIds?: string[] }) {
   // Use icon prop if provided, take only first emoji character
   // Match emoji including complex emojis (with modifiers, skin tones, etc.)
   const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E0}-\u{1F1FF}]/u;
@@ -2679,6 +2894,54 @@ function CollectionCard({ title, organization, onClick, collectionId, sharedWith
           </div>
         </div>
       </div>
+      
+      {/* Collection description */}
+      {(() => {
+        const collectionType = getCollectionType({ rules, documentIds: documentIds || [] });
+        // For auto collections, use all documents that match rules
+        // For manual collections, use documents from documentIds
+        let collectionDocuments: Document[] = [];
+        if (collectionType === 'auto' && documents && rules) {
+          // Filter documents that match the rules
+          const enabledRules = Array.isArray(rules) 
+            ? rules.filter((r): r is CollectionRule => typeof r !== 'string' && r.enabled)
+            : [];
+          if (enabledRules.length > 0) {
+            // Use matchDocumentToRules if available, otherwise use count
+            collectionDocuments = documents.filter(doc => {
+              // Simple matching logic - can be improved
+              return enabledRules.some(rule => {
+                if (rule.type === 'document_type' && doc.name) {
+                  return doc.name.toLowerCase().includes(rule.value.toLowerCase());
+                }
+                if (rule.type === 'keywords' && doc.name) {
+                  return doc.name.toLowerCase().includes(rule.value.toLowerCase()) ||
+                         (doc.description || '').toLowerCase().includes(rule.value.toLowerCase());
+                }
+                if (rule.type === 'client' && doc.organization) {
+                  return doc.organization.toLowerCase().includes(rule.value.toLowerCase());
+                }
+                return false;
+              });
+            });
+          }
+        } else if (documents && documentIds) {
+          collectionDocuments = documents.filter(doc => doc && doc.id && documentIds.includes(doc.id));
+        }
+        
+        const description = generateCollectionDescription(
+          collectionDocuments,
+          rules,
+          collectionType,
+          documentIds,
+          count
+        );
+        return (
+          <p className="text-[12px] text-[#60646c] line-clamp-2 leading-[18px]">
+            {description}
+          </p>
+        );
+      })()}
       
       {/* Organization row */}
       {organization && (() => {
@@ -3184,6 +3447,13 @@ const [aiModalInitialSearchResults, setAiModalInitialSearchResults] = useState<{
             // Toast з кнопкою показується в handleCreateCollection
           } : undefined}
           initialSearchResults={aiModalInitialSearchResults || (aiSearchResults.length > 0 ? { query: question, documents: aiSearchResults } : undefined)}
+          onViewDocuments={(docs) => {
+            handleViewDocumentsFromAI(docs.map(doc => doc.id || '').filter(Boolean));
+            setIsModalOpen(false);
+          }}
+          onViewAnalytics={(docs) => {
+            handleViewAnalyticsFromAI(docs);
+          }}
         />
       )}
       
@@ -3459,6 +3729,8 @@ const [aiModalInitialSearchResults, setAiModalInitialSearchResults] = useState<{
                     autoSync={collection.autoSync}
                     rules={collection.rules}
                     count={collection.count}
+                    documents={documents}
+                    documentIds={collection.documentIds}
                   />
                 </div>
               ))
@@ -3505,7 +3777,7 @@ function MainContent({
   getRuleDescription
 }: { 
   viewMode: ViewMode; 
-  aiFilter?: string | null;
+  aiFilter?: Set<string> | null;
   onClearAIFilter?: () => void;
   onUploadClick?: () => void;
   onNewCollectionClick?: () => void;
@@ -3540,7 +3812,8 @@ function MainContent({
       <CollectionDetailView
         isProcessing={processingCollections?.has(selectedCollection.id) || false}
         getMatchingRule={getMatchingRule}
-        getRuleDescription={getRuleDescription} 
+        getRuleDescription={getRuleDescription}
+        getNonMatchingRules={getNonMatchingRules}
         collection={selectedCollection}
         onBack={onBackFromCollection}
         onAddDocument={onUploadClick}
@@ -3585,6 +3858,8 @@ function MainContent({
           onAddToCollection={onAddToCollection}
           onCreateCollection={onCreateCollection}
           onCollectionClick={handleCollectionClickFromTooltip}
+          aiFilter={aiFilter}
+          onClearAIFilter={onClearAIFilter}
         />
       </div>
     );
@@ -4518,9 +4793,23 @@ function matchDocumentToRules(document: Document, rules: CollectionRule[]): bool
   return enabledRules.every(rule => checkRuleMatch(document, rule));
 }
 
+// Функція для отримання списку правил, які не відповідають документу
+function getNonMatchingRules(document: Document, rules: CollectionRule[]): CollectionRule[] {
+  if (!rules || rules.length === 0) return [];
+  
+  // Перевіряємо тільки увімкнені правила
+  const enabledRules = rules.filter(rule => rule.enabled);
+  if (enabledRules.length === 0) return [];
+  
+  // Повертаємо правила, які не відповідають
+  return enabledRules.filter(rule => !checkRuleMatch(document, rule));
+}
+
 export default function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('collections');
-  const [aiFilter, setAiFilter] = useState<string | null>(null);
+  const [aiFilter, setAiFilter] = useState<Set<string> | null>(null);
+  const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
+  const [analyticsDocuments, setAnalyticsDocuments] = useState<Document[]>([]);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isNewCollectionModalOpen, setIsNewCollectionModalOpen] = useState(false);
   const [isAddToCollectionModalOpen, setIsAddToCollectionModalOpen] = useState(false);
@@ -4703,6 +4992,19 @@ export default function App() {
 
   const handleClearAIFilter = () => {
     setAiFilter(null);
+  };
+
+  // Обробник для перегляду документів з AI пошуку
+  const handleViewDocumentsFromAI = (documentIds: string[]) => {
+    const documentIdSet = new Set(documentIds);
+    setAiFilter(documentIdSet);
+    setViewMode('all-documents');
+  };
+
+  // Обробник для перегляду аналітики
+  const handleViewAnalyticsFromAI = (documents: Document[]) => {
+    setAnalyticsDocuments(documents);
+    setIsAnalyticsModalOpen(true);
   };
 
   const handleToggleLeftPanel = () => {
@@ -5877,6 +6179,7 @@ export default function App() {
         onComplete={handleUploadComplete}
         collections={collections}
         getCollectionType={getCollectionType}
+        currentCollection={viewMode === 'collection-detail' && selectedCollection ? selectedCollection : null}
       />
 
       {/* AI Assistant Banner */}
@@ -5948,9 +6251,26 @@ export default function App() {
             query: aiBannerChatQuery, 
             documents: aiBannerChatDocuments 
           } : undefined}
+          onViewDocuments={(docs) => {
+            handleViewDocumentsFromAI(docs.map(doc => doc.id || '').filter(Boolean));
+            setIsAIBannerChatModalOpen(false);
+          }}
+          onViewAnalytics={(docs) => {
+            handleViewAnalyticsFromAI(docs);
+          }}
         />
       )}
 
+      {/* Analytics Modal */}
+      <AnalyticsModal
+        isOpen={isAnalyticsModalOpen}
+        onClose={() => {
+          setIsAnalyticsModalOpen(false);
+          setAnalyticsDocuments([]);
+        }}
+        documents={analyticsDocuments}
+      />
+      
       <NewCollectionModal
         isOpen={isNewCollectionModalOpen}
         onClose={() => {

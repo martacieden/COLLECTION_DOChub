@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, Share, Users, FileText, Plus, ChevronDown, ChevronUp, Search, SlidersHorizontal, List, TrendingUp, ArrowLeft, Upload, ChevronRight, MoreVertical, Sparkles, Folder } from 'lucide-react';
+import { Settings, Share, Users, FileText, Plus, ChevronDown, ChevronUp, Search, SlidersHorizontal, List, TrendingUp, ArrowLeft, Upload, ChevronRight, MoreVertical, Sparkles, Folder, Info } from 'lucide-react';
 import imgAvatar from "figma:asset/faff2adb1cb08272d6a4e4d91304adea83279eb7.png";
 import imgAvatar1 from "figma:asset/248e51d98c071d09cefd9d4449f99bd2dc3797f1.png";
 import { CollectionDocumentsTable } from './CollectionDocumentsTable';
@@ -8,6 +8,7 @@ import { FilterBar } from './FilterBar';
 import svgPaths from "../imports/svg-ylbe71kelt";
 import { Checkbox } from './ui/checkbox';
 import { getOrganizationAvatar } from '../utils/organizationUtils';
+import { Popover, PopoverTrigger, PopoverContent } from './ui/popover';
 
 interface CollectionRule {
   id: string;
@@ -59,6 +60,7 @@ interface CollectionDetailViewProps {
   isProcessing?: boolean;
   getMatchingRule?: (document: any, rules: CollectionRule[]) => CollectionRule | null;
   getRuleDescription?: (rule: CollectionRule) => string;
+  getNonMatchingRules?: (document: any, rules: CollectionRule[]) => CollectionRule[];
 }
 
 // FileIcon component - same as in App.tsx
@@ -503,29 +505,6 @@ export function CollectionDetailHeader({ collection, onBack, onAddDocument, onSe
                 <span>·</span>
                 <span>{collection.createdOn || '13/10/2025'}</span>
               </div>
-              {/* Description */}
-              {collection.description && collection.description.trim() !== '' ? (
-                <p className="text-[13px] text-[#1c2024] mt-[6px] leading-[1.4]">
-                  {collection.description}
-                </p>
-              ) : (
-                (() => {
-                  const collectionType = getCollectionType({ rules: collection.rules, documentIds: collection.documentIds });
-                  if (collectionType === 'auto') {
-                    return (
-                      <p className="text-[12px] text-[#60646c] mt-[4px]">
-                        Updates automatically based on rules. To change its contents, edit the rules.
-                      </p>
-                    );
-                  } else {
-                    return (
-                      <p className="text-[12px] text-[#60646c] mt-[4px]">
-                        Managed manually. Documents are added and removed by you.
-                      </p>
-                    );
-                  }
-                })()
-              )}
             </div>
           </div>
 
@@ -579,8 +558,8 @@ export function CollectionDetailHeader({ collection, onBack, onAddDocument, onSe
   );
 }
 
-export function CollectionDetailView({ collection, onBack, onAddDocument, onRemoveFromCollection, onDelete, onSettingsClick, onShareClick, onFiltersClick, onCustomizeFiltersClick, documents, isProcessing = false, getMatchingRule, getRuleDescription }: CollectionDetailViewProps) {
-  const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
+export function CollectionDetailView({ collection, onBack, onAddDocument, onRemoveFromCollection, onDelete, onSettingsClick, onShareClick, onFiltersClick, onCustomizeFiltersClick, documents, isProcessing = false, getMatchingRule, getRuleDescription, getNonMatchingRules }: CollectionDetailViewProps) {
+  const [isDetailsExpanded, setIsDetailsExpanded] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [filterQuery, setFilterQuery] = useState<string>('');
@@ -686,6 +665,13 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
             </button>
           </div>
         </div>
+        
+        {/* Collection Description - показується тільки коли Details розгорнуто */}
+        {isDetailsExpanded && collection.description && (
+          <p className="text-[12px] text-[#1c2024] mt-0 mb-[8px]">
+            {collection.description}
+          </p>
+        )}
         
         {isDetailsExpanded && (
           <div className="mt-[12px] space-y-[12px]">
@@ -818,6 +804,56 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
                           <span className="text-[13px] text-[#1c2024]">{doc.name || 'Unnamed document'}</span>
                           {(() => {
                             const isManuallyAdded = collection.manuallyAddedDocumentIds?.includes(doc.id || '');
+                            
+                            if (isAutoCollection && isManuallyAdded && collection.rules && getNonMatchingRules && getRuleDescription) {
+                              // Отримуємо правила, які не відповідають
+                              const rules = Array.isArray(collection.rules) 
+                                ? collection.rules.filter((r): r is CollectionRule => typeof r !== 'string')
+                                : [];
+                              const nonMatchingRules = getNonMatchingRules(doc, rules);
+                              
+                              if (nonMatchingRules.length > 0) {
+                                return (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <span 
+                                        className="px-[6px] py-[2px] bg-[#fff8ed] text-[#b45309] rounded-[4px] text-[10px] font-medium cursor-help hover:bg-[#fef3c7] transition-colors flex items-center gap-[4px]"
+                                      >
+                                        <Info className="size-[10px]" />
+                                        Manually added
+                                      </span>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[320px] p-[12px]" side="right" align="start">
+                                      <div className="space-y-[8px]">
+                                        <div>
+                                          <p className="text-[12px] font-semibold text-[#1c2024] mb-[4px]">
+                                            Документ додано вручну (override)
+                                          </p>
+                                          <p className="text-[11px] text-[#60646c] leading-[16px]">
+                                            Цей документ не відповідає правилам колекції, але був доданий вручну.
+                                          </p>
+                                        </div>
+                                        <div className="border-t border-[#e8e8ec] pt-[8px]">
+                                          <p className="text-[11px] font-medium text-[#1c2024] mb-[6px]">
+                                            Не відповідає правилам:
+                                          </p>
+                                          <div className="space-y-[4px]">
+                                            {nonMatchingRules.map((rule) => (
+                                              <div 
+                                                key={rule.id}
+                                                className="px-[8px] py-[4px] bg-[#f9fafb] border border-[#e8e8ec] rounded-[4px] text-[11px] text-[#60646c]"
+                                              >
+                                                {getRuleDescription(rule)}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </PopoverContent>
+                                  </Popover>
+                                );
+                              }
+                            }
                             
                             if (isAutoCollection && isManuallyAdded) {
                               return (
@@ -955,19 +991,69 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
                         const collectionType = getCollectionType({ rules: collection.rules, documentIds: collection.documentIds });
                         const isManuallyAdded = collection.manuallyAddedDocumentIds?.includes(doc.id || '');
                         
-                            if (isAutoCollection && isManuallyAdded) {
-                              return (
-                                <span 
-                                  className="px-[6px] py-[2px] bg-[#fff8ed] text-[#b45309] rounded-[4px] text-[10px] font-medium"
-                                  title="This document was manually added and does not match the collection rules."
-                                >
-                                  Manually added
-                                </span>
-                              );
-                            }
+                        if (isAutoCollection && isManuallyAdded && collection.rules && getNonMatchingRules && getRuleDescription) {
+                          // Отримуємо правила, які не відповідають
+                          const rules = Array.isArray(collection.rules) 
+                            ? collection.rules.filter((r): r is CollectionRule => typeof r !== 'string')
+                            : [];
+                          const nonMatchingRules = getNonMatchingRules(doc, rules);
+                          
+                          if (nonMatchingRules.length > 0) {
+                            return (
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <span 
+                                    className="px-[6px] py-[2px] bg-[#fff8ed] text-[#b45309] rounded-[4px] text-[10px] font-medium cursor-help hover:bg-[#fef3c7] transition-colors flex items-center gap-[4px]"
+                                  >
+                                    <Info className="size-[10px]" />
+                                    Manually added
+                                  </span>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[320px] p-[12px]" side="right" align="start">
+                                  <div className="space-y-[8px]">
+                                    <div>
+                                      <p className="text-[12px] font-semibold text-[#1c2024] mb-[4px]">
+                                        Документ додано вручну (override)
+                                      </p>
+                                      <p className="text-[11px] text-[#60646c] leading-[16px]">
+                                        Цей документ не відповідає правилам колекції, але був доданий вручну.
+                                      </p>
+                                    </div>
+                                    <div className="border-t border-[#e8e8ec] pt-[8px]">
+                                      <p className="text-[11px] font-medium text-[#1c2024] mb-[6px]">
+                                        Не відповідає правилам:
+                                      </p>
+                                      <div className="space-y-[4px]">
+                                        {nonMatchingRules.map((rule) => (
+                                          <div 
+                                            key={rule.id}
+                                            className="px-[8px] py-[4px] bg-[#f9fafb] border border-[#e8e8ec] rounded-[4px] text-[11px] text-[#60646c]"
+                                          >
+                                            {getRuleDescription(rule)}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            );
+                          }
+                        }
+                        
+                        if (isAutoCollection && isManuallyAdded) {
+                          return (
+                            <span 
+                              className="px-[6px] py-[2px] bg-[#fff8ed] text-[#b45309] rounded-[4px] text-[10px] font-medium"
+                              title="This document was manually added and does not match the collection rules."
+                            >
+                              Manually added
+                            </span>
+                          );
+                        }
                             
-                            return null;
-                          })()}
+                        return null;
+                      })()}
                     </div>
                   </h3>
                   <p className="text-[11px] text-[#8b8d98] line-clamp-2">

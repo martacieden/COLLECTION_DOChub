@@ -4,7 +4,7 @@ import { X, ChevronDown, Check, Folder } from 'lucide-react';
 import { UploadFileTable } from './UploadFileTable';
 import { toast } from 'sonner';
 import { Checkbox } from './ui/checkbox';
-import svgPaths from '../imports/svg-tmeiqkylpl';
+import { FileIcon } from './AllDocumentsTable';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -12,6 +12,7 @@ interface UploadModalProps {
   onComplete: (files: FileInfo[], collectionIds: string[], organization: string, metadata: FileMetadata[]) => void;
   collections?: Array<{ id: string; title: string; icon?: string; rules?: any[] }>;
   getCollectionType?: (collection: { rules?: any[]; documentIds?: string[] }) => 'auto' | 'manual';
+  currentCollection?: { id: string; title: string; icon?: string; rules?: any[] } | null;
 }
 
 interface FileInfo {
@@ -37,7 +38,7 @@ const organizations = [
   { id: 5, name: 'The Robertson Foundation', initial: 'T', color: '#98D8C8' }
 ];
 
-export function UploadModal({ isOpen, onClose, onComplete, collections = [], getCollectionType }: UploadModalProps) {
+export function UploadModal({ isOpen, onClose, onComplete, collections = [], getCollectionType, currentCollection }: UploadModalProps) {
   const [currentStep, setCurrentStep] = useState<UploadStep>('select');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedOrganization, setSelectedOrganization] = useState('');
@@ -64,6 +65,13 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
       setIsCollectionsDropdownOpen(false);
     }
   }, [isOpen]);
+
+  // Add current collection to selectedCollectionIds when modal opens
+  useEffect(() => {
+    if (isOpen && currentCollection) {
+      setSelectedCollectionIds(prev => new Set([...prev, currentCollection.id]));
+    }
+  }, [isOpen, currentCollection]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -239,28 +247,13 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
     }));
   };
 
-  const getFileExtension = (fileName: string): string => {
+  const getFileType = (fileName: string): string => {
     return fileName.split('.').pop()?.toUpperCase() || 'FILE';
-  };
-
-  // Simple file icon function
-  const getFileIcon = (fileName: string) => {
-    const ext = fileName.toLowerCase().split('.').pop() || '';
-    if (['csv', 'xls', 'xlsm', 'xlsx'].includes(ext)) {
-      return { bgColor: '#e6f6eb' };
-    }
-    if (['doc', 'docm', 'docx', 'dotm', 'txt', 'pdf'].includes(ext)) {
-      return { bgColor: '#ebf3ff' };
-    }
-    if (['bmp', 'gif', 'hdr', 'jpeg', 'jpg', 'png', 'tiff', 'webp', 'svg'].includes(ext)) {
-      return { bgColor: '#fee7e9' };
-    }
-    return { bgColor: '#f5f5f7' };
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-[24px]" onClick={onClose}>
-      <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl transition-all w-[740px] max-w-[calc(100vw-48px)] h-[650px]" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl transition-all w-[600px] max-w-[calc(100vw-48px)] h-[600px]" style={{ width: '600px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-[24px] py-[20px] border-b border-[#e8e8ec]">
           <h2 className="text-[16px] font-semibold text-[#1c2024]">Upload documents</h2>
@@ -288,13 +281,34 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
                     <button
                       type="button"
                       onClick={() => setIsOrgDropdownOpen(!isOrgDropdownOpen)}
-                      className={`w-full h-[48px] px-[16px] pr-[40px] border rounded-[8px] text-[15px] text-left appearance-none focus:outline-none focus:ring-2 focus:ring-[#005be2] bg-white ${
+                      className={`w-full h-[32px] px-[16px] pr-[40px] border rounded-[8px] text-[15px] text-left appearance-none focus:outline-none focus:ring-2 focus:ring-[#005be2] bg-white flex items-center gap-[8px] ${
                         !selectedOrganization ? 'border-red-300' : 'border-[#e0e1e6]'
                       }`}
                     >
-                      <span className={selectedOrganization ? 'text-[#1c2024]' : 'text-[#9ca3af]'}>
-                        {selectedOrganization || 'Where should this document live?'}
-                      </span>
+                      {selectedOrganization && (() => {
+                        const selectedOrg = organizations.find(org => org.name === selectedOrganization);
+                        if (selectedOrg) {
+                          return (
+                            <>
+                              <div 
+                                className="size-[24px] rounded-full flex items-center justify-center text-white shrink-0"
+                                style={{ backgroundColor: selectedOrg.color }}
+                              >
+                                <span className="text-[11px] font-medium">{selectedOrg.initial}</span>
+                              </div>
+                              <span className="text-[13px] text-[#1c2024]">
+                                {selectedOrganization}
+                              </span>
+                            </>
+                          );
+                        }
+                        return null;
+                      })()}
+                      {!selectedOrganization && (
+                        <span className="text-[13px] text-[#9ca3af]">
+                          Where should this document live?
+                        </span>
+                      )}
                     </button>
                     <ChevronDown className="size-[20px] text-[#9ca3af] absolute right-[16px] top-1/2 -translate-y-1/2 pointer-events-none" />
                     
@@ -312,10 +326,10 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
                             className="w-full px-[16px] py-[10px] text-left text-[15px] text-[#1c2024] hover:bg-[#f9fafb] transition-colors flex items-center gap-[12px]"
                           >
                             <div 
-                              className="size-[28px] rounded-full flex items-center justify-center text-white shrink-0"
+                              className="size-[24px] rounded-full flex items-center justify-center text-white shrink-0"
                               style={{ backgroundColor: org.color }}
                             >
-                              <span className="text-[13px]">{org.initial}</span>
+                              <span className="text-[11px]">{org.initial}</span>
                             </div>
                             <span>{org.name}</span>
                           </button>
@@ -329,9 +343,9 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
                 <div
                   onDrop={handleDrop}
                   onDragOver={(e) => e.preventDefault()}
-                  className={`border-2 border-dashed border-[#e0e1e6] rounded-[12px] flex flex-col items-center justify-center cursor-pointer hover:border-[#005be2] hover:bg-[#fafafa] transition-all ${
+                  className={`border-2 border-dashed border-[#e0e1e6] rounded-[12px] flex flex-col items-center justify-center cursor-pointer hover:border-[#005be2] hover:bg-[#fafafa] transition-all gap-[12px] ${
                     selectedFiles.length > 0 
-                      ? 'p-[24px_32px] min-h-[120px]' 
+                      ? 'py-[12px] px-[32px] min-h-[120px]' 
                       : 'p-[100px_32px] min-h-[400px]'
                   }`}
                   onClick={() => fileInputRef.current?.click()}
@@ -356,36 +370,45 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
                   />
                 </div>
 
-                {/* Selected Files List */}
+                {/* Footer Note */}
+                <p className="text-[12px] text-[#9ca3af] text-center mt-[12px]">
+                  Files under 10MB will get descriptions automatically
+                </p>
+
+                {/* Selected Files Table */}
                 {selectedFiles.length > 0 && (
-                  <div className="mt-[24px] border border-[#e0e1e6] rounded-[8px] overflow-hidden flex flex-col">
-                    <div className="bg-[#f9fafb] border-b border-[#e0e1e6] px-[16px] py-[8px] flex-shrink-0">
-                      <div className="flex items-center gap-[16px]">
-                        <p className="text-[13px] font-medium text-[#80838d]">Name</p>
-                        <p className="text-[13px] font-medium text-[#80838d]">Details</p>
-                      </div>
-                    </div>
-                    <div className={`overflow-y-auto ${selectedFiles.length > 6 ? 'max-h-[240px]' : ''}`}>
-                      {selectedFiles.map((file, index) => {
-                        const { bgColor } = getFileIcon(file.name);
-                        return (
-                          <div key={index} className="border-b border-[#e0e1e6] last:border-b-0">
-                            <div className="flex items-center gap-[16px] px-[16px] py-[8px]">
-                              <div
-                                className="size-[24px] rounded-[6px] flex items-center justify-center shrink-0 text-[10px] text-[#60646c]"
-                                style={{ backgroundColor: bgColor }}
-                              >
-                                {getFileExtension(file.name)}
-                              </div>
-                              <p className="text-[13px] text-[#1c2024] flex-1 truncate">{file.name}</p>
-                              <div className="flex items-center gap-[4px]">
-                                <Check className="size-[16px] text-[#059669]" />
-                                <span className="text-[13px] text-[#059669]">Ready</span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
+                  <div className="mt-[24px] border border-[#e0e1e6] rounded-[8px] overflow-hidden">
+                    <div className="overflow-y-auto">
+                      <table className="w-full caption-bottom text-sm">
+                        <thead className="[&_tr]:border-b">
+                          <tr className="border-b transition-colors">
+                            <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap">Name</th>
+                            <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap">Type</th>
+                            <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="[&_tr:last-child]:border-0">
+                          {selectedFiles.map((file, index) => (
+                            <tr key={index} className="border-b transition-colors hover:bg-[#f9fafb]">
+                              <td className="p-2 align-middle whitespace-nowrap">
+                                <div className="flex items-center gap-[8px]">
+                                  <FileIcon type={getFileType(file.name)} />
+                                  <span className="text-[13px] text-[#1c2024]">{file.name}</span>
+                                </div>
+                              </td>
+                              <td className="p-2 align-middle whitespace-nowrap">
+                                <span className="text-[13px] text-[#60646c]">{getFileType(file.name)}</span>
+                              </td>
+                              <td className="p-2 align-middle whitespace-nowrap">
+                                <div className="flex items-center gap-[4px]">
+                                  <Check className="size-[16px] text-[#059669]" />
+                                  <span className="text-[13px] text-[#059669]">Ready</span>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 )}
@@ -393,6 +416,39 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
                 {/* Collections Selection */}
                 {collections.length > 0 && selectedFiles.length > 0 && (
                   <div ref={collectionsDropdownRef} className="relative mt-[24px]">
+                    {/* Selected Collections Tags */}
+                    {selectedCollectionIds.size > 0 && (
+                      <div className="flex flex-wrap gap-[6px] mb-[8px]">
+                        {[...selectedCollectionIds].map((collectionId) => {
+                          const collection = collections.find(col => col.id === collectionId) || 
+                                           (currentCollection?.id === collectionId ? currentCollection : null);
+                          if (!collection) return null;
+                          const collectionType = getCollectionType ? getCollectionType({ rules: collection.rules, documentIds: [] }) : 'manual';
+                          
+                          return (
+                            <div
+                              key={collectionId}
+                              className="flex items-center gap-[4px] px-[6px] py-[2px] bg-[#f5f7fa] border border-[#d1d5db] rounded-[4px]"
+                            >
+                              <span className="text-[12px]">{collection.icon || '📁'}</span>
+                              <span className="text-[11px] font-normal text-[#60646c]">{collection.title}</span>
+                              {collectionType === 'auto' && (
+                                <span className="px-[3px] py-[1px] bg-[#f9fafb] text-[#9ca3af] rounded-[3px] text-[10px] font-normal">
+                                  Auto
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleToggleCollection(collectionId)}
+                                className="ml-[1px] text-[#9ca3af] hover:text-[#60646c] transition-colors"
+                              >
+                                <X className="size-[10px]" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                     <button
                       ref={collectionsButtonRef}
                       type="button"
@@ -410,14 +466,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
                       className="w-full flex items-center justify-between px-[12px] py-[10px] border border-[#e0e1e6] rounded-[8px] bg-white hover:bg-[#f9fafb] transition-colors"
                     >
                       <span className="text-[13px] text-[#1c2024]">Add to collections (optional)</span>
-                      <div className="flex items-center gap-[8px]">
-                        {selectedCollectionIds.size > 0 && (
-                          <span className="px-[6px] py-[2px] bg-[#005be2] text-white rounded-[4px] text-[11px] font-medium">
-                            {selectedCollectionIds.size}
-                          </span>
-                        )}
-                        <ChevronDown className={`size-[16px] text-[#60646c] transition-transform ${isCollectionsDropdownOpen ? 'rotate-180' : ''}`} />
-                      </div>
+                      <ChevronDown className={`size-[16px] text-[#60646c] transition-transform ${isCollectionsDropdownOpen ? 'rotate-180' : ''}`} />
                     </button>
                     
                     {isCollectionsDropdownOpen && typeof window !== 'undefined' && createPortal(
@@ -479,11 +528,6 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
                     )}
                   </div>
                 )}
-
-                {/* Footer Note */}
-                <p className="text-[14px] text-[#9ca3af] text-center mt-[24px]">
-                  Files under 10MB will get descriptions automatically
-                </p>
               </div>
             )}
 

@@ -26,6 +26,11 @@ export interface GenerateRulesResponse {
   reasoning?: string;
 }
 
+export interface EnhanceCollectionTextResponse {
+  title: string;
+  description: string;
+}
+
 // Get API key from environment variable
 const getApiKey = (): string | null => {
   // Vite exposes env vars with VITE_ prefix
@@ -270,6 +275,167 @@ Generate the best filtering rules for this collection.`;
 
   // This shouldn't be reached, but just in case
   throw lastError || new Error('Failed to generate rules after multiple attempts');
+}
+
+/**
+ * Enhance collection text by splitting it into a clear title and description
+ * @param inputText - The user's input text describing the collection
+ * @returns Promise with enhanced title and description
+ */
+export async function enhanceCollectionText(
+  inputText: string
+): Promise<EnhanceCollectionTextResponse> {
+  console.log('[AI Service] enhanceCollectionText called');
+  console.log('[AI Service] Input text:', inputText);
+
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    throw new Error('API key not configured. Please add VITE_GEMINI_API_KEY to your .env.local file.');
+  }
+
+  console.log('[AI Service] Initializing GoogleGenAI client for text enhancement');
+  const ai = new GoogleGenAI({ apiKey });
+
+  const systemPrompt = `You are an AI assistant for a family office document management system. Your task is to split user's collection description into a clear, concise title and a more detailed description.
+
+GUIDELINES:
+1. Title should be short (max 60 characters), clear, and descriptive
+2. Description should be more detailed and explain what the collection contains
+3. If the input is very short (1-2 words), use it as title and leave description empty or create a simple one
+4. If the input is a sentence, extract the key phrase for title and use the rest as description
+5. Make sure both title and description are professional and appropriate for document management
+
+EXAMPLES:
+Input: "Tax Documents 2024"
+Output: { "title": "Tax Documents 2024", "description": "" }
+
+Input: "All invoices from vendors for our property renovation project in 2024"
+Output: { 
+  "title": "Property Renovation Invoices 2024", 
+  "description": "All invoices from vendors related to the property renovation project in 2024" 
+}
+
+Input: "Invoices from household vendors for 2023-2024"
+Output: { 
+  "title": "Household Vendor Invoices 2023-2024", 
+  "description": "All invoices from household vendors for the years 2023 and 2024" 
+}`;
+
+  const userPrompt = `User's collection description: "${inputText.trim()}"
+
+Split this into a clear title and description.`;
+
+  // Retry logic for temporary errors (503, 429)
+  const maxRetries = 3;
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`[AI Service] Attempt ${attempt}/${maxRetries} - Calling Gemini API for text enhancement`);
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [
+          { role: 'user', parts: [{ text: systemPrompt + '\n\n' + userPrompt }] }
+        ],
+        config: {
+          temperature: 0.7,
+          maxOutputTokens: 512,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING },
+              description: { type: Type.STRING }
+            },
+            required: ['title', 'description']
+          }
+        }
+      });
+
+      console.log('[AI Service] Gemini response received for text enhancement');
+      console.log('[AI Service] Response text:', response.text);
+
+      // Check if response was truncated
+      const finishReason = response.candidates?.[0]?.finishReason;
+      if (finishReason === 'MAX_TOKENS') {
+        console.error('[AI Service] Response was truncated due to max tokens limit');
+        throw new Error('AI response was truncated. Please try again.');
+      }
+
+      // Parse the response
+      let result: EnhanceCollectionTextResponse;
+      try {
+        result = JSON.parse(response.text || '{}');
+      } catch (parseError) {
+        console.error('[AI Service] JSON parse error:', parseError);
+        console.error('[AI Service] Raw response text:', response.text);
+        throw new Error('AI returned invalid JSON. Please try again.');
+      }
+
+      console.log('[AI Service] Parsed enhancement result:', JSON.stringify(result, null, 2));
+
+      // Validate the response structure
+      if (!result.title || typeof result.title !== 'string') {
+        console.error('[AI Service] Invalid response structure - title is missing or invalid');
+        throw new Error('Invalid response from AI: title is missing');
+      }
+
+      // Ensure description exists (can be empty string)
+      if (typeof result.description !== 'string') {
+        result.description = '';
+      }
+
+      // Trim both fields
+      result.title = result.title.trim();
+      result.description = result.description.trim();
+
+      // If title is empty, use input text as fallback
+      if (!result.title) {
+        result.title = inputText.trim().substring(0, 60);
+      }
+
+      return result;
+
+    } catch (error) {
+      console.error(`[AI Service] Attempt ${attempt} failed:`, error);
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // Check if it's a retryable error (503 overloaded, 429 rate limit)
+      const errorMessage = lastError.message || '';
+      const isRetryable = errorMessage.includes('503') || 
+                          errorMessage.includes('overloaded') || 
+                          errorMessage.includes('UNAVAILABLE') ||
+                          errorMessage.includes('429') ||
+                          errorMessage.includes('RESOURCE_EXHAUSTED');
+
+      if (isRetryable && attempt < maxRetries) {
+        const waitTime = attempt * 2000; // 2s, 4s, 6s
+        console.log(`[AI Service] Retryable error detected. Waiting ${waitTime}ms before retry...`);
+        await sleep(waitTime);
+        continue;
+      }
+
+      // Non-retryable error or max retries reached
+      if (errorMessage.includes('API_KEY_INVALID')) {
+        throw new Error('Invalid API key. Please check your VITE_GEMINI_API_KEY in .env.local');
+      }
+      if (errorMessage.includes('PERMISSION_DENIED')) {
+        throw new Error('Permission denied. Your API key may not have access to this model.');
+      }
+      if (errorMessage.includes('RESOURCE_EXHAUSTED') || errorMessage.includes('429')) {
+        throw new Error('API quota exceeded. Please try again later.');
+      }
+      if (errorMessage.includes('503') || errorMessage.includes('overloaded') || errorMessage.includes('UNAVAILABLE')) {
+        throw new Error('AI service is temporarily overloaded. Please try again in a few seconds.');
+      }
+
+      throw lastError;
+    }
+  }
+
+  // This shouldn't be reached, but just in case
+  throw lastError || new Error('Failed to enhance text after multiple attempts');
 }
 
 /**

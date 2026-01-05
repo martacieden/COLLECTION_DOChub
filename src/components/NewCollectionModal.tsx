@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Sparkles, Loader2, ChevronDown, Plus, Trash2 } from 'lucide-react';
+import { X, Sparkles, Loader2, ChevronDown, Plus, Trash2, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
-import { generateCollectionRules, type CollectionRule } from '../services/aiRulesGenerator';
+import { generateCollectionRules, enhanceCollectionText, type CollectionRule } from '../services/aiRulesGenerator';
 
 interface Document {
   id: string;
@@ -143,7 +143,14 @@ function matchDocumentToRules(document: Document, rules: CollectionRule[]): bool
 export type { CollectionRule };
 
 export function NewCollectionModal({ isOpen, onClose, onCreateCollection, selectedDocuments = [], allDocuments = [], onOpenRulesEditor }: NewCollectionModalProps) {
-  const [collectionName, setCollectionName] = useState('');
+  // Новий флоу стани
+  const [inputText, setInputText] = useState(''); // Початковий великий інпут
+  const [collectionName, setCollectionName] = useState(''); // Title (після enhancement або без нього)
+  const [description, setDescription] = useState(''); // Description (після enhancement)
+  const [isEnhanced, setIsEnhanced] = useState(false); // Чи пройшло enhancement
+  const [isEnhancing, setIsEnhancing] = useState(false); // Чи зараз обробляється enhancement
+  
+  // Існуючі стани
   const [generatedRules, setGeneratedRules] = useState<CollectionRule[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showRulesBlock, setShowRulesBlock] = useState(false);
@@ -167,25 +174,87 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
     };
   };
 
-  // Генерація rules на основі name (використовуємо name як description)
+  // Enhancement: розділення тексту на Title і Description через AI
+  const handleEnhanceText = async () => {
+    // Для Re-enhance використовуємо поточні значення title + description
+    // Для першого enhancement використовуємо inputText
+    let textToEnhance = '';
+    
+    if (isEnhanced) {
+      // Re-enhance: використовуємо поточні значення
+      textToEnhance = [collectionName.trim(), description.trim()].filter(Boolean).join(' ').trim();
+    } else {
+      // Перший enhancement: використовуємо inputText
+      textToEnhance = inputText.trim();
+    }
+    
+    if (!textToEnhance) {
+      toast.error('Please enter some text first');
+      return;
+    }
+
+    setIsEnhancing(true);
+    setNameError('');
+
+    try {
+      console.log('[NewCollectionModal] Starting text enhancement');
+      console.log('[NewCollectionModal] Text to enhance:', textToEnhance);
+      const result = await enhanceCollectionText(textToEnhance);
+
+      console.log('[NewCollectionModal] Enhancement successful');
+      console.log('[NewCollectionModal] Title:', result.title);
+      console.log('[NewCollectionModal] Description:', result.description);
+
+      setCollectionName(result.title);
+      setDescription(result.description);
+      setIsEnhanced(true);
+      
+      // Оновлюємо inputText для збереження контексту (якщо це перший enhancement)
+      if (!inputText.trim()) {
+        setInputText(textToEnhance);
+      }
+
+      toast.success('Text enhanced successfully');
+    } catch (error) {
+      console.error('[NewCollectionModal] Enhancement error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(`Failed to enhance text: ${errorMessage}`);
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
+
+  // Генерація rules на основі name + description (або inputText якщо не enhanced)
   const handleGenerateRulesFromName = async () => {
-    if (!collectionName.trim()) {
+    // Якщо enhanced - використовуємо collectionName + description
+    // Якщо не enhanced - використовуємо inputText
+    let fullDescription = '';
+    
+    if (isEnhanced) {
+      fullDescription = description.trim() 
+        ? `${collectionName.trim()} ${description.trim()}`.trim()
+        : collectionName.trim();
+    } else {
+      fullDescription = inputText.trim();
+    }
+
+    if (!fullDescription) {
       return;
     }
 
     setIsGenerating(true);
     setAiReasoning(undefined);
 
-    console.log('[NewCollectionModal] Starting AI rule generation from name');
+    console.log('[NewCollectionModal] Starting AI rule generation');
     console.log('[NewCollectionModal] Collection name:', collectionName);
+    console.log('[NewCollectionModal] Description:', description);
 
     try {
       const context = getDocumentContext();
       console.log('[NewCollectionModal] Document context:', context);
 
-      // Використовуємо collectionName як description для AI
       const result = await generateCollectionRules({
-        description: collectionName.trim(),
+        description: fullDescription,
         ...context,
       });
 
@@ -221,32 +290,14 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
     await handleGenerateRulesFromName();
   };
 
-  // Auto-generate name when documents are selected
+  // Автоматична генерація правил після enhancement
   useEffect(() => {
-    if (isOpen && selectedDocuments.length > 0 && !collectionName) {
-      // Generate automatic name based on selected documents
-      const docTypes = [...new Set(selectedDocuments.map(d => d.type).filter(Boolean))];
-      const categories = [...new Set(selectedDocuments.map(d => d.category).filter(Boolean))];
-      
-      if (categories.length > 0) {
-        setCollectionName(`${categories[0]} Documents`);
-      } else if (docTypes.length > 0) {
-        setCollectionName(`${docTypes[0]} Files`);
-      } else {
-        setCollectionName(`Collection from ${selectedDocuments.length} documents`);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, selectedDocuments.length]);
-
-  // Автоматично генерувати rules на основі name, якщо є selectedDocuments
-  useEffect(() => {
-    if (isOpen && collectionName.trim() && selectedDocuments.length > 0 && generatedRules.length === 0 && !isGenerating) {
-      // Автоматично генеруємо rules на основі name та selectedDocuments
+    if (isEnhanced && collectionName.trim() && generatedRules.length === 0 && !isGenerating && !isEnhancing) {
+      // Автоматично генеруємо rules після enhancement
       handleGenerateRulesFromName();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, collectionName, selectedDocuments.length]);
+  }, [isEnhanced, collectionName, description]);
 
   // Recalculate matched count whenever rules change
   useEffect(() => {
@@ -308,20 +359,36 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
   };
 
   const handleCreate = () => {
+    let finalName = '';
+    let finalDescription = '';
+
+    if (isEnhanced) {
+      // Якщо пройшло enhancement - використовуємо title і description
+      finalName = collectionName.trim();
+      finalDescription = description.trim();
+    } else {
+      // Якщо НЕ пройшло enhancement - весь текст стає title, description пустий
+      finalName = inputText.trim();
+      finalDescription = '';
+    }
+
     // Validate name
-    if (!collectionName.trim()) {
+    if (!finalName) {
       setNameError('Collection name is required');
       return;
     }
 
-    // Використовуємо collectionName як description
-    const description = collectionName.trim();
-    onCreateCollection(collectionName, description, generatedRules);
+    onCreateCollection(finalName, finalDescription, generatedRules);
     handleClose();
   };
 
   const handleClose = () => {
+    // Reset всіх станів
+    setInputText('');
     setCollectionName('');
+    setDescription('');
+    setIsEnhanced(false);
+    setIsEnhancing(false);
     setGeneratedRules([]);
     setIsGenerating(false);
     setShowRulesBlock(false);
@@ -350,32 +417,97 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-[24px] space-y-[24px]">
-          {/* STEP 1 - Name Your Collection */}
-          <div className="space-y-[12px]">
-            <div>
-              <label className="block text-[13px] text-[#1c2024] mb-[8px]">
-                Collection name <span className="text-[#d4183d]">*</span>
-              </label>
-              <input
-                type="text"
-                value={collectionName}
-                onChange={(e) => {
-                  setCollectionName(e.target.value);
-                  setNameError('');
-                }}
-                placeholder="e.g. Tax Documents 2024, Property Agreements, Vendor Invoices"
-                className={`w-full h-[40px] px-[12px] border ${nameError ? 'border-[#d4183d]' : 'border-[#e0e1e6]'} rounded-[8px] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#005be2]`}
-              />
-              {nameError && (
-                <p className="text-[11px] text-[#d4183d] mt-[4px]">{nameError}</p>
-              )}
-              <p className="text-[11px] text-[#60646c] mt-[4px]">
-                AI will automatically generate filtering rules based on the collection name.
-              </p>
+          {/* Loading State - Enhancement in progress */}
+          {isEnhancing ? (
+            <div className="flex flex-col items-center justify-center py-[48px] space-y-[16px]">
+              <div className="bg-gradient-to-br from-[#f0f7ff] to-[#e8f0ff] rounded-[12px] p-[32px] w-full">
+                <div className="flex flex-col items-center space-y-[12px]">
+                  <Loader2 className="size-[32px] text-[#005be2] animate-spin" />
+                  <div className="text-center space-y-[4px]">
+                    <p className="text-[16px] font-semibold text-[#1c2024]">Enhancing your collection...</p>
+                    <p className="text-[13px] text-[#60646c]">AI is generating a clear name and improving your description</p>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : isEnhanced ? (
+            /* After Enhancement - Show Title and Description fields */
+            <div className="space-y-[24px]">
+              {/* Title Field */}
+              <div className="space-y-[8px]">
+                <label className="block text-[13px] text-[#1c2024] mb-[8px]">
+                  Title <span className="text-[#d4183d]">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={collectionName}
+                  onChange={(e) => {
+                    setCollectionName(e.target.value);
+                    setNameError('');
+                  }}
+                  placeholder="Collection title"
+                  className={`w-full h-[40px] px-[12px] border ${nameError ? 'border-[#d4183d]' : 'border-[#e0e1e6]'} rounded-[8px] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#005be2]`}
+                />
+                {nameError && (
+                  <p className="text-[11px] text-[#d4183d] mt-[4px]">{nameError}</p>
+                )}
+              </div>
 
-          {/* STEP 2 - Rules Editor (опціональний крок) */}
+              {/* Description Field */}
+              <div className="space-y-[8px]">
+                <div className="flex items-center justify-between mb-[8px]">
+                  <label className="block text-[13px] text-[#1c2024]">
+                    Description
+                  </label>
+                  <button
+                    onClick={handleEnhanceText}
+                    disabled={(!collectionName.trim() && !description.trim()) || isEnhancing}
+                    className="flex items-center gap-[6px] h-[28px] px-[10px] text-[12px] text-[#005be2] hover:bg-[#f0f7ff] rounded-[6px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <RotateCcw className="size-[14px]" />
+                    <span>Re-enhance</span>
+                  </button>
+                </div>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Describe what this collection contains..."
+                  className="w-full min-h-[100px] p-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] resize-none focus:outline-none focus:ring-2 focus:ring-[#005be2]"
+                />
+              </div>
+            </div>
+          ) : (
+            /* Initial State - Large textarea with Enhance button */
+            <div className="space-y-[16px]">
+              <div className="space-y-[12px]">
+                <textarea
+                  value={inputText}
+                  onChange={(e) => {
+                    setInputText(e.target.value);
+                    setNameError('');
+                  }}
+                  placeholder="Describe what collection you want to create..."
+                  className="w-full min-h-[120px] p-[16px] border border-[#e0e1e6] rounded-[8px] text-[13px] resize-none focus:outline-none focus:ring-2 focus:ring-[#005be2]"
+                />
+                {nameError && (
+                  <p className="text-[11px] text-[#d4183d]">{nameError}</p>
+                )}
+              </div>
+              <div className="flex items-center justify-center">
+                <button
+                  onClick={handleEnhanceText}
+                  disabled={!inputText.trim() || isEnhancing}
+                  className="flex items-center gap-[8px] h-[40px] px-[12px] bg-gradient-to-r from-[#005be2] to-[#0047b3] text-white rounded-[8px] text-[12px] font-medium hover:from-[#004fc4] hover:to-[#003d99] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  <Sparkles className="size-[16px]" />
+                  <span>Enhance with AI</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2 - Rules Editor (опціональний крок) - показуємо тільки після натискання "Enhance with AI" */}
+          {isEnhanced && (
           <div className="space-y-[12px]">
             <div>
               <label className="block text-[13px] text-[#1c2024] mb-[8px]">
@@ -389,7 +521,7 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
             {/* Rules Editor Block - завжди показуємо */}
             <div className="border border-[#e0e1e6] rounded-[8px] overflow-hidden bg-white">
               {/* Header з кнопками */}
-              <div className="flex items-center justify-between p-[16px] border-b border-[#e8e8ec] bg-[#f9fafb]">
+              <div className="flex items-center justify-between px-[16px] py-[8px] border-b border-[#e8e8ec] bg-[#f9fafb]">
                 <div className="flex items-center gap-[8px]">
                   <p className="text-[13px] text-[#1c2024] font-medium">Rules</p>
                   {generatedRules.length > 0 && (
@@ -406,7 +538,7 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
                 <div className="flex items-center gap-[8px]">
                   <button
                     onClick={handleGenerateRules}
-                    disabled={isGenerating || !collectionName.trim()}
+                    disabled={isGenerating || (!collectionName.trim() && !inputText.trim())}
                     className="flex items-center gap-[6px] h-[32px] px-[12px] bg-gradient-to-r from-[#005be2] to-[#0047b3] text-white rounded-[6px] text-[12px] hover:from-[#004fc4] hover:to-[#003d99] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     {isGenerating ? (
@@ -441,35 +573,19 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
               )}
 
               {/* Rules List */}
-              <div className="p-[16px] bg-[#f9fafb] space-y-[12px]">
+              <div className="px-[16px] py-[8px] bg-[#f9fafb] space-y-[12px]">
                 {generatedRules.length > 0 ? (
-                  <div className="space-y-[8px]">
+                  <div className="space-y-0">
                     {generatedRules.map((rule) => {
                       return (
                         <div
                           key={rule.id}
-                          className={`flex items-center gap-[12px] transition-all ${
+                          className={`flex items-center gap-[8px] pt-0 pb-0 mb-[8px] transition-all ${
                             rule.enabled
                               ? 'opacity-100'
                               : 'opacity-60'
                           }`}
                         >
-                          {/* Enable/Disable toggle */}
-                          <button
-                            onClick={() => toggleRule(rule.id)}
-                            className={`size-[20px] rounded-[4px] border-2 flex items-center justify-center transition-colors ${
-                              rule.enabled
-                                ? 'bg-[#005be2] border-[#005be2]'
-                                : 'bg-white border-[#e0e1e6]'
-                            }`}
-                          >
-                            {rule.enabled && (
-                              <svg className="size-[12px] text-white" fill="none" viewBox="0 0 16 16">
-                                <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                              </svg>
-                            )}
-                          </button>
-
                           {/* Select filter dropdown */}
                           <select
                             value={rule.type}
@@ -529,6 +645,7 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
             </div>
 
           </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -542,7 +659,7 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
           <button
             onClick={handleCreate}
             className="h-[36px] px-[16px] rounded-[6px] text-[13px] bg-[#005be2] text-white hover:bg-[#004fc4] disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={!collectionName.trim()}
+            disabled={!inputText.trim() && !collectionName.trim()}
           >
             Create Collection
           </button>

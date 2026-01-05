@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Trash2, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -56,7 +57,9 @@ export function CollectionSettingsModal({
   const [collectionIcon, setCollectionIcon] = useState(collection.icon || '📁');
   const [nameError, setNameError] = useState('');
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const emojiButtonRef = useRef<HTMLButtonElement>(null);
 
   // Extract emoji from icon string
   const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E0}-\u{1F1FF}]/u;
@@ -158,31 +161,51 @@ export function CollectionSettingsModal({
                 {/* Emoji Picker Button */}
                 <div className="relative" ref={emojiPickerRef}>
                   <button
+                    ref={emojiButtonRef}
                     type="button"
-                    onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}
+                    onClick={() => {
+                      if (emojiButtonRef.current) {
+                        const rect = emojiButtonRef.current.getBoundingClientRect();
+                        setDropdownPosition({
+                          top: rect.bottom + 4,
+                          left: rect.left
+                        });
+                      }
+                      setIsEmojiPickerOpen(!isEmojiPickerOpen);
+                    }}
                     className="size-[40px] flex items-center justify-center border border-[#e0e1e6] rounded-[8px] bg-white hover:bg-[#f9fafb] transition-colors flex-shrink-0"
                   >
                     <span className="text-[20px]">{collectionIcon}</span>
                   </button>
 
                   {/* Emoji Picker Dropdown */}
-                  {isEmojiPickerOpen && (
-                    <div className="absolute top-[44px] left-0 z-[100] bg-white border border-[#e8e8ec] rounded-[8px] shadow-lg p-[16px] w-[360px] max-h-[400px] overflow-y-auto">
+                  {isEmojiPickerOpen && typeof window !== 'undefined' && createPortal(
+                    <div 
+                      className="absolute top-[44px] left-0 z-[100] bg-white border border-[#e8e8ec] rounded-[8px] shadow-lg p-[16px] w-[300px] max-h-[400px] overflow-y-auto"
+                      style={{ 
+                        top: `${dropdownPosition.top}px`,
+                        left: `${dropdownPosition.left}px`,
+                        boxSizing: 'content-box',
+                        pointerEvents: 'auto'
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div className="space-y-[16px]">
                         {emojiCategories.map((category) => (
                           <div key={category.name}>
                             <h4 className="text-[11px] font-semibold text-[#8b8d98] uppercase tracking-wider mb-[8px]">
                               {category.name}
                             </h4>
-                            <div className="grid grid-cols-8 gap-[6px]">
+                            <div className="grid grid-cols-6 gap-[6px]" style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)' }}>
                               {category.emojis.map((emoji, index) => (
                                 <button
                                   key={index}
                                   type="button"
                                   onClick={() => handleEmojiSelect(emoji)}
-                                  className={`size-[36px] flex items-center justify-center rounded-[8px] text-[24px] hover:bg-[#f0f0f3] transition-colors ${
+                                  className={`flex items-center justify-center rounded-[8px] text-[24px] hover:bg-[#f0f0f3] transition-colors ${
                                     collectionIcon === emoji ? 'bg-[#f0f7ff] border-2 border-[#005be2]' : ''
                                   }`}
+                                  style={{ width: '100%', aspectRatio: '1' }}
                                 >
                                   {emoji}
                                 </button>
@@ -191,7 +214,8 @@ export function CollectionSettingsModal({
                           </div>
                         ))}
                       </div>
-                    </div>
+                    </div>,
+                    document.body
                   )}
                 </div>
 

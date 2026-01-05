@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Checkbox } from './ui/checkbox';
-import { MoreVertical, FileText } from 'lucide-react';
+import { MoreVertical, FileText, X, Sparkles } from 'lucide-react';
 import svgPaths from "../imports/svg-ylbe71kelt";
 import { DocumentCard } from './DocumentCard';
 import { FilterBar } from './FilterBar';
@@ -47,6 +47,8 @@ interface AllDocumentsTableProps {
   onAddToCollection?: (documentIds: string[]) => void;
   onCreateCollection?: (documentIds: string[]) => void;
   onCollectionClick?: (collection: Collection) => void;
+  aiFilter?: Set<string> | null;
+  onClearAIFilter?: () => void;
 }
 
 // FileIcon component для визначення типу файлу та іконки
@@ -306,7 +308,9 @@ export function AllDocumentsTable({
   onDelete,
   onAddToCollection,
   onCreateCollection,
-  onCollectionClick
+  onCollectionClick,
+  aiFilter,
+  onClearAIFilter
 }: AllDocumentsTableProps) {
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [filterQuery, setFilterQuery] = useState<string>('');
@@ -362,8 +366,15 @@ export function AllDocumentsTable({
     }
   };
 
-  // Filter documents based on search query, organization, and quick filter
+  // Filter documents based on search query, organization, quick filter, and AI filter
   const filteredDocuments = documents.filter(doc => {
+    // Filter by AI filter (if active)
+    if (aiFilter && aiFilter.size > 0) {
+      if (!doc.id || !aiFilter.has(doc.id)) {
+        return false;
+      }
+    }
+    
     // Filter by organization
     if (selectedOrganization && selectedOrganization !== 'all') {
       const org = organizations.find(o => o.id === selectedOrganization);
@@ -444,6 +455,25 @@ export function AllDocumentsTable({
           onViewModeChange={setViewMode}
           visibleColumnsCount={viewMode === 'table' ? visibleColumnsCount : undefined}
         />
+
+        {/* AI Filter Badge */}
+        {aiFilter && aiFilter.size > 0 && onClearAIFilter && (
+          <div className="px-[24px] py-[8px] bg-[#f0f7ff] border-b border-[#e8e8ec] flex items-center justify-between">
+            <div className="flex items-center gap-[8px]">
+              <Sparkles className="size-[14px] text-[#005be2]" />
+              <span className="text-[12px] text-[#1c2024]">
+                Showing {aiFilter.size} document{aiFilter.size !== 1 ? 's' : ''} from AI search
+              </span>
+            </div>
+            <button
+              onClick={onClearAIFilter}
+              className="h-[24px] w-[24px] flex items-center justify-center rounded-[4px] hover:bg-[#e0e1e6] transition-colors"
+              title="Clear AI filter"
+            >
+              <X className="size-[14px] text-[#60646c]" />
+            </button>
+          </div>
+        )}
 
         {/* Quick Filters */}
         <QuickFilters
