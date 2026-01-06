@@ -1856,6 +1856,7 @@ function AISuggestionPreviewModal({
   onAcceptWithSelection?: (selectedDocumentIds: string[]) => void;
 }) {
   const [selectedDocumentIds, setSelectedDocumentIds] = useState<Set<string>>(new Set());
+  const [chatMessage, setChatMessage] = useState('');
   
   // Знаходимо документи, які відповідають правилам
   let previewDocuments: Document[] = [];
@@ -1891,6 +1892,25 @@ function AISuggestionPreviewModal({
     } else {
       const allIds = new Set(previewDocuments.map(doc => doc.id || '').filter(Boolean));
       setSelectedDocumentIds(allIds);
+    }
+  };
+
+  const handleSendChatMessage = () => {
+    if (!chatMessage.trim()) return;
+    
+    // Тут можна додати логіку для відправки повідомлення до AI
+    // Наприклад, показати toast або відкрити AI чат модальне вікно
+    toast.info('Chat with AI Assistant', {
+      description: 'This feature will be available soon'
+    });
+    
+    setChatMessage('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendChatMessage();
     }
   };
 
@@ -2007,6 +2027,34 @@ function AISuggestionPreviewModal({
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+        
+        {/* AI Chat Input */}
+        <div className="border-t border-[#e8e8ec] px-[24px] py-[16px] bg-[#f9fafb] flex-shrink-0">
+          <div className="flex items-start gap-[12px]">
+            <div className="bg-gradient-to-br from-[#f5f3ff] to-[#ede9fe] size-[32px] rounded-[8px] flex items-center justify-center flex-shrink-0 mt-[2px]">
+              <Sparkles className="size-[16px] text-[#7c3aed]" />
+            </div>
+            <div className="flex-1">
+              <div className="relative">
+                <textarea
+                  value={chatMessage}
+                  onChange={(e) => setChatMessage(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask AI assistant about this collection..."
+                  rows={2}
+                  className="w-full px-[16px] py-[12px] pr-[48px] rounded-[8px] border border-[#e0e1e6] bg-white text-[13px] text-[#1c2024] placeholder:text-[#8b8d98] resize-none focus:outline-none focus:ring-2 focus:ring-[#005be2] focus:border-transparent"
+                />
+                <button 
+                  onClick={handleSendChatMessage}
+                  disabled={!chatMessage.trim()}
+                  className="absolute right-[8px] bottom-[8px] bg-[#005be2] size-[32px] rounded-[6px] flex items-center justify-center hover:bg-[#004fc4] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Send className="size-[16px] text-white" />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
         
