@@ -1935,7 +1935,7 @@ function AISuggestionPreviewModal({
                 <h2 className="text-[16px] font-semibold text-[#1c2024] mb-[4px]">{suggestion.name}</h2>
                 <p className="text-[13px] text-[#60646c] mb-[8px]">{suggestion.description}</p>
                 <div className="flex items-center gap-[12px] mb-[8px]">
-                  <span className="text-[12px] text-[#8b8d98]">{suggestion.documentCount} documents</span>
+                  <span className="text-[12px] text-[#8b8d98]">{previewDocuments.length} documents</span>
                   <span className="text-[12px] text-[#8b8d98]">•</span>
                   <span className="text-[12px] text-[#8b8d98]">AI-generated collection</span>
                 </div>
