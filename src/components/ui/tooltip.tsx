@@ -19,10 +19,11 @@ function TooltipProvider({
 }
 
 function Tooltip({
+  delayDuration = 100,
   ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Root>) {
+}: React.ComponentProps<typeof TooltipPrimitive.Root> & { delayDuration?: number }) {
   return (
-    <TooltipProvider>
+    <TooltipProvider delayDuration={delayDuration}>
       <TooltipPrimitive.Root data-slot="tooltip" {...props} />
     </TooltipProvider>
   );
@@ -38,8 +39,11 @@ function TooltipContent({
   className,
   sideOffset = 0,
   children,
+  showArrow = true,
   ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Content>) {
+}: React.ComponentProps<typeof TooltipPrimitive.Content> & { showArrow?: boolean }) {
+  const isDarkTooltip = className?.includes('bg-[#1c2024]');
+  
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Content
@@ -52,7 +56,14 @@ function TooltipContent({
         {...props}
       >
         {children}
-        <TooltipPrimitive.Arrow className="bg-primary fill-primary z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px]" />
+        {showArrow && (
+          <TooltipPrimitive.Arrow 
+            className={cn(
+              "z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px]",
+              isDarkTooltip ? "bg-[#1c2024] fill-[#1c2024]" : "bg-primary fill-primary"
+            )} 
+          />
+        )}
       </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>
   );

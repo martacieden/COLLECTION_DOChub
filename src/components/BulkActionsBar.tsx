@@ -51,11 +51,14 @@ export function BulkActionsBar({
             Clear selection
           </button>
         </div>
-        <div className="flex items-center gap-[8px]">
+        <div className="flex items-center gap-[8px]" style={{ minWidth: '500px' }}>
           {/* 1. Pin — перша */}
           {onPinToggle && (
             <button
-              onClick={onPinToggle}
+              onClick={() => {
+                onPinToggle();
+                onClearSelection();
+              }}
               className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px]"
             >
               {isUnpinMode ? (
@@ -74,7 +77,10 @@ export function BulkActionsBar({
           {/* 2. Download (раніше Export) — друга */}
           {onDownload && (
             <button 
-              onClick={onDownload}
+              onClick={() => {
+                onDownload();
+                onClearSelection();
+              }}
               className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px]"
             >
               <Download className="size-[14px]" />
@@ -83,7 +89,10 @@ export function BulkActionsBar({
           )}
           {onExport && (
             <button 
-              onClick={onExport}
+              onClick={() => {
+                onExport();
+                onClearSelection();
+              }}
               className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px]"
             >
               <Download className="size-[14px]" />
@@ -93,7 +102,10 @@ export function BulkActionsBar({
           {/* 3. Share — третя */}
           {onShare && (
             <button 
-              onClick={onShare}
+              onClick={() => {
+                onShare();
+                onClearSelection();
+              }}
               className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px]"
             >
               <Share2 className="size-[14px]" />
@@ -103,7 +115,10 @@ export function BulkActionsBar({
           {/* 4. Delete — четверта */}
           {onDelete && (
             <button 
-              onClick={onDelete}
+              onClick={() => {
+                onDelete();
+                onClearSelection();
+              }}
               className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px]"
             >
               <Trash2 className="size-[14px]" />
@@ -113,7 +128,12 @@ export function BulkActionsBar({
           {/* 5. Add to Collection — п'ята */}
           {onAddToCollection && (
             <button 
-              onClick={onAddToCollection}
+              onClick={() => {
+                onAddToCollection();
+                // Очищаємо вибір після відкриття модального вікна
+                // Вибрані документи вже збережені в окремий стан для модального вікна
+                setTimeout(() => onClearSelection(), 0);
+              }}
               className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px]"
             >
               <Plus className="size-[14px]" />
@@ -123,7 +143,12 @@ export function BulkActionsBar({
           {/* 6. Create Collection — шоста */}
           {onCreateCollection && (
             <button 
-              onClick={onCreateCollection}
+              onClick={() => {
+                onCreateCollection();
+                // Очищаємо вибір після відкриття модального вікна
+                // Вибрані документи вже збережені в окремий стан для модального вікна
+                setTimeout(() => onClearSelection(), 0);
+              }}
               className="h-[32px] px-[12px] bg-[#005be2] rounded-[6px] text-[13px] text-white hover:bg-[#0047b3] flex items-center gap-[6px]"
             >
               <Plus className="size-[14px]" />
@@ -133,7 +158,10 @@ export function BulkActionsBar({
           {/* Інші кнопки */}
           {showRemoveFromCollection && (
             <button 
-              onClick={onRemoveFromCollection}
+              onClick={() => {
+                onRemoveFromCollection?.();
+                onClearSelection();
+              }}
               className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb]"
             >
               Remove from collection
@@ -141,7 +169,10 @@ export function BulkActionsBar({
           )}
           {onMove && (
             <button 
-              onClick={onMove}
+              onClick={() => {
+                onMove();
+                onClearSelection();
+              }}
               className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb]"
             >
               Move
@@ -149,7 +180,10 @@ export function BulkActionsBar({
           )}
           {onRename && (
             <button 
-              onClick={onRename}
+              onClick={() => {
+                onRename();
+                onClearSelection();
+              }}
               disabled={selectedCount > 1}
               className="h-[32px] px-[12px] border border-[#e0e1e6] bg-white rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] disabled:opacity-50 disabled:cursor-not-allowed"
             >

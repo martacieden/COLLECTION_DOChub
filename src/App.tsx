@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, X, Search, SlidersHorizontal, Upload, MoreVertical, Info, Sparkles, List, FileText, SearchIcon, TrendingUp, Archive, Send, PanelLeft, Paperclip, Mic, Pencil, Eye, Share2, Trash2, Plus, Calendar, DollarSign, Building2, CheckCircle2, Clock, Filter, Download, Folder } from 'lucide-react';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './components/ui/alert-dialog';
 import { Checkbox } from './components/ui/checkbox';
 import svgPaths from "./imports/svg-ylbe71kelt";
@@ -892,27 +893,6 @@ function FileIcon({ type }: { type: string }) {
       <svg className={`size-[16px] ${config.color}`} fill="none" viewBox="0 0 16 16">
         {config.svg}
       </svg>
-    </div>
-  );
-}
-
-// Simple Tooltip Component
-function Tooltip({ children, text }: { children: React.ReactNode; text: string }) {
-  const [isVisible, setIsVisible] = useState(false);
-
-  return (
-    <div 
-      className="relative inline-block"
-      onMouseEnter={() => setIsVisible(true)}
-      onMouseLeave={() => setIsVisible(false)}
-    >
-      {children}
-      {isVisible && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-[#1c2024] text-white text-[11px] rounded whitespace-nowrap pointer-events-none z-50">
-          {text}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[1px] border-4 border-transparent border-t-[#1c2024]" />
-        </div>
-      )}
     </div>
   );
 }
@@ -2511,7 +2491,7 @@ function generateAISuggestionsFromDocuments(
   });
   
   console.log('[generateAISuggestions] Total suggestions before slice:', suggestions.length);
-  const result = suggestions.slice(0, 2); // Повертаємо максимум 2 suggestions
+  const result = suggestions.slice(0, 4); // Повертаємо максимум 4 suggestions
   console.log('[generateAISuggestions] Returning', result.length, 'suggestions');
   return result;
 }
@@ -2619,13 +2599,21 @@ function AISuggestionCard({
   onDismiss: () => void;
 }) {
   return (
-    <div className="bg-white border border-[#e5e7eb] rounded-[8px] p-[12px] hover:border-[#d1d5db] transition-colors cursor-pointer" onClick={onView}>
-      <div className="flex items-center gap-[8px]">
-        <div className="bg-[#f4f3ff] size-[24px] rounded-[6px] flex items-center justify-center flex-shrink-0 text-[14px]">
-          <Sparkles className="size-[14px] text-[#8b5cf6]" />
+    <div className="bg-white border border-[#e5e7eb] rounded-[8px] p-[16px] hover:border-[#d1d5db] hover:shadow-sm transition-all cursor-pointer h-full flex flex-col" onClick={onView}>
+      <div className="flex items-start gap-[12px] flex-1">
+        <div className="bg-[#f4f3ff] size-[32px] rounded-[6px] flex items-center justify-center flex-shrink-0">
+          <Sparkles className="size-[16px] text-[#8b5cf6]" />
         </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="text-[12px] font-semibold text-[#1c2024] truncate">{suggestion.name}</h3>
+        <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
+          <h3 className="text-[13px] font-semibold text-[#1c2024] leading-tight">{suggestion.name}</h3>
+          {suggestion.description && (
+            <p className="text-[11px] text-[#60646c] line-clamp-2 leading-snug">{suggestion.description}</p>
+          )}
+          {suggestion.documentCount > 0 && (
+            <div className="text-[11px] text-[#8b8d98] mt-[4px]">
+              {suggestion.documentCount} {suggestion.documentCount === 1 ? 'document' : 'documents'}
+            </div>
+          )}
         </div>
         <button 
           onClick={(e) => {
@@ -2663,6 +2651,32 @@ function getCollectionType(collection: { rules?: CollectionRule[] | string[]; do
   }
   // Manual collection: немає rules, тільки documentIds (папка)
   return 'manual';
+}
+
+// Формує детальний опис для tooltip тега "Auto"
+function getAutoCollectionTooltip(rules?: CollectionRule[] | string[]): string {
+  if (!rules || rules.length === 0) {
+    return 'Automatically updated. Documents are added or removed based on collection rules.';
+  }
+  
+  // Фільтруємо тільки активні правила
+  const enabledRules = (rules as CollectionRule[]).filter((rule): rule is CollectionRule => 
+    typeof rule === 'object' && rule.enabled !== false
+  );
+  
+  if (enabledRules.length === 0) {
+    return 'Automatically updated. Documents are added or removed based on collection rules.';
+  }
+  
+  // Формуємо опис правил
+  const rulesDescriptions = enabledRules.slice(0, 3).map(rule => {
+    const ruleDesc = getRuleDescription(rule);
+    return `• ${ruleDesc}`;
+  });
+  
+  const moreRules = enabledRules.length > 3 ? `\n... and ${enabledRules.length - 3} more rule${enabledRules.length - 3 !== 1 ? 's' : ''}` : '';
+  
+  return `Automatically updated based on rules:\n${rulesDescriptions.join('\n')}${moreRules}\n\nDocuments matching these rules are automatically added to the collection.`;
 }
 
 // Generate collection description based on documents and rules
@@ -2950,12 +2964,22 @@ function CollectionCard({ title, organization, onClick, collectionId, sharedWith
               const collectionType = getCollectionType({ rules, documentIds: [] });
               if (collectionType === 'auto') {
                 return (
-                  <span 
-                    className="px-[6px] py-[2px] bg-[#f9fafb] text-[#60646c] rounded-[4px] text-[10px] font-medium"
-                    title="Automatically updated. Documents are added or removed based on collection rules."
-                  >
-                    Auto
-                  </span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span 
+                        className="px-[6px] py-[2px] bg-[#f9fafb] text-[#60646c] rounded-[4px] text-[10px] font-medium cursor-help"
+                      >
+                        Auto
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent 
+                      className="bg-[#1c2024] text-white text-[12px] max-w-[320px] px-[12px] py-[8px] rounded-[6px] shadow-lg"
+                      sideOffset={6}
+                      showArrow={true}
+                    >
+                      <div className="whitespace-pre-line">{getAutoCollectionTooltip(rules)}</div>
+                    </TooltipContent>
+                  </Tooltip>
                 );
               }
               return null;
@@ -3089,6 +3113,7 @@ function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClic
   const [previewSuggestion, setPreviewSuggestion] = useState<AISuggestion | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isAISuggestionsExpanded, setIsAISuggestionsExpanded] = useState(true);
   
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [contextSuggestions, setContextSuggestions] = useState<ContextSuggestion[]>([]);
@@ -3463,36 +3488,6 @@ const [aiModalInitialSearchResults, setAiModalInitialSearchResults] = useState<{
               )}
             </div>
           </div>
-          
-          {/* AI Suggestions */}
-          {suggestions.length > 0 ? (
-            <div className="max-w-[720px] w-full mb-[24px]">
-              <div className="mb-[12px]">
-                <span className="text-[12px] text-[#60646c]">AI suggestions (based on document tags, categories, and keywords)</span>
-              </div>
-              <div className="grid grid-cols-2 gap-[12px]">
-                {suggestions.slice(0, 2).map((suggestion) => (
-                  <div key={suggestion.id}>
-                    <AISuggestionCard
-                      suggestion={suggestion}
-                      onView={() => handleViewSuggestion(suggestion)}
-                      onAccept={() => handleAcceptSuggestion(suggestion.id)}
-                      onDismiss={() => handleDismissSuggestion(suggestion.id)}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="max-w-[720px] w-full mb-[24px]">
-              <div className="mb-[12px]">
-                <span className="text-[12px] text-[#60646c]">AI suggestions (based on document tags, categories, and keywords)</span>
-              </div>
-              <div className="text-[11px] text-[#8b8d98] italic">
-                No suggestions available. Add more documents with categories, tags, or vendors to see AI suggestions.
-              </div>
-            </div>
-          )}
         </div>
       </div>
       
@@ -3558,6 +3553,46 @@ const [aiModalInitialSearchResults, setAiModalInitialSearchResults] = useState<{
           }}
           onCreateCollection={handleCreateCollectionFromAIRules}
         />
+      )}
+      
+      {/* AI Suggestions Section */}
+      {suggestions.length > 0 && (
+        <div className="bg-white border-b border-[#e8e8ec]">
+          <div className="px-[24px] py-[16px]">
+            <button
+              onClick={() => setIsAISuggestionsExpanded(!isAISuggestionsExpanded)}
+              className="flex items-center gap-[8px] mb-[12px] hover:bg-[#f9fafb] rounded-[6px] px-[8px] py-[4px] -ml-[8px] transition-colors group"
+            >
+              <ChevronDown 
+                className={`size-[16px] text-[#60646c] transition-transform flex-shrink-0 ${
+                  isAISuggestionsExpanded ? '' : '-rotate-90'
+                }`}
+              />
+              <h2 className="text-[13px] font-semibold text-[#1c2024]">AI suggestions</h2>
+              <span className="text-[12px] text-[#8b8d98]">({suggestions.length})</span>
+            </button>
+            
+            {isAISuggestionsExpanded && (
+              <div className="overflow-x-auto pb-[8px] -mx-[24px] px-[24px] scrollbar-thin scrollbar-thumb-[#e0e1e6] scrollbar-track-transparent">
+                <div className="flex gap-[16px] min-w-max" style={{ minWidth: '500px' }}>
+                  {suggestions.map((suggestion) => (
+                    <div 
+                      key={suggestion.id}
+                      className="flex-shrink-0 w-[320px]"
+                    >
+                      <AISuggestionCard
+                        suggestion={suggestion}
+                        onView={() => handleViewSuggestion(suggestion)}
+                        onAccept={() => handleAcceptSuggestion(suggestion.id)}
+                        onDismiss={() => handleDismissSuggestion(suggestion.id)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
       
       {/* Collections section */}
@@ -3673,12 +3708,22 @@ const [aiModalInitialSearchResults, setAiModalInitialSearchResults] = useState<{
                             const collectionType = getCollectionType({ rules: collection.rules, documentIds: (collection as any).documentIds });
                             if (collectionType === 'auto') {
                               return (
-                                <span 
-                                  className="px-[6px] py-[2px] bg-[#f9fafb] text-[#60646c] rounded-[4px] text-[10px] font-medium"
-                                  title="Automatically updated. Documents are added or removed based on collection rules."
-                                >
-                                  Auto
-                                </span>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span 
+                                      className="px-[6px] py-[2px] bg-[#f9fafb] text-[#60646c] rounded-[4px] text-[10px] font-medium cursor-help"
+                                    >
+                                      Auto
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent 
+                                    className="bg-[#1c2024] text-white text-[12px] max-w-[320px] px-[12px] py-[8px] rounded-[6px] shadow-lg"
+                                    sideOffset={6}
+                                    showArrow={true}
+                                  >
+                                    <div className="whitespace-pre-line">{getAutoCollectionTooltip(collection.rules)}</div>
+                                  </TooltipContent>
+                                </Tooltip>
                               );
                             }
                             return null;
@@ -5389,7 +5434,7 @@ export default function App() {
     }, 500); // Невелика затримка для показу статусу
   };
 
-  const handleCreateCollection = (name: string, description: string, rules: CollectionRule[]) => {
+  const handleCreateCollection = (name: string, description: string, rules: CollectionRule[], icon?: string) => {
     // Створюємо нову колекцію
     const newCollection: Collection = {
       id: `col-${Date.now()}`,
@@ -5397,7 +5442,7 @@ export default function App() {
       description: description,
       count: 0,
       type: 'custom',
-      icon: '📁',
+      icon: icon || '📁',
       createdBy: 'Joan Zhao',
       createdOn: new Date().toLocaleDateString(),
       organization: selectedOrganization !== 'all' 
@@ -5638,6 +5683,70 @@ export default function App() {
     }
   };
 
+  // Функція для оновлення опису колекції
+  const handleUpdateCollectionDescription = (collectionId: string, newDescription: string) => {
+    setCollections(prev => {
+      const updated = prev.map(col => 
+        col.id === collectionId 
+          ? { ...col, description: newDescription }
+          : col
+      );
+      saveCollectionsToStorage(updated);
+      return updated;
+    });
+
+    if (selectedCollection?.id === collectionId) {
+      setSelectedCollection((prev: any) => ({
+        ...prev,
+        description: newDescription
+      }));
+    }
+  };
+
+  // Функція для оновлення правил колекції
+  const handleUpdateCollectionRules = (collectionId: string, newRules: CollectionRule[]) => {
+    setCollections(prev => {
+      const updated = prev.map(col => {
+        if (col.id === collectionId) {
+          // Перераховуємо кількість документів, які відповідають новим правилам
+          const enabledRules = newRules.filter(r => r.enabled && r.value?.trim());
+          let newCount = 0;
+          if (enabledRules.length > 0) {
+            newCount = documents.filter(doc => matchDocumentToRules(doc, enabledRules)).length;
+          } else {
+            // Якщо немає правил, використовуємо кількість документів з documentIds
+            newCount = col.documentIds?.length || 0;
+          }
+          
+          return { 
+            ...col, 
+            rules: newRules,
+            count: newCount
+          };
+        }
+        return col;
+      });
+      saveCollectionsToStorage(updated);
+      return updated;
+    });
+
+    if (selectedCollection?.id === collectionId) {
+      const enabledRules = newRules.filter(r => r.enabled && r.value?.trim());
+      let newCount = 0;
+      if (enabledRules.length > 0) {
+        newCount = documents.filter(doc => matchDocumentToRules(doc, enabledRules)).length;
+      } else {
+        newCount = selectedCollection.documentIds?.length || 0;
+      }
+      
+      setSelectedCollection((prev: any) => ({
+        ...prev,
+        rules: newRules,
+        count: newCount
+      }));
+    }
+  };
+
   // Функція для зміни іконки колекції
   const handleChangeCollectionIcon = (collectionId: string, newIcon: string) => {
     // Оновлюємо колекцію в списку
@@ -5716,11 +5825,13 @@ export default function App() {
   };
 
   // Функція для збереження правил
-  const handleSaveRules = (rules: CollectionRule[], description?: string) => {
+  const handleSaveRules = (rules: CollectionRule[], description?: string, name?: string, icon?: string) => {
     // Якщо є тимчасові дані колекції (створення нової колекції)
     if (pendingCollectionData) {
-      // Створюємо колекцію з правилами
-      handleCreateCollection(pendingCollectionData.name, pendingCollectionData.description, rules);
+      // Використовуємо name та icon з параметрів, якщо вони передані, інакше з pendingCollectionData
+      const finalName = name || pendingCollectionData.name;
+      const finalDescription = description || pendingCollectionData.description;
+      handleCreateCollection(finalName, finalDescription, rules, icon);
       setPendingCollectionData(null);
       setIsRulesEditorModalOpen(false);
       setIsNewCollectionModalOpen(false);
@@ -5729,6 +5840,14 @@ export default function App() {
 
     // Якщо редагуємо існуючу колекцію
     if (!selectedCollection) return;
+    
+    // Оновлюємо назву та іконку, якщо вони передані
+    if (name && name !== selectedCollection.title) {
+      handleRenameCollection(selectedCollection.id, name);
+    }
+    if (icon && icon !== selectedCollection.icon) {
+      handleChangeCollectionIcon(selectedCollection.id, icon);
+    }
     
     // Знаходимо документи, які відповідають новим правилам
     const matchingDocuments = documents.filter(doc => 
@@ -6152,8 +6271,9 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen w-screen bg-[#f9fafb] flex overflow-hidden">
-      <GlobalSidebar onDocumentsClick={handleDocumentsClick} />
+    <TooltipProvider delayDuration={100}>
+      <div className="h-screen w-screen bg-[#f9fafb] flex overflow-hidden">
+        <GlobalSidebar onDocumentsClick={handleDocumentsClick} />
 
       <div className="flex-1 ml-[72px] flex flex-col min-w-0 overflow-hidden" style={{ width: 'calc(100vw - 72px)', maxWidth: 'calc(100vw - 72px)' }}>
         <WorkspaceHeader onShowAIFilter={handleShowAIFilter} viewMode={viewMode} selectedCollection={selectedCollection} onUploadClick={() => setIsUploadModalOpen(true)} />
@@ -6179,6 +6299,7 @@ export default function App() {
                   onSettingsClick={handleOpenCollectionSettings}
                   onShareClick={() => toast.info('Share collection - coming soon')}
                   onFiltersClick={() => toast.info('Collection filters - coming soon')}
+                  getRuleDescription={getRuleDescription}
                 />
                 {/* Content with right panel */}
                 <div className="flex-1 flex overflow-hidden min-w-0">
@@ -6398,6 +6519,8 @@ export default function App() {
         onSave={handleSaveRules}
         initialRules={pendingCollectionData?.rules || selectedCollection?.rules || []}
         initialDescription={pendingCollectionData?.description || selectedCollection?.description || ''}
+        initialName={pendingCollectionData?.name || selectedCollection?.title}
+        initialIcon={selectedCollection?.icon || '📁'}
         matchedDocumentsCount={selectedCollection?.count || 0}
         onFindMatchingDocuments={findMatchingDocumentsCount}
         organizations={organizations}
@@ -6407,10 +6530,14 @@ export default function App() {
       <CollectionSettingsModal
         isOpen={isCollectionSettingsModalOpen}
         onClose={() => setIsCollectionSettingsModalOpen(false)}
-        collection={selectedCollection || { id: '', title: '', icon: '📁' }}
+        collection={selectedCollection || { id: '', title: '', icon: '📁', description: '', rules: [] }}
         onRename={handleRenameCollection}
         onDelete={handleDeleteCollection}
         onIconChange={handleChangeCollectionIcon}
+        onUpdateDescription={handleUpdateCollectionDescription}
+        onUpdateRules={handleUpdateCollectionRules}
+        documents={documents}
+        getRuleDescription={getRuleDescription}
       />
       
       <Toaster position="top-right" />
@@ -6423,6 +6550,7 @@ export default function App() {
       
       {/* FAB - Ask Fojo AI button */}
       <FojoFAB onClick={handleShowAIFilter} isChatOpen={isFojoChatOpen} />
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }

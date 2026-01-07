@@ -83,8 +83,21 @@ export function AddToCollectionModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-[24px]">
-      <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl w-[840px] max-h-[80vh]">
+    <>
+      <div 
+        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-[24px]"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setSearchQuery('');
+            setSelectedCollectionIds(new Set());
+            onClose();
+          }
+        }}
+      >
+        <div 
+          className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl w-[840px] max-h-[80vh]"
+          onClick={(e) => e.stopPropagation()}
+        >
         {/* Header */}
         <div className="flex items-center justify-between px-[24px] py-[20px] border-b border-[#e8e8ec]">
           <h2 className="text-[16px] font-semibold text-[#1c2024]">Add to Collection</h2>
@@ -119,7 +132,7 @@ export function AddToCollectionModal({
           </div>
 
           {/* Collections List */}
-          <div className="flex-1 overflow-y-auto px-[24px] pb-[16px]">
+          <div className="flex-1 overflow-y-auto px-[24px] pb-[16px]" style={{ minWidth: '500px' }}>
             {filteredCollections.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-[40px] text-center">
                 <p className="text-[14px] text-[#60646c]">
@@ -182,8 +195,9 @@ export function AddToCollectionModal({
             </button>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

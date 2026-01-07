@@ -439,6 +439,224 @@ Split this into a clear title and description.`;
 }
 
 /**
+ * Generate collection description and rules from selected documents
+ * @param documents - Array of selected documents
+ * @returns Promise with generated title, description, and rules
+ */
+export interface GenerateFromDocumentsRequest {
+  documents: Array<{
+    name: string;
+    type?: string;
+    category?: string;
+    tags?: string[];
+    organization?: string;
+    description?: string;
+  }>;
+}
+
+export interface GenerateFromDocumentsResponse {
+  title: string;
+  description: string;
+  rules: CollectionRule[];
+  reasoning?: string;
+}
+
+export async function generateCollectionFromDocuments(
+  request: GenerateFromDocumentsRequest
+): Promise<GenerateFromDocumentsResponse> {
+  console.log('[AI Service] generateCollectionFromDocuments called');
+  console.log('[AI Service] Documents count:', request.documents.length);
+
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    throw new Error('API key not configured. Please add VITE_GEMINI_API_KEY to your .env.local file.');
+  }
+
+  console.log('[AI Service] Initializing GoogleGenAI client');
+  const ai = new GoogleGenAI({ apiKey });
+
+  // Analyze documents to extract patterns
+  const docTypes = [...new Set(request.documents.map(d => d.type).filter(Boolean))];
+  const tags = [...new Set(request.documents.flatMap(d => d.tags || []))];
+  const organizations = [...new Set(request.documents.map(d => d.organization).filter(Boolean))];
+  const categories = [...new Set(request.documents.map(d => d.category).filter(Boolean))];
+  
+  // Extract common keywords from document names
+  const documentNames = request.documents.map(d => d.name).slice(0, 10); // Limit to first 10 for context
+
+  const systemPrompt = `You are an AI assistant for a family office document management system. A user has selected ${request.documents.length} documents and wants to create a collection that groups similar documents.
+
+YOUR TASK:
+1. Analyze the selected documents and identify common patterns (document types, categories, organizations, tags, keywords)
+2. Generate a clear, concise collection title (max 60 characters)
+3. Generate a detailed description explaining what this collection contains
+4. Generate filtering rules that would match these documents and similar ones
+
+AVAILABLE RULE TYPES:
+- document_type: Document category (Invoice, Permit, Contract, etc.)
+- tags: Document tags
+- client: Organization/Client name
+- keywords: Specific terms in document names
+- date_range: Date/year filters
+- vendor: Vendor/company names
+
+OPERATORS: Use "contains" for flexibility
+
+EXAMPLES:
+If documents are all invoices from "Smith Family" → 
+  Title: "Smith Family Invoices"
+  Description: "All invoices related to Smith Family"
+  Rules: document_type CONTAINS "Invoice", client CONTAINS "Smith"
+
+If documents are permits and approvals → 
+  Title: "Permits & Approvals"
+  Description: "All permits and regulatory approval documents"
+  Rules: document_type CONTAINS "Permit"
+
+Generate a JSON response with title, description, and rules array.`;
+
+  const userPrompt = `Selected documents (${request.documents.length} total):
+${documentNames.map((name, i) => `${i + 1}. ${name}`).join('\n')}
+
+Document types found: ${docTypes.length > 0 ? docTypes.join(', ') : 'various'}
+Categories: ${categories.length > 0 ? categories.join(', ') : 'various'}
+Organizations: ${organizations.length > 0 ? organizations.join(', ') : 'various'}
+Tags: ${tags.length > 0 ? tags.join(', ') : 'none'}
+
+Generate a collection title, description, and filtering rules that would match these documents and similar ones.`;
+
+  // Retry logic for temporary errors
+  const maxRetries = 3;
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`[AI Service] Attempt ${attempt}/${maxRetries} - Calling Gemini API for document analysis`);
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [
+          { role: 'user', parts: [{ text: systemPrompt + '\n\n' + userPrompt }] }
+        ],
+        config: {
+          temperature: 0.7,
+          maxOutputTokens: 2048,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING },
+              description: { type: Type.STRING },
+              rules: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    id: { type: Type.STRING },
+                    type: {
+                      type: Type.STRING,
+                      enum: ['document_type', 'tags', 'client', 'keywords', 'date_range', 'vendor']
+                    },
+                    label: { type: Type.STRING },
+                    value: { type: Type.STRING },
+                    operator: {
+                      type: Type.STRING,
+                      enum: ['is', 'contains', 'equals', 'not']
+                    },
+                    enabled: { type: Type.BOOLEAN }
+                  },
+                  required: ['id', 'type', 'label', 'value', 'operator', 'enabled']
+                }
+              },
+              reasoning: { type: Type.STRING }
+            },
+            required: ['title', 'description', 'rules']
+          }
+        }
+      });
+
+      console.log('[AI Service] Gemini response received for document analysis');
+      console.log('[AI Service] Response text:', response.text);
+
+      // Check if response was truncated
+      const finishReason = response.candidates?.[0]?.finishReason;
+      if (finishReason === 'MAX_TOKENS') {
+        console.error('[AI Service] Response was truncated due to max tokens limit');
+        throw new Error('AI response was truncated. Please try again.');
+      }
+
+      // Parse the response
+      let result: GenerateFromDocumentsResponse;
+      try {
+        result = JSON.parse(response.text || '{}');
+      } catch (parseError) {
+        console.error('[AI Service] JSON parse error:', parseError);
+        console.error('[AI Service] Raw response text:', response.text);
+        throw new Error('AI returned invalid JSON. Please try again.');
+      }
+
+      console.log('[AI Service] Parsed result:', JSON.stringify(result, null, 2));
+
+      // Validate the response structure
+      if (!result.title || typeof result.title !== 'string') {
+        throw new Error('Invalid response from AI: title is missing');
+      }
+      if (!result.description || typeof result.description !== 'string') {
+        result.description = '';
+      }
+      if (!result.rules || !Array.isArray(result.rules)) {
+        throw new Error('Invalid response from AI: rules array is missing');
+      }
+
+      // Validate each rule
+      for (const rule of result.rules) {
+        if (!rule.id || !rule.type || !rule.label || !rule.operator) {
+          throw new Error('Invalid rule structure in AI response');
+        }
+      }
+
+      return result;
+
+    } catch (error) {
+      console.error(`[AI Service] Attempt ${attempt} failed:`, error);
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      const errorMessage = lastError.message || '';
+      const isRetryable = errorMessage.includes('503') || 
+                          errorMessage.includes('overloaded') || 
+                          errorMessage.includes('UNAVAILABLE') ||
+                          errorMessage.includes('429') ||
+                          errorMessage.includes('RESOURCE_EXHAUSTED');
+
+      if (isRetryable && attempt < maxRetries) {
+        const waitTime = attempt * 2000;
+        console.log(`[AI Service] Retryable error detected. Waiting ${waitTime}ms before retry...`);
+        await sleep(waitTime);
+        continue;
+      }
+
+      // Non-retryable error handling
+      if (errorMessage.includes('API_KEY_INVALID')) {
+        throw new Error('Invalid API key. Please check your VITE_GEMINI_API_KEY in .env.local');
+      }
+      if (errorMessage.includes('PERMISSION_DENIED')) {
+        throw new Error('Permission denied. Your API key may not have access to this model.');
+      }
+      if (errorMessage.includes('RESOURCE_EXHAUSTED') || errorMessage.includes('429')) {
+        throw new Error('API quota exceeded. Please try again later.');
+      }
+      if (errorMessage.includes('503') || errorMessage.includes('overloaded') || errorMessage.includes('UNAVAILABLE')) {
+        throw new Error('AI service is temporarily overloaded. Please try again in a few seconds.');
+      }
+
+      throw lastError;
+    }
+  }
+
+  throw lastError || new Error('Failed to generate collection from documents after multiple attempts');
+}
+
+/**
  * Get label for rule type
  */
 export function getRuleTypeLabel(type: CollectionRule['type']): string {

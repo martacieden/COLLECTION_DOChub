@@ -9,6 +9,7 @@ import svgPaths from "../imports/svg-ylbe71kelt";
 import { Checkbox } from './ui/checkbox';
 import { getOrganizationAvatar } from '../utils/organizationUtils';
 import { Popover, PopoverTrigger, PopoverContent } from './ui/popover';
+import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 
 interface CollectionRule {
   id: string;
@@ -29,6 +30,37 @@ function getCollectionType(collection: { rules?: CollectionRule[] | string[]; do
   }
   // Manual collection: немає rules, тільки documentIds (папка)
   return 'manual';
+}
+
+// Формує детальний опис для tooltip тега "Auto"
+function getAutoCollectionTooltip(rules?: CollectionRule[] | string[], getRuleDescription?: (rule: CollectionRule) => string): string {
+  if (!rules || rules.length === 0) {
+    return 'Automatically updated. Documents are added or removed based on collection rules.';
+  }
+  
+  // Фільтруємо тільки активні правила
+  const enabledRules = (rules as CollectionRule[]).filter((rule): rule is CollectionRule => 
+    typeof rule === 'object' && rule.enabled !== false
+  );
+  
+  if (enabledRules.length === 0) {
+    return 'Automatically updated. Documents are added or removed based on collection rules.';
+  }
+  
+  // Якщо немає функції для опису правил, повертаємо загальний опис
+  if (!getRuleDescription) {
+    return `Automatically updated based on ${enabledRules.length} ${enabledRules.length === 1 ? 'rule' : 'rules'}.\n\nDocuments matching these rules are automatically added to the collection.`;
+  }
+  
+  // Формуємо опис правил
+  const rulesDescriptions = enabledRules.slice(0, 3).map(rule => {
+    const ruleDesc = getRuleDescription(rule);
+    return `• ${ruleDesc}`;
+  });
+  
+  const moreRules = enabledRules.length > 3 ? `\n... and ${enabledRules.length - 3} more rule${enabledRules.length - 3 !== 1 ? 's' : ''}` : '';
+  
+  return `Automatically updated based on rules:\n${rulesDescriptions.join('\n')}${moreRules}\n\nDocuments matching these rules are automatically added to the collection.`;
 }
 
 interface CollectionDetailViewProps {
@@ -428,7 +460,7 @@ const baseMockCollectionDocuments = [
 ];
 
 // Collection Detail Header Component
-export function CollectionDetailHeader({ collection, onBack, onAddDocument, onSettingsClick, onShareClick, onFiltersClick }: CollectionDetailViewProps) {
+export function CollectionDetailHeader({ collection, onBack, onAddDocument, onSettingsClick, onShareClick, onFiltersClick, getRuleDescription }: CollectionDetailViewProps) {
   // Extract emoji from icon prop (same logic as CollectionCard)
   const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E0}-\u{1F1FF}]/u;
   let emoji: string | null = null;
@@ -473,12 +505,22 @@ export function CollectionDetailHeader({ collection, onBack, onAddDocument, onSe
                   const collectionType = getCollectionType({ rules: collection.rules, documentIds: collection.documentIds });
                   if (collectionType === 'auto') {
                     return (
-                      <span 
-                        className="px-[8px] py-[4px] bg-[#f9fafb] text-[#60646c] rounded-[6px] text-[11px] font-medium"
-                        title="Automatically updated. Documents are added or removed based on collection rules."
-                      >
-                        Auto
-                      </span>
+                      <Tooltip delayDuration={100}>
+                        <TooltipTrigger asChild>
+                          <span 
+                            className="px-[8px] py-[4px] bg-[#f9fafb] text-[#60646c] rounded-[6px] text-[11px] font-medium cursor-help"
+                          >
+                            Auto
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent 
+                          className="bg-[#1c2024] text-white text-[12px] max-w-[320px] px-[12px] py-[8px] rounded-[6px] shadow-lg"
+                          sideOffset={6}
+                          showArrow={true}
+                        >
+                          <div className="whitespace-pre-line">{getAutoCollectionTooltip(collection.rules, getRuleDescription)}</div>
+                        </TooltipContent>
+                      </Tooltip>
                     );
                   }
                   return null;
