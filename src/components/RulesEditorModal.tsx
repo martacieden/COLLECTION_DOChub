@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Plus, Trash2, Sparkles, Loader2 } from 'lucide-react';
+import { X, Plus, Trash2, Sparkles, Loader2, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
-import { generateCollectionRules, type CollectionRule } from '../services/aiRulesGenerator';
+import { generateCollectionRules, enhanceCollectionText, type CollectionRule } from '../services/aiRulesGenerator';
 
 interface Organization {
   id: string;
@@ -643,16 +643,54 @@ export function RulesEditorModal({
 
           {/* Description Field */}
           <div className="space-y-[8px]">
-            <label className="block text-[13px] text-[#1c2024] mb-[8px]">
-              Description
-            </label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+            <div className="flex items-center justify-between mb-[8px]">
+              <label className="block text-[13px] text-[#1c2024]">
+                Description
+              </label>
+              {(collectionName.trim() || description.trim()) && (
+                <button
+                  onClick={async () => {
+                    const fullText = collectionName.trim() 
+                      ? `${collectionName.trim()} ${description.trim()}`.trim()
+                      : description.trim();
+                    
+                    if (!fullText) {
+                      toast.error('Please enter a collection name or description first');
+                      return;
+                    }
+
+                    setIsGenerating(true);
+                    try {
+                      const result = await enhanceCollectionText({ text: fullText });
+                      if (result.title && collectionName.trim()) {
+                        setCollectionName(result.title);
+                      }
+                      if (result.description) {
+                        setDescription(result.description);
+                      }
+                      toast.success('Description enhanced successfully');
+                    } catch (error) {
+                      console.error('[RulesEditorModal] Enhancement error:', error);
+                      toast.error('Failed to enhance description');
+                    } finally {
+                      setIsGenerating(false);
+                    }
+                  }}
+                  disabled={isGenerating}
+                  className="flex items-center gap-[6px] h-[28px] px-[10px] text-[12px] text-[#005be2] hover:bg-[#f0f7ff] rounded-[6px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <RotateCcw className="size-[14px]" />
+                  <span>Re-enhance</span>
+                </button>
+              )}
+            </div>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe what this collection contains..."
-                  className="w-full min-h-[100px] p-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] resize-none focus:outline-none focus:ring-2 focus:ring-[#005be2]"
-                />
-              </div>
+              className="w-full min-h-[100px] p-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] resize-none focus:outline-none focus:ring-2 focus:ring-[#005be2]"
+            />
+          </div>
 
           {/* Filtering Rules Section */}
           <div className="space-y-[12px]">
@@ -678,7 +716,7 @@ export function RulesEditorModal({
                   )}
                   {matchedDocCount > 0 && (
                     <span className="text-[11px] text-[#60646c]">
-                      • {matchedDocCount} {matchedDocCount === 1 ? 'document' : 'documents'} will be matched
+                      • {matchedDocCount} {matchedDocCount === 1 ? 'document' : 'documents'} will be added
                     </span>
                   )}
                 </div>

@@ -3934,6 +3934,7 @@ function MainContent({
         onRemoveFromCollection={onRemoveFromCollection}
         onDelete={onDelete}
         onCustomizeFiltersClick={onCustomizeFiltersClick}
+        onAddToCollection={onAddToCollection}
         documents={documents}
         onSettingsClick={onSettingsClick}
       />

@@ -88,6 +88,7 @@ interface CollectionDetailViewProps {
   onShareClick?: () => void;
   onFiltersClick?: () => void;
   onCustomizeFiltersClick?: () => void;
+  onAddToCollection?: (documentIds: string[]) => void; // Додати вибрані документи до колекцій (включно з іншими Auto колекціями)
   documents?: any[];
   isProcessing?: boolean;
   getMatchingRule?: (document: any, rules: CollectionRule[]) => CollectionRule | null;
@@ -573,9 +574,9 @@ export function CollectionDetailHeader({ collection, onBack, onAddDocument, onSe
               if (collectionType === 'auto') {
                 return (
                   <button 
-                    disabled
-                    className="h-[36px] px-[16px] bg-[#e0e1e6] rounded-[6px] text-[13px] text-[#80838d] cursor-not-allowed flex items-center gap-[6px]"
-                    title="This is an auto collection. Edit the rules to change which documents appear here."
+                    onClick={onAddDocument}
+                    className="h-[36px] px-[16px] bg-[#005be2] rounded-[6px] text-[13px] text-white hover:bg-[#0047b3] flex items-center gap-[6px]"
+                    title="Upload documents to this auto collection. Documents that don't match the rules will be marked as manually added."
                   >
                     <Upload className="size-[16px]" />
                     <span>Upload</span>
@@ -600,7 +601,7 @@ export function CollectionDetailHeader({ collection, onBack, onAddDocument, onSe
   );
 }
 
-export function CollectionDetailView({ collection, onBack, onAddDocument, onRemoveFromCollection, onDelete, onSettingsClick, onShareClick, onFiltersClick, onCustomizeFiltersClick, documents, isProcessing = false, getMatchingRule, getRuleDescription, getNonMatchingRules }: CollectionDetailViewProps) {
+export function CollectionDetailView({ collection, onBack, onAddDocument, onRemoveFromCollection, onDelete, onSettingsClick, onShareClick, onFiltersClick, onCustomizeFiltersClick, onAddToCollection, documents, isProcessing = false, getMatchingRule, getRuleDescription, getNonMatchingRules }: CollectionDetailViewProps) {
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
@@ -784,6 +785,10 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
             hasQuickFilters={false}
             showRemoveFromCollection={true}
             onRemoveFromCollection={handleRemoveFromCollection}
+            onAddToCollection={onAddToCollection ? () => {
+              // Передаємо вибрані документи в onAddToCollection
+              onAddToCollection(selectedDocuments);
+            } : undefined}
           />
         )}
 
