@@ -23,6 +23,7 @@ import { SummaryBox } from './components/SummaryBox';
 import { PinnedView } from './components/PinnedView';
 import { RulesEditorModal } from './components/RulesEditorModal';
 import { CollectionSettingsModal } from './components/CollectionSettingsModal';
+import { ShareCollectionModal } from './components/ShareCollectionModal';
 import { AISearchResults } from './components/AISearchResults';
 import { FojoFAB } from './components/FojoFAB';
 import { FojoChatPanel } from './components/FojoChatPanel';
@@ -4997,6 +4998,7 @@ export default function App() {
   const [isAddToCollectionModalOpen, setIsAddToCollectionModalOpen] = useState(false);
   const [isRulesEditorModalOpen, setIsRulesEditorModalOpen] = useState(false);
   const [isCollectionSettingsModalOpen, setIsCollectionSettingsModalOpen] = useState(false);
+  const [isShareCollectionModalOpen, setIsShareCollectionModalOpen] = useState(false);
   const [isFojoChatOpen, setIsFojoChatOpen] = useState(false);
   const [pendingCollectionData, setPendingCollectionData] = useState<{ name: string; description: string; rules: CollectionRule[] } | null>(null);
   const [selectedDocumentsForCollection, setSelectedDocumentsForCollection] = useState<string[]>([]);
@@ -6453,7 +6455,7 @@ export default function App() {
                   onBack={handleBackFromCollection}
                   onAddDocument={() => setIsUploadModalOpen(true)}
                   onSettingsClick={handleOpenCollectionSettings}
-                  onShareClick={() => toast.info('Share collection - coming soon')}
+                  onShareClick={() => setIsShareCollectionModalOpen(true)}
                   onFiltersClick={() => toast.info('Collection filters - coming soon')}
                   getRuleDescription={getRuleDescription}
                 />
@@ -6705,6 +6707,25 @@ export default function App() {
         onUpdateRules={handleUpdateCollectionRules}
         documents={documents}
         getRuleDescription={getRuleDescription}
+      />
+
+      <ShareCollectionModal
+        isOpen={isShareCollectionModalOpen}
+        onClose={() => setIsShareCollectionModalOpen(false)}
+        collection={{
+          id: selectedCollection?.id || '',
+          title: selectedCollection?.title || '',
+          icon: selectedCollection?.icon || '📁',
+          documentCount: selectedCollection?.count || 0,
+          restrictedDocumentCount: 0, // TODO: implement restricted docs logic
+        }}
+        onShare={(email, role) => {
+          toast.success(`Shared with ${email} as ${role}`);
+        }}
+        onCopyLink={() => {
+          navigator.clipboard.writeText(`${window.location.origin}/collection/${selectedCollection?.id}`);
+          toast.success('Link copied to clipboard');
+        }}
       />
       
       <Toaster position="top-right" />
