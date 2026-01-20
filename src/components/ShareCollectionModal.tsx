@@ -253,19 +253,19 @@ function LinkedRecordTooltip({ linkedRecords }: { linkedRecords: string[] }) {
   const moreCount = linkedRecords.length - 3;
 
   return (
-    <div className="relative inline-flex">
-      <button
-        onMouseEnter={() => setIsVisible(true)}
-        onMouseLeave={() => setIsVisible(false)}
-        className="size-[16px] flex items-center justify-center"
-      >
+    <div 
+      className="relative inline-flex"
+      onMouseEnter={() => setIsVisible(true)}
+      onMouseLeave={() => setIsVisible(false)}
+    >
+      <button className="size-[16px] flex items-center justify-center">
         <Info className="size-[14px] text-[#8b8d98]" />
       </button>
 
       {isVisible && (
         <div 
           ref={tooltipRef}
-          className="absolute bottom-[24px] right-0 bg-[#1c2024] text-white rounded-[8px] px-[12px] py-[10px] min-w-[260px] z-50 shadow-lg"
+          className="absolute bottom-[28px] right-0 bg-[#1c2024] text-white rounded-[8px] px-[12px] py-[10px] min-w-[260px] z-50 shadow-lg"
         >
           <p className="text-[12px] mb-[8px]">
             This person wasn't shared directly – they have access through linked records:
@@ -539,7 +539,7 @@ export function ShareCollectionModal({
 
           {/* Tabs */}
           <div className="px-[24px] border-b border-[#e8e8ec]">
-            <div className="flex gap-[24px] my-[12px]">
+            <div className="flex gap-[24px] py-[12px]">
               <button
                 onClick={() => setActiveTab('all')}
                 className={`pb-[12px] text-[13px] font-medium border-b-2 transition-colors ${
@@ -618,7 +618,7 @@ export function ShareCollectionModal({
                                 <p className="text-[11px] text-[#60646c]">{member.email}</p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-[8px]">
+                            <div className="flex items-center gap-[8px] my-[12px] py-[12px]">
                               <span className="text-[13px] text-[#60646c]">
                                 {member.role === 'full_access' ? 'Full access' : 'Viewer'}
                               </span>
@@ -761,7 +761,7 @@ export function ShareCollectionModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-[24px] py-[16px] border-t border-[#e8e8ec]">
+        <div className="flex items-center justify-end px-[24px] py-[16px] border-t border-[#e8e8ec]">
           <button
             onClick={() => {
               onCopyLink?.();
@@ -774,7 +774,7 @@ export function ShareCollectionModal({
           </button>
           <button
             onClick={onClose}
-            className="h-[36px] px-[20px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] transition-colors"
+            className="h-[36px] px-[20px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] transition-colors ml-[12px]"
           >
             Close
           </button>
