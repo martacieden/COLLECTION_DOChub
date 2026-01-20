@@ -826,6 +826,7 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
                     <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[200px]">Name</th>
                     <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[240px]">Description</th>
                     <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[80px]">Type</th>
+                    <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[120px]">Tags</th>
                     <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[240px]">Attached to</th>
                     <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[140px]">Shared with</th>
                     <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[160px]">Uploaded by</th>
@@ -923,6 +924,26 @@ export function CollectionDetailView({ collection, onBack, onAddDocument, onRemo
                     </td>
                     <td className="p-2 align-middle whitespace-nowrap">
                       <span className="text-[13px] text-[#1c2024]">{doc.type || 'File'}</span>
+                    </td>
+                    <td className="p-2 align-middle">
+                      <div className="flex flex-wrap gap-[6px]">
+                        {(doc.tags || []).slice(0, 2).map((tag, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center px-[6px] py-[2px] bg-[#f5f7fa] border border-[#d1d5db] rounded-[4px] text-[11px] text-[#60646c]"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                        {(doc.tags || []).length > 2 && (
+                          <span className="inline-flex items-center px-[6px] py-[2px] rounded-[4px] bg-[#f5f7fa] border border-[#d1d5db] text-[11px] text-[#60646c]">
+                            +{(doc.tags || []).length - 2}
+                          </span>
+                        )}
+                        {(!doc.tags || doc.tags.length === 0) && (
+                          <span className="text-[13px] text-[#8b8d98]">-</span>
+                        )}
+                      </div>
                     </td>
                     <td className="p-2 align-middle">
                       <div className="flex flex-wrap gap-[4px]">

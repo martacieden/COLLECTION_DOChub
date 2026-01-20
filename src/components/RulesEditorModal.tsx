@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Plus, Trash2, Sparkles, Loader2, RotateCcw } from 'lucide-react';
+import { X, Plus, Trash2, Sparkles, Loader2, RotateCcw, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateCollectionRules, enhanceCollectionText, type CollectionRule } from '../services/aiRulesGenerator';
 
@@ -34,6 +34,7 @@ interface RulesEditorModalProps {
   onFindMatchingDocuments?: (rules: CollectionRule[]) => number; // Функція для пошуку відповідних документів
   organizations?: Organization[]; // Список організацій для випадаючих списків
   documents?: Document[]; // Документи для отримання унікальних значень
+  availableTags?: string[]; // Глобальний список доступних тегів
 }
 
 // Популярні емодзі для колекцій
@@ -92,7 +93,8 @@ export function RulesEditorModal({
   matchedDocumentsCount = 0,
   onFindMatchingDocuments,
   organizations = [],
-  documents = []
+  documents = [],
+  availableTags = []
 }: RulesEditorModalProps) {
   const [collectionName, setCollectionName] = useState<string>('');
   const [collectionIcon, setCollectionIcon] = useState<string>('📁');
@@ -130,12 +132,13 @@ export function RulesEditorModal({
     return categories;
   }, [documents]);
 
-  // Отримуємо список тегів (з усіх документів)
+  // Отримуємо список тегів (з усіх документів + глобальний список)
   const tagOptions = useMemo(() => {
-    const allTags = (documents || []).flatMap(d => d.tags || []).filter(Boolean);
+    const docTags = (documents || []).flatMap(d => d.tags || []).filter(Boolean);
+    const allTags = [...docTags, ...availableTags];
     const uniqueTags = [...new Set(allTags)].sort();
     return uniqueTags;
-  }, [documents]);
+  }, [documents, availableTags]);
 
   // Отримуємо список форматів файлів (з усіх документів)
   const fileTypeOptions = useMemo(() => {
@@ -694,13 +697,17 @@ export function RulesEditorModal({
 
           {/* Filtering Rules Section */}
           <div className="space-y-[12px]">
-            <div>
-              <label className="block text-[13px] text-[#1c2024] mb-[8px]">
+            <div className="space-y-[12px]">
+              <label className="block text-[13px] text-[#1c2024]">
                 Filtering Rules (optional)
               </label>
-              <p className="text-[11px] text-[#60646c] mb-[8px]">
-                Rules determine which documents are automatically included in this collection. Leave empty to create a manual collection.
-              </p>
+              
+              <div className="bg-[#f0f7ff] border border-[#005be2]/20 rounded-[8px] p-[12px] flex gap-[12px]">
+                <Info className="size-[16px] text-[#005be2] flex-shrink-0 mt-[2px]" />
+                <p className="text-[12px] text-[#005be2] leading-[1.5]">
+                  Rules automate your collection. <span className="font-bold">Every document that matches these criteria will be automatically added to this collection.</span> Leave this section empty if you prefer to add documents manually.
+                </p>
+              </div>
             </div>
 
             {/* Rules Editor Block */}

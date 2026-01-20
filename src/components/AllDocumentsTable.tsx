@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { Checkbox } from './ui/checkbox';
-import { MoreVertical, FileText, X, Sparkles } from 'lucide-react';
+import { MoreVertical, FileText, X, Sparkles, Plus } from 'lucide-react';
 import svgPaths from "../imports/svg-ylbe71kelt";
 import { DocumentCard } from './DocumentCard';
 import { FilterBar } from './FilterBar';
 import { BulkActionsBar } from './BulkActionsBar';
 import { QuickFilters } from './QuickFilters';
 import { getOrganizationAvatar } from '../utils/organizationUtils';
+import { Popover, PopoverTrigger, PopoverContent } from './ui/popover';
+import { TagInput } from './ui/tag-input';
 
 interface Document {
   id: string;
@@ -21,6 +23,7 @@ interface Document {
   signatureStatus?: string;
   lastUpdate?: string;
   collectionIds?: string[];
+  tags?: string[];
 }
 
 interface Organization {
@@ -49,6 +52,9 @@ interface AllDocumentsTableProps {
   onCollectionClick?: (collection: Collection) => void;
   aiFilter?: Set<string> | null;
   onClearAIFilter?: () => void;
+  availableTags?: string[];
+  onUpdateDocumentTags?: (documentId: string, tags: string[]) => void;
+  onCreateTag?: (tag: string) => void;
 }
 
 // FileIcon component для визначення типу файлу та іконки
@@ -268,6 +274,20 @@ const generateDocument = (id: number, orgIndex: number, statusIndex: number): Do
     ['John Doe', 'Jane Smith', 'Insurance Team'],
   ];
   
+  // Tags options для mock документів
+  const tagsOptions = [
+    ['permit', 'construction'],
+    ['contract', 'legal'],
+    ['invoice', 'financial'],
+    ['construction', 'permit'],
+    ['legal', 'contract'],
+    ['financial', 'invoice'],
+    ['contract', 'construction'],
+    ['permit', 'legal'],
+    ['trust', 'estate-planning'],
+    ['insurance', 'financial'],
+  ];
+  
   return {
     id: `DOC-${String(id).padStart(3, '0')}`,
     name: documentNames[id % documentNames.length],
@@ -280,6 +300,7 @@ const generateDocument = (id: number, orgIndex: number, statusIndex: number): Do
     organization: org,
     signatureStatus: status,
     lastUpdate: date.replace(', ', '-').replace(' ', '-'),
+    tags: tagsOptions[id % tagsOptions.length],
   };
 };
 
@@ -310,7 +331,10 @@ export function AllDocumentsTable({
   onCreateCollection,
   onCollectionClick,
   aiFilter,
-  onClearAIFilter
+  onClearAIFilter,
+  availableTags = [],
+  onUpdateDocumentTags,
+  onCreateTag
 }: AllDocumentsTableProps) {
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [filterQuery, setFilterQuery] = useState<string>('');
@@ -422,7 +446,7 @@ export function AllDocumentsTable({
   });
 
   // Count visible columns in table view
-  const visibleColumnsCount = 11; // Checkbox + Name + Description + Type + Attached to + Shared with + Uploaded by + Uploaded on + Organization + Signature status + Actions
+  const visibleColumnsCount = 13; // Checkbox + Name + Description + Type + Tags + Attached to + Shared with + Uploaded by + Uploaded on + Organization + Signature status + Collections + Actions
 
   const handlePinToggle = () => {
     if (onPinToggle) {
@@ -551,6 +575,7 @@ export function AllDocumentsTable({
                   <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[150px]">Name</th>
                   <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[180px]">Description</th>
                   <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[70px]">Type</th>
+                  <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[150px]">Tags</th>
                   <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[180px]">Attached to</th>
                   <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[120px]">Shared with</th>
                   <th className="h-10 px-2 text-left align-middle text-[11px] text-[#8b8d98] uppercase tracking-wider whitespace-nowrap min-w-[130px]">Uploaded by</th>
@@ -581,6 +606,54 @@ export function AllDocumentsTable({
                     </td>
                     <td className="p-2 align-middle whitespace-nowrap">
                       <span className="text-[13px] text-[#1c2024]">{doc.type}</span>
+                    </td>
+                    <td className="p-2 align-middle" onClick={(e) => e.stopPropagation()}>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <div className="flex flex-wrap gap-[4px] cursor-pointer hover:opacity-80 transition-opacity min-h-[24px] items-center">
+                            {(doc.tags || []).slice(0, 2).map((tag, idx) => (
+                              <span
+                                key={idx}
+                                className="inline-flex items-center px-[6px] py-[2px] bg-[#f5f7fa] border border-[#d1d5db] rounded-[4px] text-[11px] text-[#60646c]"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                            {(doc.tags || []).length > 2 && (
+                              <span className="inline-flex items-center px-[6px] py-[2px] rounded-[4px] bg-[#f5f7fa] border border-[#d1d5db] text-[11px] text-[#60646c]">
+                                +{(doc.tags || []).length - 2}
+                              </span>
+                            )}
+                            {(!doc.tags || doc.tags.length === 0) && (
+                              <span className="inline-flex items-center gap-[4px] px-[6px] py-[2px] rounded-[4px] border border-dashed border-[#d1d5db] text-[11px] text-[#8b8d98] hover:border-[#005be2] hover:text-[#005be2]">
+                                <Plus className="size-[10px]" />
+                                Add tag
+                              </span>
+                            )}
+                          </div>
+                        </PopoverTrigger>
+                        <PopoverContent 
+                          className="w-[280px] p-[12px] bg-white border border-[#e0e1e6] shadow-lg" 
+                          align="start" 
+                          side="top"
+                          sideOffset={4}
+                        >
+                          <div className="space-y-[8px]">
+                            <p className="text-[12px] font-medium text-[#1c2024]">Edit tags</p>
+                            <TagInput
+                              tags={doc.tags || []}
+                              onChange={(newTags) => {
+                                if (onUpdateDocumentTags) {
+                                  onUpdateDocumentTags(doc.id, newTags);
+                                }
+                              }}
+                              availableTags={availableTags}
+                              onCreateTag={onCreateTag}
+                              placeholder="Type to add..."
+                            />
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     </td>
                     <td className="p-2 align-middle">
                       <div className="flex flex-wrap gap-[4px]">

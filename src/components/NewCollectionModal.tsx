@@ -629,7 +629,7 @@ export function NewCollectionModal({ isOpen, onClose, onCreateCollection, select
                 Filtering Rules (optional)
               </label>
               <p className="text-[11px] text-[#60646c] mb-[8px]">
-                Rules determine which documents are automatically included in this collection. Leave empty to create a manual collection.
+                Rules determine which documents are automatically included in this collection. <span className="font-semibold">All documents that meet these criteria will be automatically added to the collection.</span> Leave empty to create a manual collection.
               </p>
             </div>
 

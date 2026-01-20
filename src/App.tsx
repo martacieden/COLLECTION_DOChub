@@ -1837,6 +1837,7 @@ function AISuggestionPreviewModal({
 }) {
   const [selectedDocumentIds, setSelectedDocumentIds] = useState<Set<string>>(new Set());
   const [chatMessage, setChatMessage] = useState('');
+  const [isAIChatOpen, setIsAIChatOpen] = useState(false);
   
   // Знаходимо документи, які відповідають правилам
   let previewDocuments: Document[] = [];
@@ -1878,13 +1879,8 @@ function AISuggestionPreviewModal({
   const handleSendChatMessage = () => {
     if (!chatMessage.trim()) return;
     
-    // Тут можна додати логіку для відправки повідомлення до AI
-    // Наприклад, показати toast або відкрити AI чат модальне вікно
-    toast.info('Chat with AI Assistant', {
-      description: 'This feature will be available soon'
-    });
-    
-    setChatMessage('');
+    // Відкриваємо AI чат модальне вікно з контекстом про цю колекцію
+    setIsAIChatOpen(true);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -2070,6 +2066,22 @@ function AISuggestionPreviewModal({
           </div>
         </div>
       </div>
+      
+      {/* AI Chat Modal для продовження чату */}
+      {isAIChatOpen && (
+        <AIChatModal
+          initialQuestion={chatMessage.trim() || `Tell me more about the "${suggestion.name}" collection`}
+          onClose={() => {
+            setIsAIChatOpen(false);
+            setChatMessage('');
+          }}
+          contextType={suggestion.name}
+          initialSearchResults={previewDocuments.length > 0 ? {
+            query: chatMessage.trim() || `Tell me about ${suggestion.name}`,
+            documents: previewDocuments
+          } : undefined}
+        />
+      )}
     </div>
   );
 }
@@ -3445,6 +3457,8 @@ const [aiModalInitialSearchResults, setAiModalInitialSearchResults] = useState<{
       <div className="border-b border-[#e8e8ec]" style={{ backgroundColor: '#FAF8FF' }}>
         {/* Ask AI Input */}
         <div className="px-[18px] flex flex-col items-center py-[48px]">
+          <h2 className="text-[24px] font-semibold text-[#1c2024] mb-[8px] text-center">What can I help you find today?</h2>
+          <p className="text-[14px] text-[#60646c] mb-[24px] text-center max-w-[600px]">Search through all your documents or ask questions to get instant answers from your content.</p>
           <div className="max-w-[720px] w-full mb-[8px]">
             <div className="relative" ref={inputRef}>
               <div className="absolute left-[12px] top-1/2 -translate-y-1/2 pointer-events-none">
@@ -3814,10 +3828,29 @@ const [aiModalInitialSearchResults, setAiModalInitialSearchResults] = useState<{
                       </td>
                     </tr>
                   ))
-                ) : (
+                ) : searchQuery.trim() !== '' ? (
                   <tr>
                         <td colSpan={8} className="text-center py-[48px]">
                       <p className="text-[#60646c] text-[13px]">No collections found matching "{searchQuery}"</p>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr>
+                    <td colSpan={8} className="text-center py-[120px]">
+                      <div className="flex flex-col items-center justify-center">
+                        <div className="bg-[#f0f0f3] text-[#60646c] rounded-[8px] size-[48px] flex items-center justify-center mb-[16px]">
+                          <Folder className="size-[20px]" />
+                        </div>
+                        <h2 className="text-[16px] font-medium text-[#1c2024] mb-[4px]">Add your first collection</h2>
+                        <p className="text-[13px] text-[#60646c] mb-[16px]">Create a collection to organize your documents</p>
+                        <button
+                          onClick={onNewCollectionClick}
+                          className="h-[36px] px-[16px] bg-white border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px] transition-colors"
+                        >
+                          <Plus className="size-[16px]" />
+                          <span>New collection</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 )}
@@ -3848,9 +3881,26 @@ const [aiModalInitialSearchResults, setAiModalInitialSearchResults] = useState<{
                   />
                 </div>
               ))
-            ) : (
+            ) : searchQuery.trim() !== '' ? (
               <div className="text-center py-[48px]" style={{ gridColumn: '1 / -1' }}>
                 <p className="text-[#60646c] text-[13px]">No collections found matching "{searchQuery}"</p>
+              </div>
+            ) : (
+              <div className="text-center py-[120px]" style={{ gridColumn: '1 / -1' }}>
+                <div className="flex flex-col items-center justify-center">
+                  <div className="bg-[#f0f0f3] text-[#60646c] rounded-[8px] size-[48px] flex items-center justify-center mb-[16px]">
+                    <Folder className="size-[20px]" />
+                  </div>
+                  <h2 className="text-[16px] font-medium text-[#1c2024] mb-[4px]">Add your first collection</h2>
+                  <p className="text-[13px] text-[#60646c] mb-[16px]">Create a collection to organize your documents</p>
+                  <button
+                    onClick={onNewCollectionClick}
+                    className="h-[36px] px-[16px] bg-white border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] flex items-center gap-[6px] transition-colors"
+                  >
+                    <Plus className="size-[16px]" />
+                    <span>New collection</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -3888,7 +3938,10 @@ function MainContent({
   onCreateCollectionWithRules,
   processingCollections,
   getMatchingRule,
-  getRuleDescription
+  getRuleDescription,
+  availableTags,
+  onUpdateDocumentTags,
+  onCreateTag
 }: { 
   viewMode: ViewMode; 
   aiFilter?: Set<string> | null;
@@ -3918,6 +3971,9 @@ function MainContent({
   processingCollections?: Set<string>;
   getMatchingRule?: (document: Document, rules: CollectionRule[]) => CollectionRule | null;
   getRuleDescription?: (rule: CollectionRule) => string;
+  availableTags?: string[];
+  onUpdateDocumentTags?: (documentId: string, tags: string[]) => void;
+  onCreateTag?: (tag: string) => void;
 }) {
   // Якщо viewMode === 'collection-detail' але selectedCollection === null, це означає що ми повертаємося назад
   // В цьому випадку не відображаємо CollectionDetailView, а дозволяємо коду йти далі до CollectionsView
@@ -3975,6 +4031,9 @@ function MainContent({
           onCollectionClick={handleCollectionClickFromTooltip}
           aiFilter={aiFilter}
           onClearAIFilter={onClearAIFilter}
+          availableTags={availableTags}
+          onUpdateDocumentTags={onUpdateDocumentTags}
+          onCreateTag={onCreateTag}
         />
       </div>
     );
@@ -4947,6 +5006,42 @@ export default function App() {
   const [collectionToDelete, setCollectionToDelete] = useState<Collection | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
+  // Глобальний список тегів для автозаповнення
+  const [availableTags, setAvailableTags] = useState<string[]>([
+    'trust',
+    'estate-planning',
+    'insurance',
+    'hr',
+    'benefits',
+    'engineering',
+    'api',
+    'product',
+    'financial',
+    'tax',
+    'contract',
+    'invoice',
+    'permit',
+    'legal'
+  ]);
+  
+  // Функція для додавання нового тегу до глобального списку
+  const handleCreateTag = (newTag: string) => {
+    if (!availableTags.includes(newTag)) {
+      setAvailableTags(prev => [...prev, newTag]);
+    }
+  };
+  
+  // Функція для оновлення тегів документа
+  const handleUpdateDocumentTags = (documentId: string, newTags: string[]) => {
+    setDocuments(prev => 
+      prev.map(doc => 
+        doc.id === documentId 
+          ? { ...doc, tags: newTags }
+          : doc
+      )
+    );
+  };
+  
   // Синхронізація стану: якщо selectedCollection стає null, але viewMode все ще 'collection-detail', встановлюємо viewMode на 'collections'
   // Це запобігає білому екрану при поверненні назад
   useEffect(() => {
@@ -4968,45 +5063,60 @@ export default function App() {
         // Перевіряємо, чи це масив
         if (Array.isArray(parsed)) {
           // Якщо є збережені колекції, об'єднуємо з mock даними (mock не перезаписуємо)
-          const mockCollections = allCollections.map(col => ({
-            id: col.id,
-            title: col.title,
-            description: col.description || '',
-            count: col.count,
-            type: col.type,
-            icon: col.icon,
-            createdBy: col.createdBy || 'Joan Zhao',
-            createdOn: col.createdOn || new Date().toLocaleDateString(),
-            organization: col.organization,
-            sharedWith: col.sharedWith,
-            rules: col.rules ? col.rules.map((rule, idx) => ({
+          const mockCollections = allCollections.map(col => {
+            // Конвертуємо legacy rules в CollectionRule формат
+            const convertedRules: CollectionRule[] = col.rules ? col.rules.map((rule, idx) => ({
               id: `rule-${col.id}-${idx}`,
               type: 'keywords' as const,
               label: 'Rule',
               value: rule,
               operator: 'contains' as const,
               enabled: true
-            })) : undefined,
-            autoSync: col.autoSync,
-            documentIds: []
-          }));
-          
-          // Заповнюємо documentIds для mock колекцій на основі collectionIds у документах
-          const documentsWithCollections = mockDocuments.filter(doc => doc.collectionIds && doc.collectionIds.length > 0);
-          const collectionsWithDocuments = mockCollections.map(col => {
-            const docIds = documentsWithCollections
-              .filter(doc => doc.collectionIds?.includes(col.id))
-              .map(doc => doc.id || '')
-              .filter(id => id !== '');
+            })) : [];
+            
+            // Обчислюємо documentIds на основі правил
+            let docIds: string[] = [];
+            if (convertedRules.length > 0) {
+              docIds = mockDocuments
+                .filter(doc => {
+                  return convertedRules.every(rule => {
+                    const ruleValue = rule.value.toLowerCase();
+                    const docName = (doc.name || '').toLowerCase();
+                    const docDesc = (doc.description || '').toLowerCase();
+                    const docType = (doc.type || '').toLowerCase();
+                    const docTags = (doc.tags || []).map(t => t.toLowerCase());
+                    const docOrg = (doc.organization || '').toLowerCase();
+                    
+                    return docName.includes(ruleValue) ||
+                           docDesc.includes(ruleValue) ||
+                           docType.includes(ruleValue) ||
+                           docTags.some(tag => tag.includes(ruleValue) || ruleValue.includes(tag)) ||
+                           docOrg.includes(ruleValue);
+                  });
+                })
+                .map(doc => doc.id || '')
+                .filter(id => id !== '');
+            }
+            
             return {
-              ...col,
-              documentIds: docIds,
-              count: docIds.length
+              id: col.id,
+              title: col.title,
+              description: col.description || '',
+              count: docIds.length || col.count,
+              type: col.type,
+              icon: col.icon,
+              createdBy: col.createdBy || 'Joan Zhao',
+              createdOn: col.createdOn || new Date().toLocaleDateString(),
+              organization: col.organization,
+              sharedWith: col.sharedWith,
+              rules: convertedRules.length > 0 ? convertedRules : undefined,
+              autoSync: col.autoSync,
+              documentIds: docIds
             };
           });
           
           // Об'єднуємо: спочатку користувацькі колекції (нові на початку), потім mock колекції
-          const mockIds = new Set(collectionsWithDocuments.map(c => c.id));
+          const mockIds = new Set(mockCollections.map(c => c.id));
           const userCollections = parsed
             .filter((c: Collection) => c && c.id && !mockIds.has(c.id))
             .map((c: Collection) => ({
@@ -5020,7 +5130,7 @@ export default function App() {
             const dateB = new Date(b.createdOn || 0).getTime();
             return dateB - dateA; // Новіші першими
           });
-          return [...sortedUserCollections, ...collectionsWithDocuments];
+          return [...sortedUserCollections, ...mockCollections];
         } else {
           // Якщо parsed не є масивом, очищаємо localStorage і використовуємо mock дані
           try {
@@ -5041,13 +5151,44 @@ export default function App() {
     }
     
     // Якщо немає збережених даних, ініціалізуємо з mock даних
-    // Заповнюємо documentIds на основі collectionIds у документах
-    const documentsWithCollections = mockDocuments.filter(doc => doc.collectionIds && doc.collectionIds.length > 0);
+    // Заповнюємо documentIds на основі правил колекцій
     return allCollections.map(col => {
-      const docIds = documentsWithCollections
-        .filter(doc => doc.collectionIds?.includes(col.id))
-        .map(doc => doc.id || '')
-        .filter(id => id !== '');
+      // Конвертуємо legacy rules в CollectionRule формат
+      const convertedRules: CollectionRule[] = col.rules ? col.rules.map((rule, idx) => ({
+        id: `rule-${col.id}-${idx}`,
+        type: 'keywords' as const,
+        label: 'Rule',
+        value: rule,
+        operator: 'contains' as const,
+        enabled: true
+      })) : [];
+      
+      // Обчислюємо documentIds на основі правил
+      let docIds: string[] = [];
+      if (convertedRules.length > 0) {
+        // Фільтруємо документи за правилами
+        docIds = mockDocuments
+          .filter(doc => {
+            // Для кожного правила перевіряємо, чи документ відповідає
+            return convertedRules.every(rule => {
+              const ruleValue = rule.value.toLowerCase();
+              const docName = (doc.name || '').toLowerCase();
+              const docDesc = (doc.description || '').toLowerCase();
+              const docType = (doc.type || '').toLowerCase();
+              const docTags = (doc.tags || []).map(t => t.toLowerCase());
+              const docOrg = (doc.organization || '').toLowerCase();
+              
+              // Перевіряємо чи значення правила міститься в документі
+              return docName.includes(ruleValue) ||
+                     docDesc.includes(ruleValue) ||
+                     docType.includes(ruleValue) ||
+                     docTags.some(tag => tag.includes(ruleValue) || ruleValue.includes(tag)) ||
+                     docOrg.includes(ruleValue);
+            });
+          })
+          .map(doc => doc.id || '')
+          .filter(id => id !== '');
+      }
       
       return {
         id: col.id,
@@ -5060,14 +5201,7 @@ export default function App() {
         createdOn: col.createdOn || new Date().toLocaleDateString(),
         organization: col.organization,
         sharedWith: col.sharedWith,
-        rules: col.rules ? col.rules.map((rule, idx) => ({
-          id: `rule-${col.id}-${idx}`,
-          type: 'keywords' as const,
-          label: 'Rule',
-          value: rule,
-          operator: 'contains' as const,
-          enabled: true
-        })) : undefined,
+        rules: convertedRules.length > 0 ? convertedRules : undefined,
         autoSync: col.autoSync,
         documentIds: docIds
       };
@@ -6334,6 +6468,9 @@ export default function App() {
             onCustomizeFiltersClick={handleOpenRulesEditor}
             onDeleteCollection={handleDeleteCollection}
             onSettingsClick={handleOpenCollectionSettings}
+            availableTags={availableTags}
+            onUpdateDocumentTags={handleUpdateDocumentTags}
+            onCreateTag={handleCreateTag}
           />
                   </div>
                   <div className="flex-shrink-0 flex-grow-0 border-l border-[#e8e8ec] overflow-hidden" style={{ width: '400px', minWidth: '400px', maxWidth: '400px' }}>
@@ -6373,6 +6510,9 @@ export default function App() {
                 onDeleteCollection={handleDeleteCollection}
                 onSettingsClick={handleOpenCollectionSettings}
                 onCreateCollectionWithRules={handleCreateCollection}
+                availableTags={availableTags}
+                onUpdateDocumentTags={handleUpdateDocumentTags}
+                onCreateTag={handleCreateTag}
               />
             )}
           </div>
@@ -6386,6 +6526,8 @@ export default function App() {
         collections={collections}
         getCollectionType={getCollectionType}
         currentCollection={viewMode === 'collection-detail' && selectedCollection ? selectedCollection : null}
+        availableTags={availableTags}
+        onCreateTag={handleCreateTag}
       />
 
       {/* AI Assistant Banner */}
@@ -6526,6 +6668,7 @@ export default function App() {
         onFindMatchingDocuments={findMatchingDocumentsCount}
         organizations={organizations}
         documents={documents}
+        availableTags={availableTags}
       />
 
       <CollectionSettingsModal

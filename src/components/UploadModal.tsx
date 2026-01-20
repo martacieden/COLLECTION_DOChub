@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ChevronDown, Check, Folder } from 'lucide-react';
+import { X, ChevronDown, Check, Folder, Tag } from 'lucide-react';
 import { UploadFileTable } from './UploadFileTable';
 import { toast } from 'sonner';
 import { Checkbox } from './ui/checkbox';
 import { FileIcon } from './AllDocumentsTable';
+import { TagInput } from './ui/tag-input';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -13,6 +14,8 @@ interface UploadModalProps {
   collections?: Array<{ id: string; title: string; icon?: string; rules?: any[] }>;
   getCollectionType?: (collection: { rules?: any[]; documentIds?: string[] }) => 'auto' | 'manual';
   currentCollection?: { id: string; title: string; icon?: string; rules?: any[] } | null;
+  availableTags?: string[];
+  onCreateTag?: (tag: string) => void;
 }
 
 interface FileInfo {
@@ -26,6 +29,7 @@ interface FileMetadata {
   title: string;
   description: string;
   tags: string[];
+  aiTags?: string[];
 }
 
 type UploadStep = 'select' | 'preview' | 'uploading';
@@ -38,10 +42,11 @@ const organizations = [
   { id: 5, name: 'The Robertson Foundation', initial: 'T', color: '#98D8C8' }
 ];
 
-export function UploadModal({ isOpen, onClose, onComplete, collections = [], getCollectionType, currentCollection }: UploadModalProps) {
+export function UploadModal({ isOpen, onClose, onComplete, collections = [], getCollectionType, currentCollection, availableTags = [], onCreateTag }: UploadModalProps) {
   const [currentStep, setCurrentStep] = useState<UploadStep>('select');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedOrganization, setSelectedOrganization] = useState('');
+  const [globalTags, setGlobalTags] = useState<string[]>([]);
   const [selectedCollectionIds, setSelectedCollectionIds] = useState<Set<string>>(new Set());
   const [fileMetadata, setFileMetadata] = useState<Record<string, FileMetadata>>({});
   const [uploadedFiles, setUploadedFiles] = useState<FileInfo[]>([]);
@@ -59,6 +64,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
       setCurrentStep('select');
       setSelectedFiles([]);
       setSelectedOrganization('');
+      setGlobalTags([]);
       setSelectedCollectionIds(new Set());
       setFileMetadata({});
       setUploadedFiles([]);
@@ -124,7 +130,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
         fileName: fileName,
         title: nameWithoutExt,
         description: '',
-        tags: []
+        tags: [...globalTags]
       };
     });
     setFileMetadata(prev => ({ ...prev, ...newMetadata }));
@@ -219,6 +225,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
     setCurrentStep('select');
     setSelectedFiles([]);
     setSelectedOrganization('');
+    setGlobalTags([]);
     setSelectedCollectionIds(new Set());
     setFileMetadata({});
     setUploadedFiles([]);
@@ -337,6 +344,33 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
                       </div>
                     )}
                   </div>
+                </div>
+
+                {/* Tags Input */}
+                <div className="mb-[24px]">
+                  <label className="block text-[14px] text-[#1c2024] mb-[8px]">
+                    Tags (applied to all files)
+                  </label>
+                  <TagInput 
+                    tags={globalTags} 
+                    onChange={(newTags) => {
+                      setGlobalTags(newTags);
+                      // Оновлюємо теги для вже вибраних файлів
+                      setSelectedFiles(current => {
+                        const updatedMetadata = { ...fileMetadata };
+                        current.forEach(file => {
+                          if (updatedMetadata[file.name]) {
+                            updatedMetadata[file.name].tags = [...newTags];
+                          }
+                        });
+                        setFileMetadata(updatedMetadata);
+                        return current;
+                      });
+                    }} 
+                    availableTags={availableTags}
+                    onCreateTag={onCreateTag}
+                    placeholder="Add tags..."
+                  />
                 </div>
 
                 {/* Drop Zone */}
