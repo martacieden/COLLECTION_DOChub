@@ -79,6 +79,7 @@ interface Document {
   organizationId?: string; // ID організації для точного матчингу
   collectionIds?: string[]; // IDs колекцій, до яких належить документ
   tags?: string[];
+  aiTags?: string[]; // AI-запропоновані теги (ще не підтверджені)
   signatureStatus?: string;
   category?: string;
   vendor?: string; // Назва постачальника/вендора
@@ -253,7 +254,8 @@ const mockDocuments: Document[] = [
     uploadedOn: 'Nov 28, 2024',
     organization: 'Summation Partners',
     collectionIds: ['1'], // Oak Street Renovation
-    tags: ['Construction', 'Architecture', 'Oak Street']
+    tags: ['Construction', 'Architecture'],
+    aiTags: ['renovation', 'blueprint'] // AI-запропоновані теги
   },
   {
     id: 'DOC-002',
@@ -268,7 +270,8 @@ const mockDocuments: Document[] = [
     uploadedOn: 'Nov 25, 2024',
     organization: 'Smith Family',
     collectionIds: ['1', '3'], // Oak Street Renovation, Permits & Approvals
-    tags: ['Permits', 'Oak Street', 'Approved'],
+    tags: ['Permits', 'Oak Street'],
+    aiTags: ['permit', 'construction'], // AI-запропоновані теги
     signatureStatus: 'Signed'
   },
   {
@@ -284,7 +287,8 @@ const mockDocuments: Document[] = [
     uploadedOn: 'Dec 1, 2024',
     organization: 'Johnson Family Trust',
     collectionIds: ['1', '2'], // Oak Street Renovation, Executed Contracts
-    tags: ['Contract', 'Executed', 'Oak Street'],
+    tags: ['Executed', 'Oak Street'],
+    aiTags: ['contract', 'legal'], // AI-запропоновані теги
     signatureStatus: 'Signed'
   },
   {
@@ -300,7 +304,8 @@ const mockDocuments: Document[] = [
     uploadedOn: 'Nov 20, 2024',
     organization: 'Summation Partners',
     category: 'Invoice',
-    tags: ['Invoice', 'Electrical', 'Payment'],
+    tags: ['Electrical', 'Payment'],
+    aiTags: ['invoice', 'financial'], // AI-запропоновані теги
     vendor: 'ABC Electrical Services'
   },
   {
@@ -3941,6 +3946,7 @@ function MainContent({
   getRuleDescription,
   availableTags,
   onUpdateDocumentTags,
+  onUpdateDocumentAiTags,
   onCreateTag
 }: { 
   viewMode: ViewMode; 
@@ -3973,6 +3979,7 @@ function MainContent({
   getRuleDescription?: (rule: CollectionRule) => string;
   availableTags?: string[];
   onUpdateDocumentTags?: (documentId: string, tags: string[]) => void;
+  onUpdateDocumentAiTags?: (documentId: string, aiTags: string[]) => void;
   onCreateTag?: (tag: string) => void;
 }) {
   // Якщо viewMode === 'collection-detail' але selectedCollection === null, це означає що ми повертаємося назад
@@ -4033,6 +4040,7 @@ function MainContent({
           onClearAIFilter={onClearAIFilter}
           availableTags={availableTags}
           onUpdateDocumentTags={onUpdateDocumentTags}
+          onUpdateDocumentAiTags={onUpdateDocumentAiTags}
           onCreateTag={onCreateTag}
         />
       </div>
@@ -5042,6 +5050,17 @@ export default function App() {
     );
   };
   
+  // Функція для оновлення AI тегів документа
+  const handleUpdateDocumentAiTags = (documentId: string, newAiTags: string[]) => {
+    setDocuments(prev => 
+      prev.map(doc => 
+        doc.id === documentId 
+          ? { ...doc, aiTags: newAiTags }
+          : doc
+      )
+    );
+  };
+  
   // Синхронізація стану: якщо selectedCollection стає null, але viewMode все ще 'collection-detail', встановлюємо viewMode на 'collections'
   // Це запобігає білому екрану при поверненні назад
   useEffect(() => {
@@ -5260,7 +5279,7 @@ export default function App() {
     setIsLeftPanelCollapsed(!isLeftPanelCollapsed);
   };
 
-  const handleUploadComplete = (files: any[], selectedCollectionIds: string[], organization: string, metadata: Array<{ fileName: string; title: string; description: string; tags: string[] }>) => {
+  const handleUploadComplete = (files: any[], selectedCollectionIds: string[], organization: string, metadata: Array<{ fileName: string; title: string; description: string; tags: string[]; aiTags?: string[] }>) => {
     // Перевірка: переконуємося, що організація передана
     if (!organization || organization.trim() === '') {
       console.error('[handleUploadComplete] Organization is missing!');
@@ -5286,7 +5305,8 @@ export default function App() {
         fileName: fileName,
         title: fileName.replace(/\.[^/.]+$/, ''),
         description: '',
-        tags: []
+        tags: [],
+        aiTags: []
       };
       
       const newDoc = {
@@ -5302,7 +5322,8 @@ export default function App() {
         uploadedOn: currentDate,
         organization: organization,
         collectionIds: selectedCollectionIds, // Використовуємо вибрані колекції
-        tags: meta.tags || []
+        tags: meta.tags || [],
+        aiTags: meta.aiTags || [] // AI-запропоновані теги
       };
       
       // Перевірка: переконуємося, що організація встановлена
@@ -6470,6 +6491,7 @@ export default function App() {
             onSettingsClick={handleOpenCollectionSettings}
             availableTags={availableTags}
             onUpdateDocumentTags={handleUpdateDocumentTags}
+            onUpdateDocumentAiTags={handleUpdateDocumentAiTags}
             onCreateTag={handleCreateTag}
           />
                   </div>
@@ -6512,6 +6534,7 @@ export default function App() {
                 onCreateCollectionWithRules={handleCreateCollection}
                 availableTags={availableTags}
                 onUpdateDocumentTags={handleUpdateDocumentTags}
+                onUpdateDocumentAiTags={handleUpdateDocumentAiTags}
                 onCreateTag={handleCreateTag}
               />
             )}

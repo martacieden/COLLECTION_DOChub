@@ -1,11 +1,58 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ChevronDown, Check, Folder, Tag } from 'lucide-react';
+import { X, ChevronDown, Check, Folder, Tag, Sparkles } from 'lucide-react';
 import { UploadFileTable } from './UploadFileTable';
 import { toast } from 'sonner';
 import { Checkbox } from './ui/checkbox';
 import { FileIcon } from './AllDocumentsTable';
 import { TagInput } from './ui/tag-input';
+
+// Функція для генерації AI тегів на основі назви файлу
+function generateAiTags(fileName: string, availableTags: string[]): string[] {
+  const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '').toLowerCase();
+  
+  // Розбиваємо назву на слова
+  const words = nameWithoutExt
+    .replace(/[-_\.]/g, ' ')
+    .split(' ')
+    .filter(word => word.length > 2);
+  
+  const suggestedTags: string[] = [];
+  
+  // Типи документів для розпізнавання
+  const documentTypes: Record<string, string[]> = {
+    'contract': ['contract', 'agreement', 'terms', 'signed'],
+    'invoice': ['invoice', 'bill', 'payment', 'receipt'],
+    'permit': ['permit', 'approval', 'license', 'authorization'],
+    'legal': ['legal', 'law', 'attorney', 'court', 'waiver', 'lien'],
+    'financial': ['financial', 'budget', 'cost', 'expense', 'tax', 'accounting'],
+    'insurance': ['insurance', 'policy', 'coverage', 'claim'],
+    'construction': ['construction', 'building', 'renovation', 'blueprint', 'plan'],
+    'trust': ['trust', 'estate', 'will', 'beneficiary'],
+  };
+  
+  // Шукаємо типи документів у назві файлу
+  for (const [tag, keywords] of Object.entries(documentTypes)) {
+    if (keywords.some(keyword => nameWithoutExt.includes(keyword))) {
+      if (!suggestedTags.includes(tag)) {
+        suggestedTags.push(tag);
+      }
+    }
+  }
+  
+  // Шукаємо співпадіння з існуючими тегами
+  for (const existingTag of availableTags) {
+    const tagLower = existingTag.toLowerCase();
+    if (words.some(word => tagLower.includes(word) || word.includes(tagLower))) {
+      if (!suggestedTags.includes(existingTag) && !suggestedTags.includes(tagLower)) {
+        suggestedTags.push(existingTag);
+      }
+    }
+  }
+  
+  // Обмежуємо до 3 тегів
+  return suggestedTags.slice(0, 3);
+}
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -47,6 +94,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedOrganization, setSelectedOrganization] = useState('');
   const [globalTags, setGlobalTags] = useState<string[]>([]);
+  const [globalAiTags, setGlobalAiTags] = useState<string[]>([]); // AI-запропоновані теги
   const [selectedCollectionIds, setSelectedCollectionIds] = useState<Set<string>>(new Set());
   const [fileMetadata, setFileMetadata] = useState<Record<string, FileMetadata>>({});
   const [uploadedFiles, setUploadedFiles] = useState<FileInfo[]>([]);
@@ -65,6 +113,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
       setSelectedFiles([]);
       setSelectedOrganization('');
       setGlobalTags([]);
+      setGlobalAiTags([]);
       setSelectedCollectionIds(new Set());
       setFileMetadata({});
       setUploadedFiles([]);
@@ -121,16 +170,37 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
     // Додаємо файли до списку (не переходимо до preview)
     setSelectedFiles(prev => [...prev, ...files]);
     
+    // Генеруємо AI теги на основі назв файлів
+    const allAiTags: string[] = [];
+    files.forEach(file => {
+      const aiTags = generateAiTags(file.name, availableTags);
+      aiTags.forEach(tag => {
+        if (!allAiTags.includes(tag) && !globalTags.includes(tag) && !globalAiTags.includes(tag)) {
+          allAiTags.push(tag);
+        }
+      });
+    });
+    
+    // Додаємо нові AI теги до існуючих
+    if (allAiTags.length > 0) {
+      setGlobalAiTags(prev => {
+        const newTags = allAiTags.filter(tag => !prev.includes(tag));
+        return [...prev, ...newTags];
+      });
+    }
+    
     // Ініціалізуємо метадані для кожного файлу
     const newMetadata: Record<string, FileMetadata> = {};
     files.forEach(file => {
       const fileName = file.name;
       const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
+      const fileAiTags = generateAiTags(fileName, availableTags);
       newMetadata[fileName] = {
         fileName: fileName,
         title: nameWithoutExt,
         description: '',
-        tags: [...globalTags]
+        tags: [...globalTags],
+        aiTags: fileAiTags
       };
     });
     setFileMetadata(prev => ({ ...prev, ...newMetadata }));
@@ -179,18 +249,25 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
     const metadataArray: FileMetadata[] = selectedFiles.map(file => {
       const meta = fileMetadata[file.name];
       if (meta) {
+        // Об'єднуємо підтверджені теги (globalTags) з AI тегами файлу
+        const confirmedTags = Array.isArray(meta.tags) ? meta.tags : [];
+        // AI теги, які ще не підтверджені
+        const pendingAiTags = meta.aiTags?.filter(t => !confirmedTags.includes(t)) || [];
+        
         return {
           fileName: meta.fileName,
           title: meta.title,
           description: meta.description,
-          tags: Array.isArray(meta.tags) ? meta.tags : []
+          tags: confirmedTags,
+          aiTags: pendingAiTags
         };
       }
       return {
         fileName: file.name,
         title: file.name.replace(/\.[^/.]+$/, ''),
         description: '',
-        tags: []
+        tags: [],
+        aiTags: []
       };
     });
 
@@ -350,9 +427,15 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
                 <div className="mb-[24px]">
                   <label className="block text-[14px] text-[#1c2024] mb-[8px]">
                     Tags (applied to all files)
+                    {globalAiTags.length > 0 && (
+                      <span className="ml-[8px] text-[12px] text-[#7c3aed] font-normal">
+                        ✨ AI suggested {globalAiTags.length} tag{globalAiTags.length > 1 ? 's' : ''}
+                      </span>
+                    )}
                   </label>
                   <TagInput 
-                    tags={globalTags} 
+                    tags={globalTags}
+                    aiTags={globalAiTags}
                     onChange={(newTags) => {
                       setGlobalTags(newTags);
                       // Оновлюємо теги для вже вибраних файлів
@@ -366,7 +449,39 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
                         setFileMetadata(updatedMetadata);
                         return current;
                       });
-                    }} 
+                    }}
+                    onAiTagConfirm={(tag) => {
+                      // Переміщуємо AI тег в manual теги
+                      setGlobalAiTags(prev => prev.filter(t => t !== tag));
+                      setGlobalTags(prev => [...prev, tag]);
+                      // Оновлюємо метадані файлів
+                      setFileMetadata(prev => {
+                        const updated = { ...prev };
+                        Object.keys(updated).forEach(fileName => {
+                          if (updated[fileName].aiTags) {
+                            updated[fileName].aiTags = updated[fileName].aiTags!.filter(t => t !== tag);
+                          }
+                          if (!updated[fileName].tags.includes(tag)) {
+                            updated[fileName].tags = [...updated[fileName].tags, tag];
+                          }
+                        });
+                        return updated;
+                      });
+                    }}
+                    onAiTagDismiss={(tag) => {
+                      // Видаляємо AI тег
+                      setGlobalAiTags(prev => prev.filter(t => t !== tag));
+                      // Видаляємо з метаданих файлів
+                      setFileMetadata(prev => {
+                        const updated = { ...prev };
+                        Object.keys(updated).forEach(fileName => {
+                          if (updated[fileName].aiTags) {
+                            updated[fileName].aiTags = updated[fileName].aiTags!.filter(t => t !== tag);
+                          }
+                        });
+                        return updated;
+                      });
+                    }}
                     availableTags={availableTags}
                     onCreateTag={onCreateTag}
                     placeholder="Add tags..."

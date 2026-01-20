@@ -24,6 +24,7 @@ interface Document {
   lastUpdate?: string;
   collectionIds?: string[];
   tags?: string[];
+  aiTags?: string[];
 }
 
 interface Organization {
@@ -54,6 +55,7 @@ interface AllDocumentsTableProps {
   onClearAIFilter?: () => void;
   availableTags?: string[];
   onUpdateDocumentTags?: (documentId: string, tags: string[]) => void;
+  onUpdateDocumentAiTags?: (documentId: string, aiTags: string[]) => void;
   onCreateTag?: (tag: string) => void;
 }
 
@@ -334,6 +336,7 @@ export function AllDocumentsTable({
   onClearAIFilter,
   availableTags = [],
   onUpdateDocumentTags,
+  onUpdateDocumentAiTags,
   onCreateTag
 }: AllDocumentsTableProps) {
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
@@ -611,7 +614,18 @@ export function AllDocumentsTable({
                       <Popover>
                         <PopoverTrigger asChild>
                           <div className="flex flex-wrap gap-[4px] cursor-pointer hover:opacity-80 transition-opacity min-h-[24px] items-center">
-                            {(doc.tags || []).slice(0, 2).map((tag, idx) => (
+                            {/* AI Tags first */}
+                            {(doc.aiTags || []).slice(0, 1).map((tag, idx) => (
+                              <span
+                                key={`ai-${idx}`}
+                                className="inline-flex items-center gap-[2px] px-[6px] py-[2px] bg-[#f3e8ff] border border-[#d8b4fe] rounded-[4px] text-[11px] text-[#7c3aed]"
+                              >
+                                <Sparkles className="size-[10px]" />
+                                {tag}
+                              </span>
+                            ))}
+                            {/* Manual Tags */}
+                            {(doc.tags || []).slice(0, doc.aiTags?.length ? 1 : 2).map((tag, idx) => (
                               <span
                                 key={idx}
                                 className="inline-flex items-center px-[6px] py-[2px] bg-[#f5f7fa] border border-[#d1d5db] rounded-[4px] text-[11px] text-[#60646c]"
@@ -619,12 +633,13 @@ export function AllDocumentsTable({
                                 {tag}
                               </span>
                             ))}
-                            {(doc.tags || []).length > 2 && (
+                            {/* +N for remaining tags */}
+                            {((doc.tags || []).length + (doc.aiTags || []).length) > 2 && (
                               <span className="inline-flex items-center px-[6px] py-[2px] rounded-[4px] bg-[#f5f7fa] border border-[#d1d5db] text-[11px] text-[#60646c]">
-                                +{(doc.tags || []).length - 2}
+                                +{(doc.tags || []).length + (doc.aiTags || []).length - 2}
                               </span>
                             )}
-                            {(!doc.tags || doc.tags.length === 0) && (
+                            {(!doc.tags || doc.tags.length === 0) && (!doc.aiTags || doc.aiTags.length === 0) && (
                               <span className="inline-flex items-center gap-[4px] px-[6px] py-[2px] rounded-[4px] border border-dashed border-[#d1d5db] text-[11px] text-[#8b8d98] hover:border-[#005be2] hover:text-[#005be2]">
                                 <Plus className="size-[10px]" />
                                 Add tag
@@ -642,9 +657,23 @@ export function AllDocumentsTable({
                             <p className="text-[12px] font-medium text-[#1c2024]">Edit tags</p>
                             <TagInput
                               tags={doc.tags || []}
+                              aiTags={doc.aiTags || []}
                               onChange={(newTags) => {
                                 if (onUpdateDocumentTags) {
                                   onUpdateDocumentTags(doc.id, newTags);
+                                }
+                              }}
+                              onAiTagConfirm={(tag) => {
+                                // Переміщуємо AI тег в manual теги
+                                if (onUpdateDocumentTags && onUpdateDocumentAiTags) {
+                                  onUpdateDocumentTags(doc.id, [...(doc.tags || []), tag]);
+                                  onUpdateDocumentAiTags(doc.id, (doc.aiTags || []).filter(t => t !== tag));
+                                }
+                              }}
+                              onAiTagDismiss={(tag) => {
+                                // Видаляємо AI тег
+                                if (onUpdateDocumentAiTags) {
+                                  onUpdateDocumentAiTags(doc.id, (doc.aiTags || []).filter(t => t !== tag));
                                 }
                               }}
                               availableTags={availableTags}

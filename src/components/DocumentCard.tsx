@@ -19,6 +19,7 @@ interface DocumentCardProps {
     uploadedOn?: string;
     organization?: string;
     signatureStatus?: string;
+    tags?: string[];
   };
   isSelected: boolean;
   onSelect: (docId: string) => void;
@@ -58,6 +59,25 @@ export function DocumentCard({ document, isSelected, onSelect, isPinned = false,
         <p className="text-[11px] text-[#8b8d98] line-clamp-2 mb-[8px]">
           {document.description || '-'}
         </p>
+        
+        {/* Tags */}
+        {document.tags && document.tags.length > 0 && (
+          <div className="flex flex-wrap gap-[4px] mb-[8px]">
+            {document.tags.slice(0, 2).map((tag, idx) => (
+              <span
+                key={idx}
+                className="inline-flex items-center px-[6px] py-[2px] bg-[#f5f7fa] border border-[#d1d5db] rounded-[4px] text-[10px] text-[#60646c]"
+              >
+                {tag}
+              </span>
+            ))}
+            {document.tags.length > 2 && (
+              <span className="inline-flex items-center px-[6px] py-[2px] rounded-[4px] bg-[#f5f7fa] border border-[#d1d5db] text-[10px] text-[#60646c]">
+                +{document.tags.length - 2}
+              </span>
+            )}
+          </div>
+        )}
         
         {/* Collections */}
         {collections.length > 0 && (

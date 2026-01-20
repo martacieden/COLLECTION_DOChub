@@ -1,10 +1,13 @@
 import * as React from "react";
-import { X, Plus } from "lucide-react";
+import { X, Plus, Sparkles } from "lucide-react";
 import { cn } from "./utils";
 
 interface TagInputProps {
   tags: string[];
   onChange: (tags: string[]) => void;
+  aiTags?: string[];
+  onAiTagConfirm?: (tag: string) => void;
+  onAiTagDismiss?: (tag: string) => void;
   availableTags?: string[];
   onCreateTag?: (tag: string) => void;
   placeholder?: string;
@@ -14,6 +17,9 @@ interface TagInputProps {
 export function TagInput({ 
   tags, 
   onChange, 
+  aiTags = [],
+  onAiTagConfirm,
+  onAiTagDismiss,
   availableTags = [], 
   onCreateTag,
   placeholder = "Add tags...", 
@@ -29,6 +35,7 @@ export function TagInput({
   const filteredTags = availableTags.filter(
     (tag) => 
       !tags.includes(tag) && 
+      !aiTags.includes(tag) &&
       tag.toLowerCase().includes(inputValue.toLowerCase())
   );
 
@@ -38,7 +45,7 @@ export function TagInput({
   );
 
   // Чи показувати опцію "Create new"
-  const showCreateOption = inputValue.trim() && !exactMatch && !tags.includes(inputValue.trim());
+  const showCreateOption = inputValue.trim() && !exactMatch && !tags.includes(inputValue.trim()) && !aiTags.includes(inputValue.trim());
 
   // Загальна кількість опцій у dropdown
   const totalOptions = filteredTags.length + (showCreateOption ? 1 : 0);
@@ -60,6 +67,18 @@ export function TagInput({
 
   const removeTag = (tagToRemove: string) => {
     onChange(tags.filter((t) => t !== tagToRemove));
+  };
+
+  const handleConfirmAiTag = (tag: string) => {
+    if (onAiTagConfirm) {
+      onAiTagConfirm(tag);
+    }
+  };
+
+  const handleDismissAiTag = (tag: string) => {
+    if (onAiTagDismiss) {
+      onAiTagDismiss(tag);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -129,6 +148,8 @@ export function TagInput({
     setHighlightedIndex(0);
   }, [inputValue]);
 
+  const hasAnyTags = tags.length > 0 || aiTags.length > 0;
+
   return (
     <div className="relative">
       <div 
@@ -138,7 +159,34 @@ export function TagInput({
         )}
         onClick={() => inputRef.current?.focus()}
       >
-        {/* Selected Tags */}
+        {/* AI Suggested Tags */}
+        {aiTags.map((tag) => (
+          <div 
+            key={`ai-${tag}`} 
+            className="flex items-center gap-[4px] px-[6px] py-[2px] bg-[#f3e8ff] border border-[#d8b4fe] rounded-[4px] text-[11px] text-[#7c3aed] cursor-pointer hover:bg-[#ede9fe] transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleConfirmAiTag(tag);
+            }}
+            title="Click to confirm this AI suggestion"
+          >
+            <Sparkles className="size-[10px]" />
+            {tag}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDismissAiTag(tag);
+              }}
+              className="hover:text-[#ef4444] transition-colors ml-[2px]"
+              title="Dismiss suggestion"
+            >
+              <X className="size-[10px]" />
+            </button>
+          </div>
+        ))}
+
+        {/* Manual/Confirmed Tags */}
         {tags.map((tag) => (
           <div 
             key={tag} 
@@ -166,7 +214,7 @@ export function TagInput({
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
-          placeholder={tags.length === 0 ? placeholder : "Type to add..."}
+          placeholder={!hasAnyTags ? placeholder : "Type to add..."}
           className="flex-1 bg-transparent outline-none text-[13px] min-w-[80px] h-[24px] placeholder:text-[#9ca3af]"
         />
       </div>
