@@ -195,7 +195,7 @@ function RoleDropdown({
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-[4px] text-[13px] text-[#1c2024] hover:text-[#60646c] transition-colors"
+        className="flex items-center gap-[4px] px-[8px] py-[4px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] rounded-[4px] transition-colors"
       >
         <span>{roleLabels[role]}</span>
         <ChevronDown className="size-[14px]" />
@@ -508,7 +508,8 @@ export function ShareCollectionModal({
               <button
                 onClick={handleShare}
                 disabled={!searchQuery.trim()}
-                className="h-[40px] px-[20px] bg-[#005be2] rounded-[8px] text-[13px] text-white font-medium hover:bg-[#0047b3] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                style={{ paddingLeft: '20px', paddingRight: '20px' }}
+                className="h-[40px] bg-[#005be2] rounded-[8px] text-[13px] text-white font-medium hover:bg-[#0047b3] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
               >
                 Share
               </button>
@@ -542,7 +543,7 @@ export function ShareCollectionModal({
             <div className="flex gap-[24px] py-[12px]">
               <button
                 onClick={() => setActiveTab('all')}
-                className={`pb-[12px] text-[13px] font-medium border-b-2 transition-colors ${
+                className={`px-[12px] pb-[12px] text-[13px] font-medium border-b-2 transition-colors ${
                   activeTab === 'all' 
                     ? 'text-[#1c2024] border-[#1c2024]' 
                     : 'text-[#60646c] border-transparent hover:text-[#1c2024]'
@@ -552,7 +553,7 @@ export function ShareCollectionModal({
               </button>
               <button
                 onClick={() => setActiveTab('teams')}
-                className={`pb-[12px] text-[13px] font-medium border-b-2 transition-colors ${
+                className={`px-[12px] pb-[12px] text-[13px] font-medium border-b-2 transition-colors ${
                   activeTab === 'teams' 
                     ? 'text-[#1c2024] border-[#1c2024]' 
                     : 'text-[#60646c] border-transparent hover:text-[#1c2024]'
@@ -618,7 +619,7 @@ export function ShareCollectionModal({
                                 <p className="text-[11px] text-[#60646c]">{member.email}</p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-[8px] my-[12px] py-[12px]">
+                            <div className="flex items-center gap-[8px] mt-[4px] mb-[4px]">
                               <span className="text-[13px] text-[#60646c]">
                                 {member.role === 'full_access' ? 'Full access' : 'Viewer'}
                               </span>
@@ -747,7 +748,7 @@ export function ShareCollectionModal({
             <div className="mx-[24px] mb-[16px] p-[12px] bg-[#f0f7ff] border border-[#bfdbfe] rounded-[8px]">
               <p className="text-[12px] text-[#1e40af]">
                 📄 This collection contains <span className="font-semibold">{collection.documentCount} documents</span>
-                {collection.restrictedDocumentCount && collection.restrictedDocumentCount > 0 && (
+                {collection.restrictedDocumentCount !== undefined && collection.restrictedDocumentCount > 0 && (
                   <>
                     {'. '}
                     <span className="text-[#dc2626]">
@@ -767,14 +768,16 @@ export function ShareCollectionModal({
               onCopyLink?.();
               // Could show toast here
             }}
-            className="flex items-center gap-[8px] h-[36px] px-[12px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] rounded-[6px] transition-colors"
+            style={{ paddingLeft: '16px', paddingRight: '16px' }}
+            className="flex items-center gap-[8px] h-[36px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] rounded-[6px] transition-colors shrink-0"
           >
             <Link2 className="size-[16px] text-[#60646c]" />
             <span>Copy link</span>
           </button>
           <button
             onClick={onClose}
-            className="h-[36px] px-[20px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] transition-colors ml-[12px]"
+            style={{ paddingLeft: '20px', paddingRight: '20px' }}
+            className="h-[36px] border border-[#e0e1e6] rounded-[6px] text-[13px] text-[#1c2024] hover:bg-[#f9fafb] transition-colors ml-[12px] shrink-0"
           >
             Close
           </button>
