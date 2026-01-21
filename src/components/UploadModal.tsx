@@ -236,7 +236,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
             // Перевіряємо чи всі файли завантажені
             const allCompleted = updated.every(f => f.status === 'completed');
             if (allCompleted) {
-              handleUploadComplete();
+              handleUploadComplete(updated);
             }
           }
           return updated;
@@ -245,7 +245,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
     });
   };
 
-  const handleUploadComplete = () => {
+  const handleUploadComplete = (completedFiles: FileInfo[]) => {
     const metadataArray: FileMetadata[] = selectedFiles.map(file => {
       const meta = fileMetadata[file.name];
       if (meta) {
@@ -296,7 +296,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
       { duration: 6000 }
     );
     
-    onComplete(uploadedFiles, collectionIdsArray as string[], selectedOrganization, metadataArray);
+    onComplete(completedFiles, collectionIdsArray as string[], selectedOrganization, metadataArray);
     
     // Reset state
     setCurrentStep('select');

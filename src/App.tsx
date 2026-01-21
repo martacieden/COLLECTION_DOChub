@@ -1728,7 +1728,13 @@ function AIChatModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      // Маркер для інших компонентів: коли AI Assistant модалка відкрита,
+      // деякі sticky-елементи (наприклад BulkActionsBar) мають ховатись,
+      // щоб не "накладатись" поверх модалки.
+      data-ai-assistant-modal="true"
+    >
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/50" 
@@ -2719,7 +2725,11 @@ function generateCollectionDescription(
   count?: number
 ): string {
   const enabledRules = Array.isArray(rules) 
-    ? rules.filter((r): r is CollectionRule => typeof r !== 'string' && r.enabled && r.value?.trim())
+    ? rules.filter((r): r is CollectionRule => {
+        if (typeof r === 'string') return false;
+        if (!r.enabled) return false;
+        return Boolean(r.value && r.value.trim());
+      })
     : [];
 
   // If collection is empty
@@ -3116,7 +3126,32 @@ function CollectionCard({ title, organization, onClick, collectionId, sharedWith
   );
 }
 
-function CollectionsView({ onUploadClick, onNewCollectionClick, onCollectionClick, selectedOrganization, collections, onCreateCollectionFromAI, onDeleteCollection, documents, onCreateCollection }: { onUploadClick?: () => void; onNewCollectionClick?: () => void; onCollectionClick?: (collection: any) => void; selectedOrganization?: string; collections?: Collection[]; onCreateCollectionFromAI?: (suggestion: AISuggestion, selectedDocumentIds?: string[]) => void; onDeleteCollection?: (collectionId: string) => void; documents?: Document[]; onCreateCollection?: (name: string, description: string, rules: CollectionRule[]) => void }) {
+function CollectionsView({
+  onUploadClick,
+  onNewCollectionClick,
+  onCollectionClick,
+  selectedOrganization,
+  collections,
+  onCreateCollectionFromAI,
+  onDeleteCollection,
+  documents,
+  onCreateCollection,
+  onViewDocumentsFromAI,
+  onViewAnalyticsFromAI
+}: {
+  onUploadClick?: () => void;
+  onNewCollectionClick?: () => void;
+  onCollectionClick?: (collection: any) => void;
+  selectedOrganization?: string;
+  collections?: Collection[];
+  onCreateCollectionFromAI?: (suggestion: AISuggestion, selectedDocumentIds?: string[]) => void;
+  onDeleteCollection?: (collectionId: string) => void;
+  documents?: Document[];
+  onCreateCollection?: (name: string, description: string, rules: CollectionRule[]) => void;
+  // Передаємо наверх, бо тільки App знає як саме перемикати viewMode / aiFilter / analytics modal.
+  onViewDocumentsFromAI?: (documentIds: string[]) => void;
+  onViewAnalyticsFromAI?: (documents: Document[]) => void;
+}) {
   const [question, setQuestion] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   // Генеруємо suggestions динамічно на основі документів
@@ -3545,11 +3580,16 @@ const [aiModalInitialSearchResults, setAiModalInitialSearchResults] = useState<{
           } : undefined}
           initialSearchResults={aiModalInitialSearchResults || (aiSearchResults.length > 0 ? { query: question, documents: aiSearchResults } : undefined)}
           onViewDocuments={(docs) => {
-            handleViewDocumentsFromAI(docs.map(doc => doc.id || '').filter(Boolean));
+            const ids = docs.map(doc => doc.id || '').filter(Boolean);
+            if (onViewDocumentsFromAI) {
+              onViewDocumentsFromAI(ids);
+            }
             setIsModalOpen(false);
           }}
           onViewAnalytics={(docs) => {
-            handleViewAnalyticsFromAI(docs);
+            if (onViewAnalyticsFromAI) {
+              onViewAnalyticsFromAI(docs);
+            }
           }}
         />
       )}
@@ -3896,7 +3936,9 @@ const [aiModalInitialSearchResults, setAiModalInitialSearchResults] = useState<{
                     rules={collection.rules}
                     count={collection.count}
                     documents={documents}
-                    documentIds={collection.documentIds}
+                    // Частина UI працює з "моковими" колекціями, де тип не гарантує `documentIds`.
+                    // Для рендера нам достатньо передати масив або undefined.
+                    documentIds={(collection as any).documentIds}
                   />
                 </div>
               ))
@@ -3961,7 +4003,9 @@ function MainContent({
   availableTags,
   onUpdateDocumentTags,
   onUpdateDocumentAiTags,
-  onCreateTag
+  onCreateTag,
+  onViewDocumentsFromAI,
+  onViewAnalyticsFromAI
 }: { 
   viewMode: ViewMode; 
   aiFilter?: Set<string> | null;
@@ -3995,6 +4039,8 @@ function MainContent({
   onUpdateDocumentTags?: (documentId: string, tags: string[]) => void;
   onUpdateDocumentAiTags?: (documentId: string, aiTags: string[]) => void;
   onCreateTag?: (tag: string) => void;
+  onViewDocumentsFromAI?: (documentIds: string[]) => void;
+  onViewAnalyticsFromAI?: (documents: Document[]) => void;
 }) {
   // Якщо viewMode === 'collection-detail' але selectedCollection === null, це означає що ми повертаємося назад
   // В цьому випадку не відображаємо CollectionDetailView, а дозволяємо коду йти далі до CollectionsView
@@ -4120,6 +4166,8 @@ function MainContent({
     onDeleteCollection={onDeleteCollection}
     documents={documents}
     onCreateCollection={onCreateCollectionWithRules}
+    onViewDocumentsFromAI={onViewDocumentsFromAI}
+    onViewAnalyticsFromAI={onViewAnalyticsFromAI}
   />;
 }
 
@@ -6569,6 +6617,8 @@ export default function App() {
             onUpdateDocumentTags={handleUpdateDocumentTags}
             onUpdateDocumentAiTags={handleUpdateDocumentAiTags}
             onCreateTag={handleCreateTag}
+            onViewDocumentsFromAI={handleViewDocumentsFromAI}
+            onViewAnalyticsFromAI={handleViewAnalyticsFromAI}
           />
                   </div>
                   <div className="flex-shrink-0 flex-grow-0 border-l border-[#e8e8ec] overflow-hidden" style={{ width: '400px', minWidth: '400px', maxWidth: '400px' }}>
@@ -6612,6 +6662,8 @@ export default function App() {
                 onUpdateDocumentTags={handleUpdateDocumentTags}
                 onUpdateDocumentAiTags={handleUpdateDocumentAiTags}
                 onCreateTag={handleCreateTag}
+                onViewDocumentsFromAI={handleViewDocumentsFromAI}
+                onViewAnalyticsFromAI={handleViewAnalyticsFromAI}
               />
             )}
           </div>

@@ -265,7 +265,7 @@ function LinkedRecordTooltip({ linkedRecords }: { linkedRecords: string[] }) {
       {isVisible && (
         <div 
           ref={tooltipRef}
-          className="absolute bottom-[28px] right-0 bg-[#1c2024] text-white rounded-[8px] px-[12px] py-[10px] min-w-[260px] z-50 shadow-lg"
+          className="absolute bottom-[28px] right-0 bg-[#1c2024] text-white rounded-[8px] px-[12px] py-[10px] min-w-[160px] z-50 shadow-lg"
         >
           <p className="text-[12px] mb-[8px]">
             This person wasn't shared directly – they have access through linked records:
@@ -519,7 +519,7 @@ export function ShareCollectionModal({
           {/* Organization Access Toggle */}
           <div className="px-[24px] pb-[16px] mt-[16px]">
             <div 
-              className="flex items-center justify-between p-[16px] bg-[#f9fafb] rounded-[8px] cursor-pointer hover:bg-[#f0f0f3] transition-colors"
+              className="flex items-center justify-between p-[16px] bg-[#f9fafb] rounded-[8px] cursor-pointer hover:bg-[#f0f0f3] transition-colors mt-[12px]"
               onClick={handleOrgToggle}
             >
               <div className="flex items-center gap-[12px]">

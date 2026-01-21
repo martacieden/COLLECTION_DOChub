@@ -36,11 +36,27 @@ export function BulkActionsBar({
   onRename,
   onDownload
 }: BulkActionsBarProps) {
+  // Якщо відкрита AI Assistant модалка — ховаємо bulk-bar повністю.
+  // Причина: це sticky-елемент і навіть з низьким z-index може візуально “конкурувати”
+  // з модалкою (особливо при складних stacking context / transform у батьків).
+  // Ранній вихід = найпростіший і найнадійніший варіант.
+  if (typeof document !== 'undefined') {
+    const isAIAssistantModalOpen = Boolean(document.querySelector('[data-ai-assistant-modal="true"]'));
+    if (isAIAssistantModalOpen) {
+      return null;
+    }
+  }
+
   // Розрахувати top offset: FilterBar (56px) + QuickFilters (56px якщо є)
   const topOffset = hasQuickFilters ? 112 : 56;
 
   return (
-    <div className={`sticky px-[24px] pt-[8px] pb-[8px] bg-white`} style={{ top: `${topOffset}px`, zIndex: 100 }}>
+    <div
+      className="sticky px-[24px] pt-[8px] pb-[8px] bg-white z-20"
+      // Важливо: цей бар НЕ має перекривати модалки (які в нас зазвичай z-50 / z-[100]).
+      // Тому залишаємо йому низький z-index (z-20) і керуємо тільки top через inline-style.
+      style={{ top: `${topOffset}px` }}
+    >
       <div className="bg-[#f0f0f3] border border-[#e0e1e6] rounded-[8px] px-[24px] py-[12px] flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-[12px]">
           <span className="text-[13px] text-[#1c2024]">{selectedCount} selected</span>
