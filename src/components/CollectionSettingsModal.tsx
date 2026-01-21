@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Trash2, Plus, Sparkles, Loader2 } from 'lucide-react';
+import { TagInput } from './ui/tag-input';
 import { toast } from 'sonner';
 import { generateCollectionRules, type CollectionRule } from '../services/aiRulesGenerator';
 
@@ -45,10 +46,35 @@ function matchDocumentToRules(document: any, rules: CollectionRule[]): boolean {
         
       case 'tags':
         const docTags = (document.tags || []).map((t: string) => t.toLowerCase());
-        if (rule.operator === 'contains') {
-          return docTags.some((tag: string) => tag.includes(ruleValue));
+        const ruleValueTags = ruleValue.split(',').map((t: string) => t.trim().toLowerCase()).filter(Boolean);
+        
+        if (ruleValueTags.length === 0) return false;
+
+        if (rule.operator === 'contains' || rule.operator === 'contains_any') {
+          return ruleValueTags.some((tag: string) => 
+            docTags.some((docTag: string) => docTag.toLowerCase().includes(tag)) ||
+            (document.name || '').toLowerCase().includes(tag) ||
+            (document.description || '').toLowerCase().includes(tag)
+          );
         }
-        return docTags.includes(ruleValue);
+        if (rule.operator === 'contains_all') {
+          return ruleValueTags.every((tag: string) => 
+            docTags.some((docTag: string) => docTag.toLowerCase().includes(tag)) ||
+            (document.name || '').toLowerCase().includes(tag) ||
+            (document.description || '').toLowerCase().includes(tag)
+          );
+        }
+        if (rule.operator === 'is' || rule.operator === 'equals') {
+          return ruleValueTags.some((tag: string) => docTags.some((docTag: string) => docTag.toLowerCase() === tag));
+        }
+        if (rule.operator === 'not') {
+          return !ruleValueTags.some((tag: string) => 
+            docTags.some((docTag: string) => docTag.toLowerCase().includes(tag)) ||
+            (document.name || '').toLowerCase().includes(tag) ||
+            (document.description || '').toLowerCase().includes(tag)
+          );
+        }
+        return false;
         
       case 'client':
         const docOrg = (document.organization || '').toLowerCase();
@@ -56,17 +82,6 @@ function matchDocumentToRules(document: any, rules: CollectionRule[]): boolean {
           return docOrg.includes(ruleValue);
         }
         return docOrg === ruleValue;
-        
-      case 'keywords':
-        const searchableText = [
-          document.name || '',
-          document.description || '',
-          document.category || ''
-        ].join(' ').toLowerCase();
-        if (rule.operator === 'contains') {
-          return searchableText.includes(ruleValue);
-        }
-        return searchableText === ruleValue;
         
       case 'vendor':
         const docVendor = (document.vendor || '').toLowerCase();
@@ -130,6 +145,36 @@ export function CollectionSettingsModal({
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
+  
+  // Отримуємо список тегів (з усіх документів)
+  const tagOptions = useMemo(() => {
+    const docTags = (documents || []).flatMap(doc => doc.tags || []).filter(Boolean);
+    return [...new Set(docTags)].sort();
+  }, [documents]);
+
+  // Отримуємо список категорій документів (з усіх документів)
+  const categoryOptions = useMemo(() => {
+    const categories = [...new Set((documents || []).map(d => d.category).filter(Boolean))].sort();
+    return categories;
+  }, [documents]);
+
+  // Отримуємо список організацій
+  const organizationOptions = useMemo(() => {
+    const orgs = [...new Set((documents || []).map(d => d.organization).filter(Boolean))].sort();
+    return orgs;
+  }, [documents]);
+
+  // Отримуємо список форматів файлів
+  const fileTypeOptions = useMemo(() => {
+    const fileTypes = [...new Set((documents || []).map(d => d.type).filter(Boolean))].sort();
+    return fileTypes;
+  }, [documents]);
+
+  // Отримуємо список вендорів
+  const vendorOptions = useMemo(() => {
+    const vendors = [...new Set((documents || []).map(d => d.vendor).filter(Boolean))].sort();
+    return vendors;
+  }, [documents]);
   
   // Rules state
   const [rules, setRules] = useState<CollectionRule[]>(() => {
@@ -279,8 +324,8 @@ export function CollectionSettingsModal({
   const addNewRule = () => {
     const newRule: CollectionRule = {
       id: `rule-${Date.now()}`,
-      type: 'keywords',
-      label: 'Contains keywords',
+      type: 'document_type',
+      label: 'Document category',
       value: '',
       operator: 'contains',
       enabled: true,
@@ -550,7 +595,6 @@ export function CollectionSettingsModal({
                             <option value="document_type">Document category</option>
                             <option value="tags">Tags</option>
                             <option value="client">Client</option>
-                            <option value="keywords">Keywords</option>
                             <option value="date_range">Date range</option>
                             <option value="vendor">Vendor</option>
                             <option value="file_type">File format</option>
@@ -565,11 +609,94 @@ export function CollectionSettingsModal({
                           >
                             <option value="is">is</option>
                             <option value="contains">contains</option>
+                            <option value="contains_any">contains any of</option>
+                            <option value="contains_all">contains all of</option>
                             <option value="equals">equals</option>
                             <option value="not">is not</option>
                           </select>
 
-                          {/* Value input */}
+                          {/* Value Input/Select */}
+                          {rule.type === 'tags' && (rule.operator === 'contains_any' || rule.operator === 'contains_all') ? (
+                            <div className="flex-1 min-w-0">
+                              <TagInput
+                                tags={rule.value ? rule.value.split(',').map(v => v.trim()).filter(Boolean) : []}
+                                onChange={(newTags) => updateRuleValue(rule.id, newTags.join(','))}
+                                availableTags={tagOptions}
+                                placeholder="Add tags..."
+                                className="w-full"
+                              />
+                            </div>
+                          ) : rule.type === 'document_type' && (rule.operator === 'contains_any' || rule.operator === 'contains_all') ? (
+                            <div className="flex-1 min-w-0">
+                              <TagInput
+                                tags={rule.value ? rule.value.split(',').map(v => v.trim()).filter(Boolean) : []}
+                                onChange={(newTags) => updateRuleValue(rule.id, newTags.join(','))}
+                                availableTags={categoryOptions}
+                                placeholder="Add categories..."
+                                className="w-full"
+                              />
+                            </div>
+                          ) : rule.type === 'document_type' ? (
+                            <select
+                              value={rule.value}
+                              onChange={(e) => updateRuleValue(rule.id, e.target.value)}
+                              className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
+                              style={{ minWidth: 0 }}
+                            >
+                              <option value="">Select category...</option>
+                              {categoryOptions.map(category => (
+                                <option key={category} value={category}>{category}</option>
+                              ))}
+                            </select>
+                          ) : rule.type === 'client' || rule.type === 'organization' ? (
+                            <select
+                              value={rule.value}
+                              onChange={(e) => updateRuleValue(rule.id, e.target.value)}
+                              className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
+                              style={{ minWidth: 0 }}
+                            >
+                              <option value="">Select {rule.type === 'client' ? 'client' : 'organization'}...</option>
+                              {organizationOptions.map(org => (
+                                <option key={org} value={org}>{org}</option>
+                              ))}
+                            </select>
+                          ) : rule.type === 'vendor' ? (
+                            <select
+                              value={rule.value}
+                              onChange={(e) => updateRuleValue(rule.id, e.target.value)}
+                              className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
+                              style={{ minWidth: 0 }}
+                            >
+                              <option value="">Select vendor...</option>
+                              {vendorOptions.map(vendor => (
+                                <option key={vendor} value={vendor}>{vendor}</option>
+                              ))}
+                            </select>
+                          ) : rule.type === 'file_type' ? (
+                            <select
+                              value={rule.value}
+                              onChange={(e) => updateRuleValue(rule.id, e.target.value)}
+                              className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
+                              style={{ minWidth: 0 }}
+                            >
+                              <option value="">Select file format...</option>
+                              {fileTypeOptions.map(ft => (
+                                <option key={ft} value={ft}>{ft}</option>
+                              ))}
+                            </select>
+                          ) : rule.type === 'tags' ? (
+                            <select
+                              value={rule.value}
+                              onChange={(e) => updateRuleValue(rule.id, e.target.value)}
+                              className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
+                              style={{ minWidth: 0 }}
+                            >
+                              <option value="">Select tag...</option>
+                              {tagOptions.map(tag => (
+                                <option key={tag} value={tag}>{tag}</option>
+                              ))}
+                            </select>
+                          ) : (
                           <input
                             type="text"
                             value={rule.value}
@@ -577,6 +704,7 @@ export function CollectionSettingsModal({
                             placeholder="Value"
                             className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
                           />
+                          )}
 
                           {/* Delete button */}
                           <button

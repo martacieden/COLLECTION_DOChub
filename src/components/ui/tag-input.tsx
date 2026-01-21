@@ -1,4 +1,5 @@
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { X, Plus, Sparkles } from "lucide-react";
 import { cn } from "./utils";
 
@@ -28,8 +29,34 @@ export function TagInput({
   const [inputValue, setInputValue] = React.useState("");
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
   const [highlightedIndex, setHighlightedIndex] = React.useState(0);
+  const [dropdownPosition, setDropdownPosition] = React.useState({ top: 0, left: 0, width: 0 });
+  const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  // Оновлюємо позицію випадаючого списку
+  const updateDropdownPosition = () => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width
+      });
+    }
+  };
+
+  React.useEffect(() => {
+    if (isDropdownOpen) {
+      updateDropdownPosition();
+      window.addEventListener('resize', updateDropdownPosition);
+      window.addEventListener('scroll', updateDropdownPosition, true);
+    }
+    return () => {
+      window.removeEventListener('resize', updateDropdownPosition);
+      window.removeEventListener('scroll', updateDropdownPosition, true);
+    };
+  }, [isDropdownOpen]);
 
   // Фільтруємо доступні теги: ті, що ще не вибрані та містять введений текст
   const filteredTags = availableTags.filter(
@@ -123,6 +150,7 @@ export function TagInput({
   };
 
   const handleFocus = () => {
+    updateDropdownPosition();
     setIsDropdownOpen(true);
   };
 
@@ -132,8 +160,8 @@ export function TagInput({
       if (
         dropdownRef.current && 
         !dropdownRef.current.contains(event.target as Node) &&
-        inputRef.current &&
-        !inputRef.current.contains(event.target as Node)
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
       ) {
         setIsDropdownOpen(false);
       }
@@ -151,7 +179,7 @@ export function TagInput({
   const hasAnyTags = tags.length > 0 || aiTags.length > 0;
 
   return (
-    <div className="relative">
+    <div className="relative w-full" ref={containerRef}>
       <div 
         className={cn(
           "flex flex-wrap gap-[6px] px-[12px] py-[6px] border border-[#e0e1e6] rounded-[8px] bg-white min-h-[36px] focus-within:ring-2 focus-within:ring-[#005be2] focus-within:border-transparent transition-all",
@@ -219,11 +247,16 @@ export function TagInput({
         />
       </div>
 
-      {/* Dropdown */}
-      {isDropdownOpen && (filteredTags.length > 0 || showCreateOption) && (
+      {/* Dropdown with Portal */}
+      {isDropdownOpen && (filteredTags.length > 0 || showCreateOption) && typeof window !== 'undefined' && createPortal(
         <div 
           ref={dropdownRef}
-          className="absolute top-full left-0 right-0 mt-[4px] bg-white border border-[#e0e1e6] rounded-[8px] shadow-lg z-50 py-[4px] max-h-[120px] overflow-y-auto"
+          className="fixed bg-white border border-[#e8e8ec] rounded-[8px] shadow-xl py-[4px] max-h-[200px] overflow-y-auto z-[9999]"
+          style={{ 
+            top: `${dropdownPosition.top + 4}px`,
+            left: `${dropdownPosition.left}px`,
+            width: `${dropdownPosition.width}px`
+          }}
         >
           {/* Existing Tags */}
           {filteredTags.map((tag, index) => (
@@ -232,7 +265,7 @@ export function TagInput({
               type="button"
               onClick={() => addTag(tag)}
               className={cn(
-                "w-full px-[12px] py-[6px] text-left text-[13px] text-[#1c2024] transition-colors flex items-center gap-[8px]",
+                "w-full px-[12px] py-[8px] text-left text-[13px] text-[#1c2024] transition-colors flex items-center gap-[8px]",
                 highlightedIndex === index 
                   ? "bg-[#f0f7ff]" 
                   : "hover:bg-[#f9fafb]"
@@ -250,7 +283,7 @@ export function TagInput({
               type="button"
               onClick={() => addTag(inputValue.trim())}
               className={cn(
-                "w-full px-[12px] py-[6px] text-left text-[13px] transition-colors flex items-center gap-[8px]",
+                "w-full px-[12px] py-[8px] text-left text-[13px] transition-colors flex items-center gap-[8px]",
                 highlightedIndex === filteredTags.length 
                   ? "bg-[#f0f7ff]" 
                   : "hover:bg-[#f9fafb]"
@@ -263,7 +296,8 @@ export function TagInput({
               </span>
             </button>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

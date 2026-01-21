@@ -4,6 +4,8 @@ import { X, Plus, Trash2, Sparkles, Loader2, RotateCcw, Info } from 'lucide-reac
 import { toast } from 'sonner';
 import { generateCollectionRules, enhanceCollectionText, type CollectionRule } from '../services/aiRulesGenerator';
 
+import { TagInput } from './ui/tag-input';
+
 interface Organization {
   id: string;
   name: string;
@@ -78,6 +80,8 @@ const ruleTypeOptions = [
 const operatorOptions = [
   { value: 'is', label: 'is' },
   { value: 'contains', label: 'contains' },
+  { value: 'contains_any', label: 'contains any of' },
+  { value: 'contains_all', label: 'contains all of' },
   { value: 'equals', label: 'equals' },
   { value: 'not', label: 'is not' },
 ];
@@ -468,7 +472,25 @@ export function RulesEditorModal({
                 return (doc.category || '').toLowerCase().includes(ruleValue);
               }
               if (rule.type === 'tags') {
-                return (doc.tags || []).some(tag => tag.toLowerCase().includes(ruleValue));
+                const docTags = (doc.tags || []).map(t => t.toLowerCase());
+                const ruleTags = rule.value.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+                if (ruleTags.length === 0) return false;
+                
+                if (rule.operator === 'contains' || rule.operator === 'contains_any') {
+                  return ruleTags.some(tag => 
+                    docTags.some(docTag => docTag.includes(tag)) ||
+                    (doc.name || '').toLowerCase().includes(tag) ||
+                    (doc.description || '').toLowerCase().includes(tag)
+                  );
+                }
+                if (rule.operator === 'contains_all') {
+                  return ruleTags.every(tag => 
+                    docTags.some(docTag => docTag.includes(tag)) ||
+                    (doc.name || '').toLowerCase().includes(tag) ||
+                    (doc.description || '').toLowerCase().includes(tag)
+                  );
+                }
+                return docTags.some(tag => tag.includes(ruleValue));
               }
               if (rule.type === 'client') {
                 return (doc.organization || '').toLowerCase().includes(ruleValue);
@@ -829,6 +851,16 @@ export function RulesEditorModal({
                                     <option key={org} value={org}>{org}</option>
                                   ))}
                                 </select>
+                              ) : rule.type === 'document_type' && (rule.operator === 'contains_any' || rule.operator === 'contains_all') ? (
+                                <div className="flex-1 min-w-0">
+                                  <TagInput
+                                    tags={rule.value ? rule.value.split(',').map(v => v.trim()).filter(Boolean) : []}
+                                    onChange={(newTags) => updateRuleValue(rule.id, newTags.join(','))}
+                                    availableTags={categoryOptions}
+                                    placeholder="Add categories..."
+                                    className="w-full"
+                                  />
+                                </div>
                               ) : rule.type === 'document_type' ? (
                                 <select
                                   value={rule.value}
@@ -842,17 +874,29 @@ export function RulesEditorModal({
                                   ))}
                                 </select>
                               ) : rule.type === 'tags' ? (
-                                <select
-                                  value={rule.value}
-                                  onChange={(e) => updateRuleValue(rule.id, e.target.value)}
-                                  className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] flex-1"
-                                  style={{ minWidth: 0 }}
-                                >
-                                  <option value="">Select tag...</option>
-                                  {tagOptions.map(tag => (
-                                    <option key={tag} value={tag}>{tag}</option>
-                                  ))}
-                                </select>
+                                <div className="flex-1 min-w-0">
+                                  {rule.operator === 'contains_any' || rule.operator === 'contains_all' ? (
+                                    <TagInput
+                                      tags={rule.value ? rule.value.split(',').filter(Boolean) : []}
+                                      onChange={(newTags) => updateRuleValue(rule.id, newTags.join(','))}
+                                      availableTags={tagOptions}
+                                      placeholder="Add tags..."
+                                      className="w-full"
+                                    />
+                                  ) : (
+                                    <select
+                                      value={rule.value}
+                                      onChange={(e) => updateRuleValue(rule.id, e.target.value)}
+                                      className="h-[40px] px-[12px] border border-[#e0e1e6] rounded-[8px] text-[13px] text-[#1c2024] bg-white focus:outline-none focus:ring-2 focus:ring-[#005be2] w-full"
+                                      style={{ minWidth: 0 }}
+                                    >
+                                      <option value="">Select tag...</option>
+                                      {tagOptions.map(tag => (
+                                        <option key={tag} value={tag}>{tag}</option>
+                                      ))}
+                                    </select>
+                                  )}
+                                </div>
                         ) : rule.type === 'file_type' ? (
                           <select
                             value={rule.value}

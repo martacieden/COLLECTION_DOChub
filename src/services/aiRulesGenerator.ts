@@ -5,10 +5,10 @@ import { GoogleGenAI, Type } from '@google/genai';
 
 export interface CollectionRule {
   id: string;
-  type: 'document_type' | 'tags' | 'client' | 'keywords' | 'date_range' | 'vendor';
+  type: 'document_type' | 'tags' | 'client' | 'date_range' | 'vendor';
   label: string;
   value: string;
-  operator: 'is' | 'contains' | 'equals' | 'not';
+  operator: 'is' | 'contains' | 'equals' | 'not' | 'contains_any' | 'contains_all';
   enabled: boolean;
 }
 
@@ -86,21 +86,16 @@ AVAILABLE RULE TYPES:
    Use for semantic document categories found in NAME like: Invoice, Permit, Contract, Agreement, Change Order, Lien Waiver, Blueprint
    Example: "Invoice" matches "Invoice #1247 - Electrical Work Phase 1"
 
-2. keywords - Searches: Name + Description
-   Use for specific terms: project names, work types, locations
-   Example: "Oak Street" matches docs with "Oak Street" in name or description
-   Example: "electrical" matches "Invoice #1247 - Electrical Work"
-
-3. client - Searches: Organization column
+2. client - Searches: Organization column
    Use for family offices/trusts: "Smith Family", "Johnson Family Trust", "Summation Partners"
    
-4. vendor - Searches: Organization, Name, Description, Uploaded by
+3. vendor - Searches: Organization, Name, Description, Uploaded by
    Use for company names: "Studio XYZ", "ABC Plumbing"
 
-5. date_range - Searches: Uploaded on column
+4. date_range - Searches: Uploaded on column
    Use for dates/years: "2024", "Nov", "December"
 
-6. tags - Searches: document tags (not visible in table but stored)
+5. tags - Searches: document tags (not visible in table but stored)
    Common tags: Construction, Architecture, Permits, Contract, Executed
 
 OPERATORS: Use "contains" for flexibility, "is" for exact match, "not" to exclude
@@ -114,13 +109,13 @@ EXAMPLES:
 
 "Oak Street invoices from 2024" →
   document_type CONTAINS "Invoice"
-  keywords CONTAINS "Oak Street"
+  document_type CONTAINS "Oak Street"
   date_range CONTAINS "2024"
 
 "PDF invoices from Johnson family about electrical work for 2025" →
   document_type CONTAINS "Invoice"
   client CONTAINS "Johnson"
-  keywords CONTAINS "electrical"
+  document_type CONTAINS "electrical"
   date_range CONTAINS "2025"
   (Note: PDF is ignored - it's a file format, not a filter)
 
@@ -129,9 +124,9 @@ RULES:
 2. Typical criteria to look for:
    - Document category (invoice, permit, contract, etc.) → document_type
    - Family/company name → client
-   - Project/location name → keywords
+   - Project/location name → document_type
    - Year or date → date_range
-   - Specific terms/topics → keywords
+   - Specific terms/topics → document_type
 3. Use "contains" operator for all rules
 4. IGNORE file formats like PDF, DOCX, XLSX - do not create rules for them
 5. All rules: enabled=true
@@ -171,7 +166,7 @@ Generate the best filtering rules for this collection.`;
                     id: { type: Type.STRING },
                     type: {
                       type: Type.STRING,
-                      enum: ['document_type', 'tags', 'client', 'keywords', 'date_range', 'vendor']
+                      enum: ['document_type', 'tags', 'client', 'date_range', 'vendor']
                     },
                     label: { type: Type.STRING },
                     value: { type: Type.STRING },
@@ -481,13 +476,13 @@ export async function generateCollectionFromDocuments(
   const organizations = [...new Set(request.documents.map(d => d.organization).filter(Boolean))];
   const categories = [...new Set(request.documents.map(d => d.category).filter(Boolean))];
   
-  // Extract common keywords from document names
+  // Extract common patterns from document names
   const documentNames = request.documents.map(d => d.name).slice(0, 10); // Limit to first 10 for context
 
   const systemPrompt = `You are an AI assistant for a family office document management system. A user has selected ${request.documents.length} documents and wants to create a collection that groups similar documents.
 
 YOUR TASK:
-1. Analyze the selected documents and identify common patterns (document types, categories, organizations, tags, keywords)
+1. Analyze the selected documents and identify common patterns (document types, categories, organizations, tags)
 2. Generate a clear, concise collection title (max 60 characters)
 3. Generate a detailed description explaining what this collection contains
 4. Generate filtering rules that would match these documents and similar ones
@@ -496,7 +491,6 @@ AVAILABLE RULE TYPES:
 - document_type: Document category (Invoice, Permit, Contract, etc.)
 - tags: Document tags
 - client: Organization/Client name
-- keywords: Specific terms in document names
 - date_range: Date/year filters
 - vendor: Vendor/company names
 
@@ -555,7 +549,7 @@ Generate a collection title, description, and filtering rules that would match t
                     id: { type: Type.STRING },
                     type: {
                       type: Type.STRING,
-                      enum: ['document_type', 'tags', 'client', 'keywords', 'date_range', 'vendor']
+                      enum: ['document_type', 'tags', 'client', 'date_range', 'vendor']
                     },
                     label: { type: Type.STRING },
                     value: { type: Type.STRING },
@@ -664,7 +658,6 @@ export function getRuleTypeLabel(type: CollectionRule['type']): string {
     document_type: 'Document category',
     tags: 'Tags',
     client: 'Client',
-    keywords: 'Contains keywords',
     date_range: 'Date range',
     vendor: 'Vendor',
   };

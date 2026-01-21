@@ -5,10 +5,10 @@ import { Checkbox } from './ui/checkbox';
 
 interface CollectionRule {
   id: string;
-  type: 'document_type' | 'tags' | 'client' | 'keywords' | 'date_range' | 'vendor';
+  type: 'document_type' | 'tags' | 'client' | 'keywords' | 'date_range' | 'vendor' | 'file_type' | 'organization';
   label: string;
   value: string;
-  operator: 'is' | 'contains' | 'equals' | 'not';
+  operator: 'is' | 'contains' | 'equals' | 'not' | 'contains_any' | 'contains_all';
   enabled: boolean;
 }
 

@@ -41,7 +41,7 @@ interface CollectionRule {
   type: 'document_type' | 'tags' | 'client' | 'keywords' | 'date_range' | 'vendor' | 'file_type' | 'organization';
   label: string;
   value: string;
-  operator: 'is' | 'contains' | 'equals' | 'not';
+  operator: 'is' | 'contains' | 'equals' | 'not' | 'contains_any' | 'contains_all';
   enabled: boolean;
 }
 
@@ -256,7 +256,8 @@ const mockDocuments: Document[] = [
     organization: 'Summation Partners',
     collectionIds: ['1'], // Oak Street Renovation
     tags: ['Construction', 'Architecture'],
-    aiTags: ['renovation', 'blueprint'] // AI-запропоновані теги
+    aiTags: ['renovation', 'blueprint'], // AI-запропоновані теги
+    category: 'Blueprint'
   },
   {
     id: 'DOC-002',
@@ -273,7 +274,8 @@ const mockDocuments: Document[] = [
     collectionIds: ['1', '3'], // Oak Street Renovation, Permits & Approvals
     tags: ['Permits', 'Oak Street'],
     aiTags: ['permit', 'construction'], // AI-запропоновані теги
-    signatureStatus: 'Signed'
+    signatureStatus: 'Signed',
+    category: 'Permit'
   },
   {
     id: 'DOC-003',
@@ -290,7 +292,8 @@ const mockDocuments: Document[] = [
     collectionIds: ['1', '2'], // Oak Street Renovation, Executed Contracts
     tags: ['Executed', 'Oak Street'],
     aiTags: ['contract', 'legal'], // AI-запропоновані теги
-    signatureStatus: 'Signed'
+    signatureStatus: 'Signed',
+    category: 'Contract'
   },
   {
     id: 'doc-2',
@@ -320,7 +323,8 @@ const mockDocuments: Document[] = [
     status: 'Waiting for Signature',
     uploadedBy: 'Joan Zhao',
     uploadedOn: 'Dec 2, 2024',
-    organization: 'Smith Family'
+    organization: 'Smith Family',
+    category: 'Change Order'
   },
   {
     id: 'doc-4',
@@ -333,7 +337,8 @@ const mockDocuments: Document[] = [
     status: 'Waiting for Signature',
     uploadedBy: 'Michael Chen',
     uploadedOn: 'Dec 3, 2024',
-    organization: 'Johnson Family Trust'
+    organization: 'Johnson Family Trust',
+    category: 'Lien Waiver'
   },
   {
     id: 'doc-5',
@@ -346,7 +351,8 @@ const mockDocuments: Document[] = [
     status: 'In Review',
     uploadedBy: 'Sarah Miller',
     uploadedOn: 'Nov 30, 2024',
-    organization: 'Summation Partners'
+    organization: 'Summation Partners',
+    category: 'Permit'
   },
   {
     id: 'doc-6',
@@ -359,7 +365,8 @@ const mockDocuments: Document[] = [
     status: 'Approved',
     uploadedBy: 'Joan Zhao',
     uploadedOn: 'Nov 15, 2024',
-    organization: "Herwitz's Family"
+    organization: "Herwitz's Family",
+    category: 'Survey'
   },
   {
     id: 'doc-7',
@@ -388,7 +395,8 @@ const mockDocuments: Document[] = [
     status: 'Waiting for Signature',
     uploadedBy: 'Michael Chen',
     uploadedOn: 'Dec 2, 2024',
-    organization: 'Wayne Estate Management'
+    organization: 'Wayne Estate Management',
+    category: 'Lien Waiver'
   },
   {
     id: 'doc-9',
@@ -401,7 +409,8 @@ const mockDocuments: Document[] = [
     status: 'Signed',
     uploadedBy: 'Sarah Miller',
     uploadedOn: 'Nov 10, 2024',
-    organization: 'The Robertson Foundation'
+    organization: 'The Robertson Foundation',
+    category: 'Contract'
   },
   {
     id: 'doc-10',
@@ -414,7 +423,8 @@ const mockDocuments: Document[] = [
     status: 'Approved',
     uploadedBy: 'Joan Zhao',
     uploadedOn: 'Nov 5, 2024',
-    organization: 'Wayne Estate Management'
+    organization: 'Wayne Estate Management',
+    category: 'Permit'
   },
   {
     id: 'doc-11',
@@ -427,7 +437,8 @@ const mockDocuments: Document[] = [
     status: 'Waiting for Signature',
     uploadedBy: 'David Park',
     uploadedOn: 'Dec 1, 2024',
-    organization: "Herwitz's Family"
+    organization: "Herwitz's Family",
+    category: 'Change Order'
   },
   {
     id: 'doc-12',
@@ -456,7 +467,8 @@ const mockDocuments: Document[] = [
     status: 'Signed',
     uploadedBy: 'Sarah Miller',
     uploadedOn: 'Nov 2, 2024',
-    organization: 'Wayne Estate Management'
+    organization: 'Wayne Estate Management',
+    category: 'Lien Waiver'
   },
   {
     id: 'doc-14',
@@ -469,7 +481,8 @@ const mockDocuments: Document[] = [
     status: 'Active',
     uploadedBy: 'Joan Zhao',
     uploadedOn: 'Oct 15, 2024',
-    organization: 'The Robertson Foundation'
+    organization: 'The Robertson Foundation',
+    category: 'Insurance'
   },
   {
     id: 'doc-15',
@@ -4855,31 +4868,34 @@ function checkRuleMatch(document: Document, rule: CollectionRule): boolean {
         return false;
         
       case 'tags':
-        const docTags = document.tags || [];
-        const ruleTags = rule.value.split(',').map(t => t.trim().toLowerCase());
-        if (rule.operator === 'contains') {
+        const docTags = (document.tags || []).map(t => t.toLowerCase());
+        const ruleTags = rule.value.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+        
+        if (ruleTags.length === 0) return false;
+
+        if (rule.operator === 'contains' || rule.operator === 'contains_any') {
           return ruleTags.some(tag => 
             docTags.some(docTag => docTag.toLowerCase().includes(tag)) ||
             document.name.toLowerCase().includes(tag) ||
-            document.description?.toLowerCase().includes(tag)
+            (document.description || '').toLowerCase().includes(tag)
+          );
+        }
+        if (rule.operator === 'contains_all') {
+          return ruleTags.every(tag => 
+            docTags.some(docTag => docTag.toLowerCase().includes(tag)) ||
+            document.name.toLowerCase().includes(tag) ||
+            (document.description || '').toLowerCase().includes(tag)
           );
         }
         if (rule.operator === 'is' || rule.operator === 'equals') {
           return ruleTags.some(tag => docTags.some(docTag => docTag.toLowerCase() === tag));
         }
-        return false;
-        
-      case 'keywords':
-        const keyword = rule.value.toLowerCase();
-        const searchText = `${document.name} ${document.description || ''}`.toLowerCase();
-        if (rule.operator === 'contains') {
-          return searchText.includes(keyword);
-        }
-        if (rule.operator === 'is' || rule.operator === 'equals') {
-          return searchText === keyword || document.name.toLowerCase() === keyword;
-        }
         if (rule.operator === 'not') {
-          return !searchText.includes(keyword);
+          return !ruleTags.some(tag => 
+            docTags.some(docTag => docTag.toLowerCase().includes(tag)) ||
+            document.name.toLowerCase().includes(tag) ||
+            (document.description || '').toLowerCase().includes(tag)
+          );
         }
         return false;
         
@@ -5076,6 +5092,74 @@ export default function App() {
   
   // State для зберігання колекцій - збереження в localStorage
   const [collections, setCollections] = useState<Collection[]>(() => {
+    // Функція для парсингу legacy правила в CollectionRule
+    const parseLegacyRule = (ruleString: string, colId: string, idx: number): CollectionRule => {
+      const lowerRule = ruleString.toLowerCase();
+      let type: CollectionRule['type'] = 'document_type';
+      let operator: CollectionRule['operator'] = 'contains';
+      let value = ruleString;
+      let label = 'Rule';
+      
+      // Парсимо формат "X is any of Y, Z" або "X = Y"
+      if (lowerRule.includes(' is any of ')) {
+        const parts = ruleString.split(' is any of ');
+        const leftPart = (parts[0] || '').toLowerCase().trim();
+        value = (parts[1] || '').trim();
+        operator = 'contains_any';
+        
+        // Визначаємо тип на основі лівої частини
+        if (leftPart.includes('category') || leftPart.includes('document type')) {
+          type = 'document_type';
+          label = 'Document category';
+        } else if (leftPart.includes('status')) {
+          type = 'document_type'; // Status поки що як document_type
+          label = 'Status';
+        } else if (leftPart.includes('tag')) {
+          type = 'tags';
+          label = 'Tags';
+        }
+      } else if (lowerRule.includes(' = ')) {
+        const parts = ruleString.split(' = ');
+        const leftPart = (parts[0] || '').toLowerCase().trim();
+        value = (parts[1] || '').trim();
+        operator = 'equals';
+        
+        // Визначаємо тип на основі лівої частини
+        if (leftPart.includes('category') || leftPart.includes('document type')) {
+          type = 'document_type';
+          label = 'Document category';
+        } else if (leftPart.includes('project')) {
+          type = 'document_type'; // Project зберігаємо як document_type
+          label = 'Project';
+        } else if (leftPart.includes('status')) {
+          type = 'document_type';
+          label = 'Status';
+        } else if (leftPart.includes('file type')) {
+          type = 'file_type';
+          label = 'File format';
+        } else if (leftPart.includes('vendor')) {
+          type = 'vendor';
+          label = 'Vendor';
+        } else if (leftPart.includes('party type')) {
+          type = 'organization';
+          label = 'Organization';
+        }
+      } else if (lowerRule.includes('date is within') || lowerRule.includes('date range')) {
+        type = 'date_range';
+        operator = 'contains';
+        label = 'Date range';
+      }
+      
+      return {
+        id: `rule-${colId}-${idx}`,
+        type,
+        label,
+        value,
+        operator,
+        enabled: true
+      };
+    };
+    
     // Спочатку пробуємо завантажити з localStorage
     try {
       const savedCollections = localStorage.getItem('way2b1_collections');
@@ -5086,14 +5170,9 @@ export default function App() {
           // Якщо є збережені колекції, об'єднуємо з mock даними (mock не перезаписуємо)
           const mockCollections = allCollections.map(col => {
             // Конвертуємо legacy rules в CollectionRule формат
-            const convertedRules: CollectionRule[] = col.rules ? col.rules.map((rule, idx) => ({
-              id: `rule-${col.id}-${idx}`,
-              type: 'keywords' as const,
-              label: 'Rule',
-              value: rule,
-              operator: 'contains' as const,
-              enabled: true
-            })) : [];
+            const convertedRules: CollectionRule[] = col.rules ? col.rules.map((rule, idx) => 
+              parseLegacyRule(rule, col.id, idx)
+            ) : [];
             
             // Обчислюємо documentIds на основі правил
             let docIds: string[] = [];
@@ -5175,14 +5254,9 @@ export default function App() {
     // Заповнюємо documentIds на основі правил колекцій
     return allCollections.map(col => {
       // Конвертуємо legacy rules в CollectionRule формат
-      const convertedRules: CollectionRule[] = col.rules ? col.rules.map((rule, idx) => ({
-        id: `rule-${col.id}-${idx}`,
-        type: 'keywords' as const,
-        label: 'Rule',
-        value: rule,
-        operator: 'contains' as const,
-        enabled: true
-      })) : [];
+      const convertedRules: CollectionRule[] = col.rules ? col.rules.map((rule, idx) => 
+        parseLegacyRule(rule, col.id, idx)
+      ) : [];
       
       // Обчислюємо documentIds на основі правил
       let docIds: string[] = [];
