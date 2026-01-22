@@ -917,6 +917,137 @@ function FileIcon({ type }: { type: string }) {
 }
 
 // ========================================
+// SEARCH RESULTS DROPDOWN
+// ========================================
+
+interface SearchResult {
+  id: string;
+  type: 'collection' | 'document';
+  title: string;
+  subtitle?: string;
+  icon?: string;
+}
+
+function SearchResultsDropdown({
+  collections,
+  documents,
+  onCollectionClick,
+  onDocumentClick,
+  inputValue
+}: {
+  collections: Collection[];
+  documents: Document[];
+  onCollectionClick?: (collection: Collection) => void;
+  onDocumentClick?: (document: Document) => void;
+  inputValue: string;
+}) {
+  if (inputValue.trim().length < 2) {
+    return null;
+  }
+
+  const lowerQuery = inputValue.toLowerCase();
+  
+  // Пошук по колекціях
+  const matchedCollections = collections.filter(collection => {
+    const title = (collection.title || '').toLowerCase();
+    const description = (collection.description || '').toLowerCase();
+    return title.includes(lowerQuery) || description.includes(lowerQuery);
+  }).slice(0, 5); // Обмежуємо до 5 результатів
+
+  // Пошук по документах
+  const matchedDocuments = documents.filter(doc => {
+    const name = (doc.name || '').toLowerCase();
+    const description = (doc.description || '').toLowerCase();
+    const type = (doc.type || '').toLowerCase();
+    const category = (doc.category || '').toLowerCase();
+    return name.includes(lowerQuery) || 
+           description.includes(lowerQuery) ||
+           type.includes(lowerQuery) ||
+           category.includes(lowerQuery);
+  }).slice(0, 5); // Обмежуємо до 5 результатів
+
+  if (matchedCollections.length === 0 && matchedDocuments.length === 0) {
+    return (
+      <div className="absolute top-full left-0 right-0 mt-[4px] bg-white rounded-[8px] border border-[#e0e1e6] shadow-lg z-50 max-h-[400px] overflow-auto">
+        <div className="p-[16px] text-center">
+          <p className="text-[13px] text-[#60646c]">No results found</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="absolute top-full left-0 right-0 mt-[4px] bg-white rounded-[8px] border border-[#e0e1e6] shadow-lg z-50 max-h-[400px] overflow-auto">
+      <div className="p-[8px]">
+        {matchedCollections.length > 0 && (
+          <div>
+            <p className="text-[11px] font-semibold text-[#8b8d98] uppercase tracking-wider px-[12px] py-[8px]">
+              Collections ({matchedCollections.length})
+            </p>
+            {matchedCollections.map((collection) => (
+              <button
+                key={collection.id}
+                onClick={() => {
+                  if (onCollectionClick) {
+                    onCollectionClick(collection);
+                  }
+                }}
+                className="w-full flex items-start gap-[12px] p-[12px] rounded-[6px] transition-colors text-left hover:bg-[#f9fafb]"
+              >
+                <div className="flex-shrink-0 mt-[2px]">
+                  <Folder className="size-[16px] text-[#60646c]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] text-[#1c2024] mb-[2px] truncate">{collection.title}</p>
+                  {collection.description && (
+                    <p className="text-[11px] text-[#8b8d98] truncate">{collection.description}</p>
+                  )}
+                </div>
+                <div className="flex-shrink-0">
+                  <span className="text-[11px] text-[#8b8d98]">{collection.count || 0} docs</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+        
+        {matchedDocuments.length > 0 && (
+          <div>
+            <p className="text-[11px] font-semibold text-[#8b8d98] uppercase tracking-wider px-[12px] py-[8px]">
+              Documents ({matchedDocuments.length})
+            </p>
+            {matchedDocuments.map((document) => (
+              <button
+                key={document.id}
+                onClick={() => {
+                  if (onDocumentClick) {
+                    onDocumentClick(document);
+                  }
+                }}
+                className="w-full flex items-start gap-[12px] p-[12px] rounded-[6px] transition-colors text-left hover:bg-[#f9fafb]"
+              >
+                <div className="flex-shrink-0 mt-[2px]">
+                  <FileText className="size-[16px] text-[#60646c]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] text-[#1c2024] mb-[2px] truncate">{document.name}</p>
+                  {document.description && (
+                    <p className="text-[11px] text-[#8b8d98] truncate">{document.description}</p>
+                  )}
+                </div>
+                <div className="flex-shrink-0">
+                  <span className="text-[11px] text-[#8b8d98]">{document.type}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ========================================
 // CONTEXT SUGGESTIONS DROPDOWN
 // ========================================
 
@@ -3184,6 +3315,7 @@ function CollectionsView({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [contextSuggestions, setContextSuggestions] = useState<ContextSuggestion[]>([]);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
+  const [showSearchResults, setShowSearchResults] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const [tableMenuOpen, setTableMenuOpen] = useState<string | null>(null);
   const tableMenuRef = useRef<HTMLDivElement>(null);
@@ -3262,10 +3394,14 @@ const [aiModalInitialSearchResults, setAiModalInitialSearchResults] = useState<{
 
   useEffect(() => {
     if (question.length >= 2) {
+      // Показуємо результати пошуку по колекціях та документах
+      setShowSearchResults(true);
+      // Також показуємо AI suggestions якщо потрібно
       setContextSuggestions(getContextSuggestions(question));
       setShowSuggestions(true);
       setSelectedSuggestionIndex(0);
     } else {
+      setShowSearchResults(false);
       setShowSuggestions(false);
       setContextSuggestions([]);
     }
@@ -3446,10 +3582,54 @@ const [aiModalInitialSearchResults, setAiModalInitialSearchResults] = useState<{
   const handleSelectSuggestion = (suggestion: ContextSuggestion) => {
     setQuestion(suggestion.text);
     setShowSuggestions(false);
+    setShowSearchResults(false);
     setIsModalOpen(true);
   };
 
+  // Обробник кліку на колекцію з результатів пошуку
+  const handleCollectionClickFromSearch = (collection: Collection) => {
+    if (onCollectionClick) {
+      onCollectionClick(collection);
+    }
+    setQuestion('');
+    setShowSearchResults(false);
+    setShowSuggestions(false);
+  };
+
+  // Обробник кліку на документ з результатів пошуку
+  const handleDocumentClickFromSearch = (document: Document) => {
+    // Якщо документ належить до колекції, відкриваємо колекцію
+    if (document.collectionIds && document.collectionIds.length > 0) {
+      const collectionId = document.collectionIds[0];
+      const collection = allCollectionsData.find(c => c.id === collectionId);
+      if (collection && onCollectionClick) {
+        onCollectionClick(collection);
+      }
+    } else if (onViewDocumentsFromAI) {
+      // Інакше показуємо документ через AI view
+      onViewDocumentsFromAI([document.id || '']);
+    }
+    setQuestion('');
+    setShowSearchResults(false);
+    setShowSuggestions(false);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setShowSearchResults(false);
+      setShowSuggestions(false);
+      return;
+    }
+    
+    if (showSearchResults) {
+      // Якщо показуємо результати пошуку, Enter відкриває AI модальне вікно
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSubmit();
+      }
+      return;
+    }
+    
     if (showSuggestions && contextSuggestions.length > 0) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -3466,8 +3646,6 @@ const [aiModalInitialSearchResults, setAiModalInitialSearchResults] = useState<{
         } else {
           handleSubmit();
         }
-      } else if (e.key === 'Escape') {
-        setShowSuggestions(false);
       }
     } else if (e.key === 'Enter') {
       handleSubmit();
@@ -3498,6 +3676,7 @@ const [aiModalInitialSearchResults, setAiModalInitialSearchResults] = useState<{
     const handleClickOutside = (e: MouseEvent) => {
       if (inputRef.current && !inputRef.current.contains(e.target as Node)) {
         setShowSuggestions(false);
+        setShowSearchResults(false);
       }
     };
 
@@ -3545,8 +3724,19 @@ const [aiModalInitialSearchResults, setAiModalInitialSearchResults] = useState<{
                 </svg>
               </button>
               
-              {/* Context Suggestions Dropdown */}
-              {showSuggestions && (
+              {/* Search Results Dropdown - показуємо результати пошуку по колекціях та документах */}
+              {showSearchResults && (
+                <SearchResultsDropdown
+                  collections={allCollectionsData}
+                  documents={documents || []}
+                  onCollectionClick={handleCollectionClickFromSearch}
+                  onDocumentClick={handleDocumentClickFromSearch}
+                  inputValue={question}
+                />
+              )}
+              
+              {/* Context Suggestions Dropdown - показуємо AI suggestions тільки якщо немає результатів пошуку */}
+              {showSuggestions && !showSearchResults && contextSuggestions.length > 0 && (
                 <ContextSuggestionsDropdown
                   suggestions={contextSuggestions}
                   onSelect={handleSelectSuggestion}

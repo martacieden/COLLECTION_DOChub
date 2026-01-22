@@ -1,14 +1,18 @@
 import svgPaths from "../imports/svg-tmeiqkylpl";
-import { MoreVertical } from 'lucide-react';
+import { MoreVertical, Sparkles, X } from 'lucide-react';
 
 interface FileInfo {
   file: File;
   uploadProgress: number;
   status: 'uploading' | 'completed' | 'failed';
+  aiTags?: string[];
+  tags?: string[];
 }
 
 interface UploadFileTableProps {
   files: FileInfo[];
+  onConfirmAiTag?: (fileName: string, tag: string) => void;
+  onDismissAiTag?: (fileName: string, tag: string) => void;
 }
 
 // Icon Components from Figma
@@ -174,7 +178,7 @@ function getFileIcon(fileName: string) {
   };
 }
 
-export function UploadFileTable({ files }: UploadFileTableProps) {
+export function UploadFileTable({ files, onConfirmAiTag, onDismissAiTag }: UploadFileTableProps) {
   return (
     <div className="content-stretch flex isolate items-start overflow-clip relative shrink-0 w-full">
       {/* Name Column */}
@@ -253,7 +257,15 @@ export function UploadFileTable({ files }: UploadFileTableProps) {
                 <div aria-hidden="true" className="absolute border-[#e8e8ec] border-[0px_0px_1px] border-solid inset-0 pointer-events-none" />
                 <div className="flex flex-row items-center size-full">
                   <div className="box-border content-center flex flex-wrap gap-[8px] h-[36px] items-center justify-between px-[16px] py-[8px] relative w-full">
-                    <p className="font-['Inter:Regular',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#ce2c31] text-[13px] text-nowrap whitespace-pre">Upload failed, try again</p>
+                    <p className="font-['Inter:Regular',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#ce2c31] text-[13px] text-nowrap whitespace-pre">Upload failed</p>
+                    <div className="flex items-center gap-[8px]">
+                      <button className="h-[24px] px-[8px] rounded-[4px] text-[12px] border border-[#e0e1e6] text-[#1c2024] hover:bg-[#f9fafb] transition-colors">
+                        Retry
+                      </button>
+                      <button className="size-[24px] flex items-center justify-center rounded-[4px] text-[#ce2c31] hover:bg-[#fee7e9] transition-colors">
+                        <X className="size-[14px]" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -266,12 +278,88 @@ export function UploadFileTable({ files }: UploadFileTableProps) {
                 <div className="flex flex-row items-center size-full">
                   <div className="box-border content-stretch flex gap-[8px] h-[36px] items-center pl-[16px] pr-[32px] py-[8px] relative w-full">
                     <CheckIcon />
-                    <p className="font-['Inter:Regular',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#60646c] text-[13px] text-nowrap whitespace-pre">Uploaded</p>
+                    <p className="font-['Inter:Regular',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#60646c] text-[13px] text-nowrap whitespace-pre">✓ Uploaded</p>
                   </div>
                 </div>
               </div>
             );
           }
+        })}
+      </div>
+
+      {/* Tags Column */}
+      <div className="basis-0 content-stretch flex flex-col grow items-start min-h-px min-w-px relative shrink-0 z-[2]">
+        {/* Header */}
+        <div className="bg-white h-[36px] relative shrink-0 w-full">
+          <div aria-hidden="true" className="absolute border-[#e8e8ec] border-[0px_0px_1px] border-solid inset-0 pointer-events-none" />
+          <div className="flex flex-row items-center size-full">
+            <div className="box-border content-stretch flex gap-[16px] h-[36px] items-center p-[16px] relative w-full">
+              <div className="basis-0 content-stretch flex gap-[4px] grow items-center min-h-px min-w-px relative shrink-0">
+                <p className="font-['Inter:Medium',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#80838d] text-[13px] text-nowrap whitespace-pre">Tags</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Rows */}
+        {files.map((fileInfo, index) => {
+          const aiTags = fileInfo.aiTags || [];
+          const confirmedTags = fileInfo.tags || [];
+          const hasTags = aiTags.length > 0 || confirmedTags.length > 0;
+          
+          if (!hasTags || fileInfo.status === 'uploading' || fileInfo.status === 'failed') {
+            return (
+              <div key={index} className="bg-white h-[36px] relative shrink-0 w-full">
+                <div aria-hidden="true" className="absolute border-[#e8e8ec] border-[0px_0px_1px] border-solid inset-0 pointer-events-none" />
+                <div className="flex flex-row items-center size-full">
+                  <div className="box-border content-stretch flex gap-[8px] h-[36px] items-center px-[16px] py-[8px] relative w-full">
+                    <p className="font-['Inter:Regular',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#9ca3af] text-[12px]">—</p>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div key={index} className="bg-white min-h-[36px] relative shrink-0 w-full">
+              <div aria-hidden="true" className="absolute border-[#e8e8ec] border-[0px_0px_1px] border-solid inset-0 pointer-events-none" />
+              <div className="flex flex-row items-start size-full">
+                <div className="box-border content-stretch flex flex-wrap gap-[6px] items-center px-[16px] py-[8px] relative w-full">
+                  {/* Confirmed tags */}
+                  {confirmedTags.map((tag, tagIndex) => (
+                    <span
+                      key={`confirmed-${tagIndex}`}
+                      className="inline-flex items-center gap-[4px] px-[6px] py-[2px] bg-[#f0f0f3] border border-[#e0e1e6] rounded-[4px] text-[11px] text-[#1c2024]"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                  
+                  {/* AI suggested tags */}
+                  {aiTags.map((tag, tagIndex) => (
+                    <span
+                      key={`ai-${tagIndex}`}
+                      className="inline-flex items-center gap-[4px] px-[6px] py-[2px] bg-[#faf5ff] border border-[#e9d5ff] rounded-[4px] text-[11px] text-[#7c3aed] group cursor-pointer hover:bg-[#f3e8ff] transition-colors"
+                      onClick={() => onConfirmAiTag?.(fileInfo.file.name, tag)}
+                      title="Click to confirm tag"
+                    >
+                      <Sparkles className="size-[10px]" />
+                      {tag}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDismissAiTag?.(fileInfo.file.name, tag);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="size-[10px]" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
         })}
       </div>
 

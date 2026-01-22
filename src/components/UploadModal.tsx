@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ChevronDown, Check, Folder, Tag, Sparkles } from 'lucide-react';
+import { X, ChevronDown, Check, Folder, Tag, Sparkles, Info } from 'lucide-react';
 import { UploadFileTable } from './UploadFileTable';
 import { toast } from 'sonner';
 import { Checkbox } from './ui/checkbox';
@@ -69,6 +69,8 @@ interface FileInfo {
   file: File;
   uploadProgress: number;
   status: 'uploading' | 'completed' | 'failed';
+  aiTags?: string[];
+  tags?: string[];
 }
 
 interface FileMetadata {
@@ -101,6 +103,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
   const [isOrgDropdownOpen, setIsOrgDropdownOpen] = useState(false);
   const [isCollectionsDropdownOpen, setIsCollectionsDropdownOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const orgDropdownRef = useRef<HTMLDivElement>(null);
   const collectionsDropdownRef = useRef<HTMLDivElement>(null);
@@ -118,6 +121,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
       setFileMetadata({});
       setUploadedFiles([]);
       setIsCollectionsDropdownOpen(false);
+      setShowAdvancedOptions(false);
     }
   }, [isOpen]);
 
@@ -149,103 +153,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
     };
   }, [isOrgDropdownOpen, isCollectionsDropdownOpen]);
 
-  if (!isOpen) return null;
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []) as File[];
-    if (files.length > 0) {
-      handleFilesSelected(files);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const files = Array.from(e.dataTransfer.files) as File[];
-    if (files.length > 0) {
-      handleFilesSelected(files);
-    }
-  };
-
-  const handleFilesSelected = (files: File[]) => {
-    // Додаємо файли до списку (не переходимо до preview)
-    setSelectedFiles(prev => [...prev, ...files]);
-    
-    // Генеруємо AI теги на основі назв файлів
-    const allAiTags: string[] = [];
-    files.forEach(file => {
-      const aiTags = generateAiTags(file.name, availableTags);
-      aiTags.forEach(tag => {
-        if (!allAiTags.includes(tag) && !globalTags.includes(tag) && !globalAiTags.includes(tag)) {
-          allAiTags.push(tag);
-        }
-      });
-    });
-    
-    // Додаємо нові AI теги до існуючих
-    if (allAiTags.length > 0) {
-      setGlobalAiTags(prev => {
-        const newTags = allAiTags.filter(tag => !prev.includes(tag));
-        return [...prev, ...newTags];
-      });
-    }
-    
-    // Ініціалізуємо метадані для кожного файлу
-    const newMetadata: Record<string, FileMetadata> = {};
-    files.forEach(file => {
-      const fileName = file.name;
-      const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
-      const fileAiTags = generateAiTags(fileName, availableTags);
-      newMetadata[fileName] = {
-        fileName: fileName,
-        title: nameWithoutExt,
-        description: '',
-        tags: [...globalTags],
-        aiTags: fileAiTags
-      };
-    });
-    setFileMetadata(prev => ({ ...prev, ...newMetadata }));
-  };
-
-  const handleStartUpload = () => {
-    // Перевірка обов'язкового поля організації
-    if (!selectedOrganization || selectedOrganization.trim() === '') {
-      toast.error('Please select an organization before uploading files');
-      return;
-    }
-
-    const fileInfos: FileInfo[] = selectedFiles.map(file => ({
-      file,
-      uploadProgress: 0,
-      status: 'uploading' as const
-    }));
-    
-    setUploadedFiles(fileInfos);
-    setCurrentStep('uploading');
-
-    // Simulate upload progress
-    fileInfos.forEach((fileInfo, index) => {
-      const progressInterval = setInterval(() => {
-        setUploadedFiles(prev => {
-          const updated = [...prev];
-          if (updated[index] && updated[index].uploadProgress < 100) {
-            updated[index].uploadProgress += 20;
-          } else if (updated[index]) {
-            updated[index].status = 'completed';
-            clearInterval(progressInterval);
-            
-            // Перевіряємо чи всі файли завантажені
-            const allCompleted = updated.every(f => f.status === 'completed');
-            if (allCompleted) {
-              handleUploadComplete(updated);
-            }
-          }
-          return updated;
-        });
-      }, 300);
-    });
-  };
-
-  const handleUploadComplete = (completedFiles: FileInfo[]) => {
+  const handleUploadComplete = useCallback((completedFiles: FileInfo[]) => {
     const metadataArray: FileMetadata[] = selectedFiles.map(file => {
       const meta = fileMetadata[file.name];
       if (meta) {
@@ -307,6 +215,128 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
     setFileMetadata({});
     setUploadedFiles([]);
     onClose();
+  }, [selectedFiles, fileMetadata, selectedCollectionIds, collections, selectedOrganization, onComplete, onClose]);
+
+  const handleStartUpload = useCallback(() => {
+    // Перевірка, чи не вже йде завантаження
+    if (currentStep === 'uploading') {
+      return;
+    }
+    
+    // Перевірка обов'язкового поля організації
+    if (!selectedOrganization || selectedOrganization.trim() === '') {
+      toast.error('Please select an organization before uploading files');
+      return;
+    }
+    
+    // Перевірка, чи є файли для завантаження
+    if (selectedFiles.length === 0) {
+      return;
+    }
+
+    const fileInfos: FileInfo[] = selectedFiles.map(file => {
+      const meta = fileMetadata[file.name];
+      return {
+        file,
+        uploadProgress: 0,
+        status: 'uploading' as const,
+        aiTags: meta?.aiTags || [],
+        tags: meta?.tags || []
+      };
+    });
+    
+    setUploadedFiles(fileInfos);
+    setCurrentStep('uploading');
+
+    // Simulate upload progress
+    fileInfos.forEach((fileInfo, index) => {
+      const progressInterval = setInterval(() => {
+        setUploadedFiles(prev => {
+          const updated = [...prev];
+          if (updated[index] && updated[index].uploadProgress < 100) {
+            updated[index].uploadProgress += 20;
+          } else if (updated[index]) {
+            updated[index].status = 'completed';
+            // Зберігаємо метадані при завершенні
+            const file = selectedFiles[index];
+            const meta = file ? fileMetadata[file.name] : null;
+            if (meta) {
+              updated[index].aiTags = meta.aiTags || [];
+              updated[index].tags = meta.tags || [];
+            }
+            clearInterval(progressInterval);
+            
+            // Перевіряємо чи всі файли завантажені
+            const allCompleted = updated.every(f => f.status === 'completed');
+            if (allCompleted) {
+              handleUploadComplete(updated);
+            }
+          }
+          return updated;
+        });
+      }, 300);
+    });
+  }, [currentStep, selectedOrganization, selectedFiles, fileMetadata, handleUploadComplete]);
+
+  if (!isOpen) return null;
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []) as File[];
+    if (files.length > 0) {
+      handleFilesSelected(files);
+    }
+    // Скидаємо значення input, щоб можна було вибрати ті самі файли знову
+    if (e.target) {
+      e.target.value = '';
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const files = Array.from(e.dataTransfer.files) as File[];
+    if (files.length > 0) {
+      handleFilesSelected(files);
+    }
+  };
+
+  const handleFilesSelected = (files: File[]) => {
+    // Додаємо файли до списку (не переходимо до preview)
+    setSelectedFiles(prev => [...prev, ...files]);
+    
+    // Генеруємо AI теги на основі назв файлів
+    const allAiTags: string[] = [];
+    files.forEach(file => {
+      const aiTags = generateAiTags(file.name, availableTags);
+      aiTags.forEach(tag => {
+        if (!allAiTags.includes(tag) && !globalTags.includes(tag) && !globalAiTags.includes(tag)) {
+          allAiTags.push(tag);
+        }
+      });
+    });
+    
+    // Додаємо нові AI теги до існуючих
+    if (allAiTags.length > 0) {
+      setGlobalAiTags(prev => {
+        const newTags = allAiTags.filter(tag => !prev.includes(tag));
+        return [...prev, ...newTags];
+      });
+    }
+    
+    // Ініціалізуємо метадані для кожного файлу
+    const newMetadata: Record<string, FileMetadata> = {};
+    files.forEach(file => {
+      const fileName = file.name;
+      const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
+      const fileAiTags = generateAiTags(fileName, availableTags);
+      newMetadata[fileName] = {
+        fileName: fileName,
+        title: nameWithoutExt,
+        description: '',
+        tags: [...globalTags],
+        aiTags: fileAiTags
+      };
+    });
+    setFileMetadata(prev => ({ ...prev, ...newMetadata }));
   };
 
   const handleToggleCollection = (collectionId: string) => {
@@ -337,7 +367,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-[24px]" onClick={onClose}>
-      <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl transition-all w-[600px] max-w-[calc(100vw-48px)] h-[600px]" style={{ width: '600px' }} onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-[12px] overflow-hidden flex flex-col shadow-2xl transition-all w-[600px] max-w-[calc(100vw-48px)] h-[720px]" style={{ width: '600px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-[24px] py-[20px] border-b border-[#e8e8ec]">
           <h2 className="text-[16px] font-semibold text-[#1c2024]">Upload documents</h2>
@@ -350,12 +380,12 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
         </div>
 
         {/* Main Content */}
-        <div className="flex flex-1 overflow-hidden flex-col">
+        <div className="flex flex-1 overflow-hidden flex-col min-h-0">
           {/* Content */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto min-h-0">
             {/* Single Step: Select Files & Configure */}
             {(currentStep === 'select' || currentStep === 'preview') && (
-              <div className="p-[32px]">
+              <div className="px-[16px] py-[16px]">
                 {/* Organization Dropdown */}
                 <div className="mb-[24px]">
                   <label className="block text-[14px] text-[#1c2024] mb-[8px]">
@@ -364,10 +394,15 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
                   <div className="relative" ref={orgDropdownRef}>
                     <button
                       type="button"
-                      onClick={() => setIsOrgDropdownOpen(!isOrgDropdownOpen)}
+                      onClick={() => {
+                        if (currentStep !== 'uploading') {
+                          setIsOrgDropdownOpen(!isOrgDropdownOpen);
+                        }
+                      }}
+                      disabled={currentStep === 'uploading'}
                       className={`w-full h-[32px] px-[16px] pr-[40px] border rounded-[8px] text-[15px] text-left appearance-none focus:outline-none focus:ring-2 focus:ring-[#005be2] bg-white flex items-center gap-[8px] ${
                         !selectedOrganization ? 'border-red-300' : 'border-[#e0e1e6]'
-                      }`}
+                      } ${currentStep === 'uploading' ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       {selectedOrganization && (() => {
                         const selectedOrg = organizations.find(org => org.name === selectedOrganization);
@@ -421,72 +456,15 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
                       </div>
                     )}
                   </div>
+                  
+                  {/* Warning message during upload */}
+                  {currentStep === 'uploading' && (
+                    <p className="text-[12px] text-[#60646c] mt-[8px]">
+                      You can't change the organization during an upload.
+                    </p>
+                  )}
                 </div>
 
-                {/* Tags Input */}
-                <div className="mb-[24px]">
-                  <label className="block text-[14px] text-[#1c2024] mb-[8px]">
-                    Tags (applied to all files)
-                    {globalAiTags.length > 0 && (
-                      <span className="ml-[8px] text-[12px] text-[#7c3aed] font-normal">
-                        ✨ AI suggested {globalAiTags.length} tag{globalAiTags.length > 1 ? 's' : ''}
-                      </span>
-                    )}
-                  </label>
-                  <TagInput 
-                    tags={globalTags}
-                    aiTags={globalAiTags}
-                    onChange={(newTags) => {
-                      setGlobalTags(newTags);
-                      // Оновлюємо теги для вже вибраних файлів
-                      setSelectedFiles(current => {
-                        const updatedMetadata = { ...fileMetadata };
-                        current.forEach(file => {
-                          if (updatedMetadata[file.name]) {
-                            updatedMetadata[file.name].tags = [...newTags];
-                          }
-                        });
-                        setFileMetadata(updatedMetadata);
-                        return current;
-                      });
-                    }}
-                    onAiTagConfirm={(tag) => {
-                      // Переміщуємо AI тег в manual теги
-                      setGlobalAiTags(prev => prev.filter(t => t !== tag));
-                      setGlobalTags(prev => [...prev, tag]);
-                      // Оновлюємо метадані файлів
-                      setFileMetadata(prev => {
-                        const updated = { ...prev };
-                        Object.keys(updated).forEach(fileName => {
-                          if (updated[fileName].aiTags) {
-                            updated[fileName].aiTags = updated[fileName].aiTags!.filter(t => t !== tag);
-                          }
-                          if (!updated[fileName].tags.includes(tag)) {
-                            updated[fileName].tags = [...updated[fileName].tags, tag];
-                          }
-                        });
-                        return updated;
-                      });
-                    }}
-                    onAiTagDismiss={(tag) => {
-                      // Видаляємо AI тег
-                      setGlobalAiTags(prev => prev.filter(t => t !== tag));
-                      // Видаляємо з метаданих файлів
-                      setFileMetadata(prev => {
-                        const updated = { ...prev };
-                        Object.keys(updated).forEach(fileName => {
-                          if (updated[fileName].aiTags) {
-                            updated[fileName].aiTags = updated[fileName].aiTags!.filter(t => t !== tag);
-                          }
-                        });
-                        return updated;
-                      });
-                    }}
-                    availableTags={availableTags}
-                    onCreateTag={onCreateTag}
-                    placeholder="Add tags..."
-                  />
-                </div>
 
                 {/* Drop Zone */}
                 <div
@@ -499,17 +477,30 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
                   }`}
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <div className="text-center">
-                    <p className="text-[15px] text-[#1c2024] mb-[8px]">
-                      {selectedFiles.length > 0 ? 'Drop more files here or ' : 'Drag & drop your files or '}
-                      <span className="text-[#005be2] underline cursor-pointer">Browse</span>
-                    </p>
-                    <p className="text-[14px] text-[#9ca3af]">
-                      Supports documents, images, audio, video
-                      <br />
-                      and more
-                    </p>
-                  </div>
+                  {selectedFiles.length === 0 && (
+                    <div className="text-center">
+                      <p className="text-[15px] text-[#1c2024] mb-[8px]">
+                        Drag & drop your files or <span className="text-[#005be2] underline cursor-pointer">Browse</span>
+                      </p>
+                      <p className="text-[14px] text-[#9ca3af]">
+                        Supports documents, images, audio, video
+                        <br />
+                        and more
+                      </p>
+                    </div>
+                  )}
+                  {selectedFiles.length > 0 && (
+                    <div className="text-center">
+                      <p className="text-[15px] text-[#1c2024] mb-[8px]">
+                        Drag & drop more files or <span className="text-[#005be2] underline cursor-pointer">Browse</span>
+                      </p>
+                      <p className="text-[14px] text-[#9ca3af]">
+                        Supports documents, images, audio, video
+                        <br />
+                        and more
+                      </p>
+                    </div>
+                  )}
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -519,15 +510,10 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
                   />
                 </div>
 
-                {/* Footer Note */}
-                <p className="text-[12px] text-[#9ca3af] text-center mt-[12px]">
-                  Files under 10MB will get descriptions automatically
-                </p>
-
                 {/* Selected Files Table */}
                 {selectedFiles.length > 0 && (
                   <div className="mt-[24px] border border-[#e0e1e6] rounded-[8px] overflow-hidden">
-                    <div className="overflow-y-auto">
+                    <div className="overflow-y-auto max-h-[280px]">
                       <table className="w-full caption-bottom text-sm">
                         <thead className="[&_tr]:border-b">
                           <tr className="border-b transition-colors">
@@ -562,118 +548,228 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
                   </div>
                 )}
 
-                {/* Collections Selection */}
-                {collections.length > 0 && selectedFiles.length > 0 && (
-                  <div ref={collectionsDropdownRef} className="relative mt-[24px]">
-                    {/* Selected Collections Tags */}
-                    {selectedCollectionIds.size > 0 && (
-                      <div className="flex flex-wrap gap-[6px] mb-[8px]">
-                        {[...selectedCollectionIds].map((collectionId) => {
-                          const collection = collections.find(col => col.id === collectionId) || 
-                                           (currentCollection?.id === collectionId ? currentCollection : null);
-                          if (!collection) return null;
-                          const collectionType = getCollectionType ? getCollectionType({ rules: collection.rules, documentIds: [] }) : 'manual';
-                          
-                          return (
-                            <div
-                              key={collectionId}
-                              className="flex items-center gap-[4px] px-[6px] py-[2px] bg-[#f5f7fa] border border-[#d1d5db] rounded-[4px]"
-                            >
-                              <span className="text-[12px]">{collection.icon || '📁'}</span>
-                              <span className="text-[11px] font-normal text-[#60646c]">{collection.title}</span>
-                              {collectionType === 'auto' && (
-                                <span className="px-[3px] py-[1px] bg-[#f9fafb] text-[#9ca3af] rounded-[3px] text-[10px] font-normal">
-                                  Auto
-                                </span>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => handleToggleCollection(collectionId)}
-                                className="ml-[1px] text-[#9ca3af] hover:text-[#60646c] transition-colors"
-                              >
-                                <X className="size-[10px]" />
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                {/* Advanced Options - Tags and Collections */}
+                {selectedFiles.length > 0 && (
+                  <div className="mt-[24px] box-content">
                     <button
-                      ref={collectionsButtonRef}
                       type="button"
-                      onClick={() => {
-                        if (collectionsButtonRef.current) {
-                          const rect = collectionsButtonRef.current.getBoundingClientRect();
-                          setDropdownPosition({
-                            top: rect.bottom + 4,
-                            left: rect.left,
-                            width: rect.width
-                          });
-                        }
-                        setIsCollectionsDropdownOpen(!isCollectionsDropdownOpen);
-                      }}
-                      className="w-full flex items-center justify-between px-[12px] py-[10px] border border-[#e0e1e6] rounded-[8px] bg-white hover:bg-[#f9fafb] transition-colors"
+                      onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                      className="w-full flex items-center justify-between px-[12px] py-[8px] text-[13px] text-[#60646c] hover:text-[#1c2024] hover:bg-[#f9fafb] rounded-[6px] transition-colors mb-0"
                     >
-                      <span className="text-[13px] text-[#1c2024]">Add to collections (optional)</span>
-                      <ChevronDown className={`size-[16px] text-[#60646c] transition-transform ${isCollectionsDropdownOpen ? 'rotate-180' : ''}`} />
+                      <span className="flex items-center gap-[8px]">
+                        Advanced options (optional)
+                        {/* AI suggestions indicator when collapsed */}
+                        {!showAdvancedOptions && globalAiTags.length > 0 && (
+                          <span className="inline-flex items-center gap-[4px] px-[6px] py-[2px] bg-[#f3e8ff] text-[#7c3aed] rounded-[4px] text-[11px] font-medium">
+                            <Sparkles className="size-[12px]" />
+                            {globalAiTags.length} AI suggestion{globalAiTags.length > 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </span>
+                      <ChevronDown className={`size-[16px] transition-transform ${showAdvancedOptions ? 'rotate-180' : ''}`} />
                     </button>
                     
-                    {isCollectionsDropdownOpen && typeof window !== 'undefined' && createPortal(
-                      <div
-                        className="fixed border border-[#e0e1e6] rounded-[8px] bg-white shadow-lg overflow-hidden flex flex-col"
-                        style={{
-                          top: `${dropdownPosition.top}px`,
-                          left: `${dropdownPosition.left}px`,
-                          width: `${dropdownPosition.width}px`,
-                          height: '226px',
-                          zIndex: 99999,
-                          pointerEvents: 'auto'
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div className="overflow-y-auto p-[8px] space-y-[4px]" style={{ height: '226px' }}>
-                          {collections.map((collection) => {
-                            const isSelected = selectedCollectionIds.has(collection.id);
-                            const collectionType = getCollectionType ? getCollectionType({ rules: collection.rules, documentIds: [] }) : 'manual';
-                            
-                            return (
-                              <button
-                                key={collection.id}
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  e.preventDefault();
-                                  handleToggleCollection(collection.id);
-                                }}
-                                onMouseDown={(e) => {
-                                  e.stopPropagation();
-                                }}
-                                className={`w-full flex items-center gap-[8px] px-[8px] py-[6px] rounded-[6px] text-left transition-colors cursor-pointer ${
-                                  isSelected
-                                    ? 'bg-[#ebf3ff] border border-[#005be2]'
-                                    : 'hover:bg-[#f9fafb] border border-transparent'
-                                }`}
-                              >
-                                <Checkbox
-                                  checked={isSelected}
-                                  onCheckedChange={() => handleToggleCollection(collection.id)}
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                                <span className="text-[16px]">{collection.icon || '📁'}</span>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-[12px] font-medium text-[#1c2024] truncate">{collection.title}</p>
-                                </div>
-                                {collectionType === 'auto' && (
-                                  <span className="px-[4px] py-[1px] bg-[#f9fafb] text-[#60646c] rounded-[4px] text-[10px] font-medium">
-                                    Auto
-                                  </span>
-                                )}
-                              </button>
-                            );
-                          })}
+                    {showAdvancedOptions && (
+                      <div className="mt-[16px] space-y-[24px] border-t border-[#e8e8ec] pt-[12px]">
+                        {/* Tags Input */}
+                        <div className="mt-[12px]">
+                          <label className="block text-[12px] text-[#1c2024] mb-[8px] mt-[8px]">
+                            Tags (applied to all files)
+                            {globalAiTags.length > 0 && (
+                              <span className="ml-[8px] text-[12px] text-[#7c3aed] font-normal">
+                                ✨ AI suggested {globalAiTags.length} tag{globalAiTags.length > 1 ? 's' : ''}
+                              </span>
+                            )}
+                          </label>
+                          <TagInput 
+                            tags={globalTags}
+                            aiTags={globalAiTags}
+                            onChange={(newTags) => {
+                              setGlobalTags(newTags);
+                              // Оновлюємо теги для вже вибраних файлів
+                              setSelectedFiles(current => {
+                                const updatedMetadata = { ...fileMetadata };
+                                current.forEach(file => {
+                                  if (updatedMetadata[file.name]) {
+                                    updatedMetadata[file.name].tags = [...newTags];
+                                  }
+                                });
+                                setFileMetadata(updatedMetadata);
+                                return current;
+                              });
+                            }}
+                            onAiTagConfirm={(tag) => {
+                              // Переміщуємо AI тег в manual теги
+                              setGlobalAiTags(prev => prev.filter(t => t !== tag));
+                              setGlobalTags(prev => [...prev, tag]);
+                              // Оновлюємо метадані файлів
+                              setFileMetadata(prev => {
+                                const updated = { ...prev };
+                                Object.keys(updated).forEach(fileName => {
+                                  if (updated[fileName].aiTags) {
+                                    updated[fileName].aiTags = updated[fileName].aiTags!.filter(t => t !== tag);
+                                  }
+                                  if (!updated[fileName].tags.includes(tag)) {
+                                    updated[fileName].tags = [...updated[fileName].tags, tag];
+                                  }
+                                });
+                                return updated;
+                              });
+                            }}
+                            onAiTagDismiss={(tag) => {
+                              // Видаляємо AI тег
+                              setGlobalAiTags(prev => prev.filter(t => t !== tag));
+                              // Видаляємо з метаданих файлів
+                              setFileMetadata(prev => {
+                                const updated = { ...prev };
+                                Object.keys(updated).forEach(fileName => {
+                                  if (updated[fileName].aiTags) {
+                                    updated[fileName].aiTags = updated[fileName].aiTags!.filter(t => t !== tag);
+                                  }
+                                });
+                                return updated;
+                              });
+                            }}
+                            availableTags={availableTags}
+                            onCreateTag={onCreateTag}
+                            placeholder="Add tags..."
+                          />
                         </div>
-                      </div>,
-                      document.body
+
+                        {/* Collections Selection */}
+                        {collections.length > 0 && (
+                          <div ref={collectionsDropdownRef} className="relative">
+                            <label className="block text-[12px] text-[#1c2024] mb-[8px]">
+                              Add to collections
+                            </label>
+                            <button
+                              ref={collectionsButtonRef}
+                              type="button"
+                              onClick={() => {
+                                if (collectionsButtonRef.current) {
+                                  const rect = collectionsButtonRef.current.getBoundingClientRect();
+                                  setDropdownPosition({
+                                    top: rect.bottom + 4,
+                                    left: rect.left,
+                                    width: rect.width
+                                  });
+                                }
+                                setIsCollectionsDropdownOpen(!isCollectionsDropdownOpen);
+                              }}
+                              className="w-full flex items-center gap-[6px] px-[12px] py-[6px] border border-[#e0e1e6] rounded-[8px] bg-white hover:bg-[#f9fafb] transition-colors min-h-[36px]"
+                            >
+                              {/* Selected Collections inside button */}
+                              {selectedCollectionIds.size > 0 ? (
+                                <div className="flex-1 flex items-center gap-[6px] overflow-hidden">
+                                  {(() => {
+                                    const selectedArray = [...selectedCollectionIds];
+                                    const maxVisible = 2;
+                                    const visibleIds = selectedArray.slice(0, maxVisible);
+                                    const hiddenCount = selectedArray.length - maxVisible;
+                                    
+                                    return (
+                                      <>
+                                        {visibleIds.map((collectionId) => {
+                                          const collection = collections.find(col => col.id === collectionId) || 
+                                                           (currentCollection?.id === collectionId ? currentCollection : null);
+                                          if (!collection) return null;
+                                          const collectionType = getCollectionType ? getCollectionType({ rules: collection.rules, documentIds: [] }) : 'manual';
+                                          
+                                          return (
+                                            <div
+                                              key={collectionId}
+                                              className="flex items-center gap-[4px] px-[6px] py-[2px] bg-[#f5f7fa] border border-[#d1d5db] rounded-[4px] shrink-0"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleToggleCollection(collectionId);
+                                              }}
+                                            >
+                                              <span className="text-[12px]">{collection.icon || '📁'}</span>
+                                              <span className="text-[11px] font-normal text-[#60646c] max-w-[100px] truncate">{collection.title}</span>
+                                              {collectionType === 'auto' && (
+                                                <span className="px-[3px] py-[1px] bg-[#f9fafb] text-[#9ca3af] rounded-[3px] text-[10px] font-normal">
+                                                  Auto
+                                                </span>
+                                              )}
+                                              <X className="size-[10px] text-[#9ca3af] hover:text-[#60646c]" />
+                                            </div>
+                                          );
+                                        })}
+                                        {hiddenCount > 0 && (
+                                          <span className="text-[11px] text-[#60646c] shrink-0">+{hiddenCount}</span>
+                                        )}
+                                      </>
+                                    );
+                                  })()}
+                                </div>
+                              ) : (
+                                <span className="flex-1 text-[13px] text-[#9ca3af] text-left">Select collections</span>
+                              )}
+                              <ChevronDown className={`size-[16px] text-[#60646c] transition-transform shrink-0 ${isCollectionsDropdownOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            
+                            {isCollectionsDropdownOpen && typeof window !== 'undefined' && createPortal(
+                              <div
+                                className="border border-[#e0e1e6] rounded-[8px] bg-white shadow-lg overflow-hidden flex flex-col"
+                                style={{
+                                  position: 'fixed',
+                                  top: `${dropdownPosition.top}px`,
+                                  left: `${dropdownPosition.left}px`,
+                                  width: `${dropdownPosition.width}px`,
+                                  height: '226px',
+                                  zIndex: 2147483647,
+                                  pointerEvents: 'auto',
+                                  isolation: 'isolate'
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <div className="overflow-y-auto p-[8px] space-y-[4px]" style={{ height: '226px' }}>
+                                  {collections.map((collection) => {
+                                    const isSelected = selectedCollectionIds.has(collection.id);
+                                    const collectionType = getCollectionType ? getCollectionType({ rules: collection.rules, documentIds: [] }) : 'manual';
+                                    
+                                    return (
+                                      <button
+                                        key={collection.id}
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          e.preventDefault();
+                                          handleToggleCollection(collection.id);
+                                        }}
+                                        onMouseDown={(e) => {
+                                          e.stopPropagation();
+                                        }}
+                                        className={`w-full flex items-center gap-[8px] px-[8px] py-[6px] rounded-[6px] text-left transition-colors cursor-pointer ${
+                                          isSelected
+                                            ? 'bg-[#ebf3ff] border border-[#005be2]'
+                                            : 'hover:bg-[#f9fafb] border border-transparent'
+                                        }`}
+                                      >
+                                        <Checkbox
+                                          checked={isSelected}
+                                          onCheckedChange={() => handleToggleCollection(collection.id)}
+                                          onClick={(e) => e.stopPropagation()}
+                                        />
+                                        <span className="text-[16px]">{collection.icon || '📁'}</span>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-[12px] font-medium text-[#1c2024] truncate">{collection.title}</p>
+                                        </div>
+                                        {collectionType === 'auto' && (
+                                          <span className="px-[4px] py-[1px] bg-[#f9fafb] text-[#60646c] rounded-[4px] text-[10px] font-medium">
+                                            Auto
+                                          </span>
+                                        )}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>,
+                              document.body
+                            )}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
@@ -682,7 +778,7 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
 
             {/* Step 3: Uploading Files */}
             {currentStep === 'uploading' && (
-              <div className="p-[32px]">
+              <div className="px-[16px] py-[16px]">
                 <div className="mb-[20px]">
                   <h3 className="text-[14px] font-semibold text-[#1c2024] mb-[8px]">Uploading documents...</h3>
                   <p className="text-[12px] text-[#60646c]">
@@ -691,43 +787,99 @@ export function UploadModal({ isOpen, onClose, onComplete, collections = [], get
                 </div>
 
                 {/* File List */}
-                <UploadFileTable files={uploadedFiles} />
+                <UploadFileTable 
+                  files={uploadedFiles.map(fileInfo => {
+                    const file = selectedFiles.find(f => f.name === fileInfo.file.name);
+                    const meta = file ? fileMetadata[file.name] : null;
+                    return {
+                      ...fileInfo,
+                      aiTags: meta?.aiTags || [],
+                      tags: meta?.tags || []
+                    };
+                  })}
+                  onConfirmAiTag={(fileName, tag) => {
+                    // Переміщуємо AI тег в підтверджені теги
+                    setFileMetadata(prev => {
+                      const updated = { ...prev };
+                      if (updated[fileName]) {
+                        // Видаляємо з AI тегів
+                        updated[fileName].aiTags = updated[fileName].aiTags?.filter(t => t !== tag) || [];
+                        // Додаємо до підтверджених тегів
+                        if (!updated[fileName].tags.includes(tag)) {
+                          updated[fileName].tags = [...updated[fileName].tags, tag];
+                        }
+                      }
+                      return updated;
+                    });
+                    
+                    // Оновлюємо глобальні теги
+                    setGlobalAiTags(prev => prev.filter(t => t !== tag));
+                    if (!globalTags.includes(tag)) {
+                      setGlobalTags(prev => [...prev, tag]);
+                    }
+                  }}
+                  onDismissAiTag={(fileName, tag) => {
+                    // Видаляємо AI тег
+                    setFileMetadata(prev => {
+                      const updated = { ...prev };
+                      if (updated[fileName]) {
+                        updated[fileName].aiTags = updated[fileName].aiTags?.filter(t => t !== tag) || [];
+                      }
+                      return updated;
+                    });
+                    
+                    // Видаляємо з глобальних AI тегів
+                    setGlobalAiTags(prev => prev.filter(t => t !== tag));
+                  }}
+                />
               </div>
             )}
           </div>
 
-          {/* Footer */}
-          {(currentStep === 'select' || currentStep === 'preview') && (
-            <div className="flex items-center justify-end gap-[12px] px-[24px] py-[16px] border-t border-[#e8e8ec] flex-shrink-0">
-              <button
-                onClick={onClose}
-                className="h-[36px] px-[16px] rounded-[6px] text-[13px] border border-[#e0e1e6] text-[#1c2024] hover:bg-[#f9fafb]"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleStartUpload}
-                disabled={!selectedOrganization || selectedOrganization.trim() === '' || selectedFiles.length === 0}
-                className={`h-[36px] px-[16px] rounded-[6px] text-[13px] text-white transition-colors ${
-                  !selectedOrganization || selectedOrganization.trim() === '' || selectedFiles.length === 0
-                    ? 'bg-[#9ca3af] cursor-not-allowed'
-                    : 'bg-[#005be2] hover:bg-[#004fc4]'
-                }`}
-              >
-                Add
-              </button>
+          {/* Footer - кнопка Add для кроку вибору файлів */}
+          {(currentStep === 'select' || currentStep === 'preview') && selectedFiles.length > 0 && (
+            <div className="px-[24px] py-[16px] border-t border-[#e8e8ec] flex-shrink-0">
+              <div className="flex items-center justify-end gap-[12px]">
+                <button
+                  onClick={onClose}
+                  className="h-[36px] px-[16px] rounded-[6px] text-[13px] text-[#60646c] hover:text-[#1c2024] hover:bg-[#f9fafb] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleStartUpload}
+                  disabled={!selectedOrganization || selectedOrganization.trim() === ''}
+                  className={`h-[36px] px-[16px] rounded-[6px] text-[13px] font-medium transition-colors ${
+                    !selectedOrganization || selectedOrganization.trim() === ''
+                      ? 'bg-[#e0e1e6] text-[#9ca3af] cursor-not-allowed'
+                      : 'bg-[#005be2] text-white hover:bg-[#004fc4]'
+                  }`}
+                >
+                  Add
+                </button>
+              </div>
             </div>
           )}
+
+          {/* Footer - тільки під час завантаження */}
           
           {currentStep === 'uploading' && (
-            <div className="flex items-center justify-end gap-[12px] px-[24px] py-[16px] border-t border-[#e8e8ec] flex-shrink-0">
-              <button
-                onClick={onClose}
-                disabled={uploadedFiles.some(f => f.status === 'uploading')}
-                className="h-[36px] px-[16px] rounded-[6px] text-[13px] border border-[#e0e1e6] text-[#1c2024] hover:bg-[#f9fafb] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {uploadedFiles.every(f => f.status === 'completed') ? 'Close' : 'Cancel'}
-              </button>
+            <div className="px-[24px] py-[16px] border-t border-[#e8e8ec] flex-shrink-0">
+              {/* Info message */}
+              <div className="flex items-center gap-[8px] mb-[12px] text-[12px] text-[#60646c]">
+                <Info className="size-[16px] text-[#60646c] flex-shrink-0" />
+                <span>Safe to close — uploads continue in background</span>
+              </div>
+              
+              {/* Action buttons */}
+              <div className="flex items-center justify-end gap-[12px]">
+                <button
+                  onClick={onClose}
+                  className="h-[36px] px-[16px] rounded-[6px] text-[13px] bg-[#005be2] text-white hover:bg-[#004fc4] transition-colors"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           )}
         </div>

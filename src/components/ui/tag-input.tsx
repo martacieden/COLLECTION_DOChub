@@ -34,13 +34,13 @@ export function TagInput({
   const inputRef = React.useRef<HTMLInputElement>(null);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
 
-  // Оновлюємо позицію випадаючого списку
+  // Оновлюємо позицію випадаючого списку (для position: fixed використовуємо viewport coordinates)
   const updateDropdownPosition = () => {
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       setDropdownPosition({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
+        top: rect.bottom,
+        left: rect.left,
         width: rect.width
       });
     }
@@ -177,6 +177,15 @@ export function TagInput({
   }, [inputValue]);
 
   const hasAnyTags = tags.length > 0 || aiTags.length > 0;
+  const [isFocused, setIsFocused] = React.useState(false);
+  
+  // Логіка відображення тегів з overflow
+  const maxVisibleTags = 2;
+  const allTags = [...aiTags, ...tags];
+  const visibleAiTags = isFocused ? aiTags : aiTags.slice(0, maxVisibleTags);
+  const remainingSlots = Math.max(0, maxVisibleTags - visibleAiTags.length);
+  const visibleManualTags = isFocused ? tags : tags.slice(0, remainingSlots);
+  const hiddenCount = isFocused ? 0 : allTags.length - (visibleAiTags.length + visibleManualTags.length);
 
   return (
     <div className="relative w-full" ref={containerRef}>
@@ -188,10 +197,10 @@ export function TagInput({
         onClick={() => inputRef.current?.focus()}
       >
         {/* AI Suggested Tags */}
-        {aiTags.map((tag) => (
+        {visibleAiTags.map((tag) => (
           <div 
             key={`ai-${tag}`} 
-            className="flex items-center gap-[4px] px-[6px] py-[2px] bg-[#f3e8ff] border border-[#d8b4fe] rounded-[4px] text-[11px] text-[#7c3aed] cursor-pointer hover:bg-[#ede9fe] transition-colors"
+            className="flex items-center gap-[4px] px-[6px] py-[2px] bg-[#f3e8ff] border border-[#d8b4fe] rounded-[4px] text-[11px] text-[#7c3aed] cursor-pointer hover:bg-[#ede9fe] transition-colors shrink-0"
             onClick={(e) => {
               e.stopPropagation();
               handleConfirmAiTag(tag);
@@ -215,10 +224,10 @@ export function TagInput({
         ))}
 
         {/* Manual/Confirmed Tags */}
-        {tags.map((tag) => (
+        {visibleManualTags.map((tag) => (
           <div 
             key={tag} 
-            className="flex items-center gap-[4px] px-[6px] py-[2px] bg-[#f5f7fa] border border-[#d1d5db] rounded-[4px] text-[11px] text-[#60646c]"
+            className="flex items-center gap-[4px] px-[6px] py-[2px] bg-[#f5f7fa] border border-[#d1d5db] rounded-[4px] text-[11px] text-[#60646c] shrink-0"
           >
             {tag}
             <button
@@ -234,6 +243,11 @@ export function TagInput({
           </div>
         ))}
 
+        {/* Hidden count indicator */}
+        {hiddenCount > 0 && (
+          <span className="text-[11px] text-[#60646c] px-[4px] py-[2px] shrink-0">+{hiddenCount}</span>
+        )}
+
         {/* Input Field */}
         <input
           ref={inputRef}
@@ -241,21 +255,28 @@ export function TagInput({
           value={inputValue}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          onFocus={handleFocus}
+          onFocus={() => {
+            setIsFocused(true);
+            handleFocus();
+          }}
+          onBlur={() => setIsFocused(false)}
           placeholder={!hasAnyTags ? placeholder : "Type to add..."}
           className="flex-1 bg-transparent outline-none text-[13px] min-w-[80px] h-[24px] placeholder:text-[#9ca3af]"
         />
       </div>
 
-      {/* Dropdown with Portal */}
+      {/* Dropdown with Portal - z-index must be higher than modal's z-50 */}
       {isDropdownOpen && (filteredTags.length > 0 || showCreateOption) && typeof window !== 'undefined' && createPortal(
         <div 
           ref={dropdownRef}
-          className="fixed bg-white border border-[#e8e8ec] rounded-[8px] shadow-xl py-[4px] max-h-[200px] overflow-y-auto z-[9999]"
+          className="bg-white border border-[#e8e8ec] rounded-[8px] shadow-xl py-[4px] max-h-[200px] overflow-y-auto"
           style={{ 
+            position: 'fixed',
             top: `${dropdownPosition.top + 4}px`,
             left: `${dropdownPosition.left}px`,
-            width: `${dropdownPosition.width}px`
+            width: `${dropdownPosition.width}px`,
+            zIndex: 2147483647,
+            isolation: 'isolate'
           }}
         >
           {/* Existing Tags */}
